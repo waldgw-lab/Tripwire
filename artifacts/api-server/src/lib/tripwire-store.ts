@@ -1,6 +1,6 @@
 import { db, tripwireRecords } from "@workspace/db";
 import { eq, inArray, and } from "drizzle-orm";
-import { outlets, people, organizations, attributions, topics, stableId } from "./tripwire-config";
+import { outlets, people, organizations, attributions, topics, stableId, journalistRoster } from "./tripwire-config";
 import { SaveRecordBody } from "@workspace/api-zod";
 import { scopeDefaults, unassignedPositions } from "./tripwire-scope";
 
@@ -8,6 +8,9 @@ export type RecordData = typeof SaveRecordBody._output;
 export async function seedConfig() {
   const rows: RecordData[] = [
     ...outlets.map(([title, feedUrl]) => ({kind: "outlet" as const, title, feedUrl, enabled: true, feedStatus: feedUrl ? "Not checked" : "Manual intake"})),
+    ...journalistRoster.flatMap(([outlet, names]) => names.map(title => ({kind: "watch" as const, watchType: "journalist" as const, title, outlet, enabled: true,
+      aliases: title === "Alex Ward" ? ["Alexander Ward"] : [],
+    }))),
     ...people.map(([title, tier, aliases]) => ({kind: "watch" as const, title, tier, ...scopeDefaults(title), aliases: aliases.split("|"), enabled: true})),
     ...organizations.map(([title, tier, aliases]) => ({kind: "watch" as const, title, tier, watchType: "organization" as const, ...scopeDefaults(title), aliases: aliases.split("|"), enabled: true})),
     ...unassignedPositions.map(([organization, position, summary, tier]) => ({kind: "watch" as const, title: position, organization, position, individual: "", summary, tier, watchType: "position" as const, enabled: true})),

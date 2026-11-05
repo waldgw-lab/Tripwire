@@ -35,7 +35,7 @@ Reporting intelligence workspace tracking relevant outlet releases, journalists,
 
 ## Product
 
-Tracks the requested eleven outlets, an entity/account watchlist, article and X-post intake, journalist associations, and claim observations across origin, sourcing, independent additions, and republications.
+Tracks the requested twelve outlets (including NBC), an entity/account watchlist, article and X-post intake, an explicit journalist roster alongside discovered bylines, and claim observations across origin, sourcing, independent additions, and republications.
 
 ## User preferences
 

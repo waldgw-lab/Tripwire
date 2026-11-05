@@ -69,6 +69,7 @@ export const RecordInputWatchType = {
   person: 'person',
   position: 'position',
   organization: 'organization',
+  journalist: 'journalist',
   'x-account': 'x-account',
   attribution: 'attribution',
   topic: 'topic',

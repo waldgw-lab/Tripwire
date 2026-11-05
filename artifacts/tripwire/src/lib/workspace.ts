@@ -99,7 +99,7 @@ export const REPORTING = ['unassessed', 'original', 'independent', 'republicatio
 export const SENTIMENT = ['unassessed', 'negative', 'neutral', 'positive'] as const;
 export const FOCUS = ['blame', 'performance', 'replacement', 'decision-making', 'institutional', 'other'] as const;
 export const STAGES = ['origin', 'sourcing', 'addition', 'republication'] as const;
-export const WATCH_TYPES = ['position', 'organization', 'x-account', 'attribution', 'topic'] as const;
+export const WATCH_TYPES = ['position', 'organization', 'journalist', 'x-account', 'attribution', 'topic'] as const;
 
 export const reportingTone: Record<string, string> = {
   original: 'bg-accent text-accent-foreground',

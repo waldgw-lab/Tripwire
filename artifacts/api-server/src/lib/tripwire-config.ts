@@ -13,6 +13,18 @@ export const outlets = [
   ["CNN", "https://rss.cnn.com/rss/cnn_allpolitics.rss"],
   ["Washington Examiner", "https://www.washingtonexaminer.com/feed/"],
   ["Daily Mail", "https://www.dailymail.co.uk/news/us-politics/index.rss"],
+  ["NBC", "https://feeds.nbcnews.com/nbcnews/public/politics"],
+] as const;
+
+// User-defined monitoring roster; affiliations reflect the requested scope.
+export const journalistRoster = [
+  ["Axios", ["Marc Caputo", "Alex Isenstadt", "Tom Novelly", "Barak Ravid"]],
+  ["The Washington Post", ["Tara Copp", "Noah Robertson", "Dan Lamothe", "Alex Horton"]],
+  ["The New York Times", ["Greg Jaffe", "Eric Schmitt", "Helene Cooper", "Julian Barnes"]],
+  ["The Wall Street Journal", ["Michael Gordon", "Lara Seligman", "Alex Ward", "Heather Somerville"]],
+  ["The Atlantic", ["Nancy Youssef", "Missy Ryan", "Johnathan Lemiere"]],
+  ["CBS", ["Eleanor Watson", "Jim Laporta", "Jennifer Jacobs", "Emma Nicholson"]],
+  ["NBC", ["Courtney Kube", "Gordon Lubold", "Moshes Gaines", "Ken Dilanian"]],
 ] as const;
 
 // User-supplied research scope, not independently verified office-holder facts.

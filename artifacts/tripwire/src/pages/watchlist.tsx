@@ -34,6 +34,7 @@ export default function WatchlistPage() {
         <div>
           <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{position ? 'Position' : w.watchType} · Tier {w.tier ?? 3}</p>
           <h3 className="mt-1 text-sm font-semibold">{position ? w.position || 'Position not specified' : w.title}</h3>
+          {w.watchType === 'journalist' && w.outlet && <p className="mt-1 text-xs text-muted-foreground">{w.outlet}</p>}
           {position && <p className="mt-1 text-sm">{w.individual || (w.watchType === 'person' ? w.title : 'Individual not specified')}</p>}
         </div>
         {actions(w)}
@@ -79,7 +80,7 @@ export default function WatchlistPage() {
     return !w.organization || !orgNames.has(w.organization);
   }).sort(order);
   const ungrouped = items.filter(w => w.watchType !== 'organization' && (!w.organization || !orgNames.has(w.organization)) && matches(w)).sort(order);
-  const otherTypes = ['position', 'x-account', 'attribution', 'topic'];
+  const otherTypes = ['position', 'journalist', 'x-account', 'attribution', 'topic'];
   return <div className="tw-rise">
     <PageHead title="Watchlist" count={items.length}>
       {isSignedIn ? <button onClick={() => setCreating(true)} data-testid="button-add-watch" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground"><Plus className="h-3.5 w-3.5" /> Watch</button> : <SignInAction />}
@@ -94,7 +95,7 @@ export default function WatchlistPage() {
       {otherTypes.map(t => {
         const records = ungrouped.filter(w => (w.watchType === 'person' ? 'position' : w.watchType) === t);
         return records.length ? <section key={t}>
-          <h2 className="mb-3 font-display text-2xl font-semibold">{t === 'position' ? 'Other positions' : t === 'x-account' ? 'X accounts' : t === 'attribution' ? 'Source attributions' : 'Topics'}</h2>
+          <h2 className="mb-3 font-display text-2xl font-semibold">{t === 'position' ? 'Other positions' : t === 'journalist' ? 'Journalists' : t === 'x-account' ? 'X accounts' : t === 'attribution' ? 'Source attributions' : 'Topics'}</h2>
           <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{records.map(card)}</ul>
         </section> : null;
       })}
