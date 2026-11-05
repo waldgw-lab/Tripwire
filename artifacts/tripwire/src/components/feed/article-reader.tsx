@@ -46,7 +46,7 @@ export function ArticleReader({ article: a, impact, onClose }: {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-5 md:px-6">
+      <div className="tw-headline-container flex-1 overflow-y-auto px-5 py-5 md:px-6">
         <div className="mb-3 flex items-center gap-3">
           <OutletBrand name={a.sourceType === 'x' ? 'X' : outlet} variant="square" />
           <div className="min-w-0">
@@ -54,7 +54,7 @@ export function ArticleReader({ article: a, impact, onClose }: {
             <time dateTime={a.publishedAt ?? undefined} className="font-mono text-[11px] text-muted-foreground" data-testid="text-reader-published">{pub.label}</time>
           </div>
         </div>
-        <h2 id={`reader-title-${a.id}`} className="font-serif text-xl font-semibold leading-snug" data-testid="text-reader-title">{a.title}</h2>
+        <h2 id={`reader-title-${a.id}`} className="tw-reader-headline font-serif font-semibold" data-testid="text-reader-title">{a.title}</h2>
 
         <dl className="mt-5 grid gap-4 rounded-md border border-border/70 bg-background/70 p-4">
           <Field label="Byline">

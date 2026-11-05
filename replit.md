@@ -42,12 +42,14 @@ Tracks the requested twelve outlets (including NBC), an entity/account watchlist
 - Keep the interface focused: no unnecessary UI, explainer copy, unrelated warnings, or out-of-scope tags.
 - Black-and-white UI with restrained semantic color; use an Agency FB–like condensed heading font with complementary readable UI typography.
 - Use the supplied Tripwire logo pack for branding; the 1:1 open-corner monogram is the browser tab icon.
+- The black navigation sidebar is collapsible; switch to the supplied 1:1 TW logo on the collapsed icon bar.
 - The published app is intended to be private/invite-only. Keep sign-in promotion out of the workspace UI; this does not replace configuring publishing access restrictions.
 - News Media should provide an All hierarchy of outlets and their journalists, alongside separate outlet and journalist views.
 - Keep journalists within News Media, not a separate sidebar destination. Expand outlets into journalists and journalists into coverage.
 - Display full names as credited on bylines, including middle names, initials and suffixes; default to last-name A–Z sorting, with newest-coverage and item-count options.
 - Feed rows use borderless rounded-square outlet marks. Metadata: DD MMM (year only when not current) · HHMM in ET · OUTLET · full single byline or comma-separated surnames · colored impact word · tags without hashtags · content dot.
 - Clicking a feed item opens a right-hand detail pane; keep full byline names and per-article credit roles in that view.
+- Headline sizes scale with their available pane width: larger in a wide feed and smaller on narrow screens or when the reader is open.
 - Use a visible grayscale-wave background with light translucent feed-item surfaces and prominent outlet logos; retain high text contrast and the black sidebar.
 - Feed filters belong in one Filters control with per-category multi-select checkboxes, category clearing and a global reset. Empty selections mean all; omit “: all” labels.
 - Feed impact categories are CRITICAL, HIGH, LOW; keep prioritization separate from sourcing verification. Content dots indicate complete retained text, partial content, or minimal metadata.

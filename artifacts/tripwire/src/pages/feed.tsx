@@ -133,10 +133,10 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
               <li key={a.id} onClick={() => setOpen(a.id)} className={cn('tw-feed-item group relative cursor-pointer rounded-xl px-3 py-3.5 transition-colors md:px-5', active && 'tw-feed-item-active')} data-testid={`row-article-${a.id}`}>
                 <div className="flex items-start gap-3 sm:gap-4">
                   <OutletBrand name={a.sourceType === 'x' ? 'X' : (a.outlet ?? '—')} variant="square" className="mt-0.5 h-14 w-14 rounded-xl shadow-sm sm:h-16 sm:w-16" />
-                  <div className="min-w-0 flex-1">
+                  <div className="tw-headline-container min-w-0 flex-1">
                     <FeedMeta article={a} impact={imp} />
                     <button onClick={(e) => { e.stopPropagation(); setOpen(a.id); }} aria-expanded={active} aria-controls="article-reader" className="block w-full text-left focus-visible:outline-2 focus-visible:outline-offset-2" data-testid={`button-expand-${a.id}`}>
-                      <span className="font-serif text-[17px] leading-snug">{a.title}</span>
+                      <span className="tw-feed-headline font-serif">{a.title}</span>
                     </button>
                   </div>
                   <div className="flex shrink-0 items-center gap-0.5" onClick={event => event.stopPropagation()}>
