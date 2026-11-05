@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FieldLabel } from '@/components/bits';
 import {
-  FOCUS, REPORTING, SENTIMENT, STAGES, WATCH_TYPES, fromLocalInput, splitList, toInput, toLocalInput, useRemove, useSave,
+  FOCUS, REPORTING, SENTIMENT, STAGES, WATCH_TYPES, fromLocalInput, splitList, toInput, toLocalInput, useRemove, useSave, useWorkspace, byKind,
 } from '@/lib/workspace';
 
 function F({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
@@ -177,25 +177,33 @@ export function ClaimEditor({ open, onOpenChange, record, articles }: EditorProp
 
 export function WatchEditor({ open, onOpenChange, record }: EditorProps) {
   const save = useSave();
-  const [f, setF] = useState({ title: '', watchType: 'person', tier: '1', aliases: '', summary: '', enabled: true });
+  const { data: workspace } = useWorkspace();
+  const organizations = byKind(workspace?.records, 'watch').filter(w => w.watchType === 'organization' && w.id !== record?.id);
+  const [f, setF] = useState({ title: '', watchType: 'position', organization: '', individual: '', tier: '1', aliases: '', summary: '', enabled: true });
   useEffect(() => {
     if (!open) return;
-    setF({ title: record?.title ?? '', watchType: record?.watchType ?? 'person', tier: String(record?.tier ?? 1), aliases: (record?.aliases ?? []).join(', '), summary: record?.summary ?? '', enabled: record?.enabled ?? true });
+    setF({ title: record?.position || record?.title || '', watchType: record?.watchType === 'person' ? 'position' : record?.watchType ?? 'position', organization: record?.organization ?? '', individual: record?.individual ?? '', tier: String(record?.tier ?? 1), aliases: (record?.aliases ?? []).join(', '), summary: record?.summary ?? '', enabled: record?.enabled ?? true });
   }, [open, record]);
   const submit = () => {
     const data: RecordInput = {
-      ...(record ? toInput(record) : {}), kind: 'watch', title: f.title.trim(), watchType: f.watchType as RecordInput['watchType'],
-      tier: Number(f.tier), aliases: splitList(f.aliases), summary: f.summary || undefined, enabled: f.enabled,
+      ...(record ? toInput(record) : {}), kind: 'watch', title: f.watchType === 'position' ? record?.title ?? f.title.trim() : f.title.trim(), watchType: f.watchType as RecordInput['watchType'],
+      position: f.watchType === 'position' ? f.title.trim() : '', individual: f.watchType === 'position' ? f.individual.trim() : '', organization: f.organization.trim(),
+      tier: Number(f.tier), aliases: splitList(f.aliases), summary: f.summary, enabled: f.enabled,
     };
     save.mutate({ data }, { onSuccess: () => onOpenChange(false) });
   };
   return (
     <Shell open={open} onOpenChange={onOpenChange} title={record ? 'Edit watch' : 'Add watch'} onSubmit={submit} pending={save.isPending} canSubmit={!!f.title.trim()}>
-      <F label={f.watchType === 'x-account' ? 'Handle' : 'Name'} className="block"><Input data-testid="input-watch-title" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></F>
+      <F label={f.watchType === 'position' ? 'Position' : f.watchType === 'x-account' ? 'Handle' : 'Name'} className="block"><Input data-testid="input-watch-title" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></F>
       <div className="grid grid-cols-2 gap-3">
         <F label="Type"><Pick testId="select-watch-type" value={f.watchType} onChange={(v) => setF({ ...f, watchType: v })} options={WATCH_TYPES} /></F>
         <F label="Tier"><Pick testId="select-watch-tier" value={f.tier} onChange={(v) => setF({ ...f, tier: v })} options={['1', '2', '3']} /></F>
       </div>
+      <F label={f.watchType === 'organization' ? 'Parent organization' : 'Organization'} className="block">
+        <Input list="watch-organizations" data-testid="input-watch-organization" value={f.organization} onChange={(e) => setF({ ...f, organization: e.target.value })} />
+        <datalist id="watch-organizations">{organizations.map(w => <option key={w.id} value={w.title} />)}</datalist>
+      </F>
+      {f.watchType === 'position' && <F label="Individual" className="block"><Input data-testid="input-watch-individual" value={f.individual} onChange={(e) => setF({ ...f, individual: e.target.value })} /></F>}
       <F label="Aliases, comma separated" className="block"><Input data-testid="input-watch-aliases" value={f.aliases} onChange={(e) => setF({ ...f, aliases: e.target.value })} /></F>
       <F label="Relevance" className="block"><Textarea rows={2} data-testid="input-watch-summary" value={f.summary} onChange={(e) => setF({ ...f, summary: e.target.value })} /></F>
       <label className="flex items-center gap-2 text-sm"><Switch checked={f.enabled} onCheckedChange={(v) => setF({ ...f, enabled: v })} data-testid="switch-watch-enabled" /> Active</label>

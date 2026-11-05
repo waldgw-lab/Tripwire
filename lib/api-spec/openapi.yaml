@@ -82,7 +82,10 @@ components:
         saved: { type: boolean }
         articleId: { type: string }
         tier: { type: integer, minimum: 1, maximum: 3 }
-        watchType: { type: string, enum: [person, organization, x-account, attribution, topic] }
+        watchType: { type: string, enum: [person, position, organization, x-account, attribution, topic] }
+        organization: { type: string }
+        position: { type: string }
+        individual: { type: string }
         aliases: { type: array, items: { type: string } }
         enabled: { type: boolean }
         feedUrl: { type: string }

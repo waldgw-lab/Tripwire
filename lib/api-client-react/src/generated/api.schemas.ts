@@ -67,6 +67,7 @@ export type RecordInputWatchType = typeof RecordInputWatchType[keyof typeof Reco
 
 export const RecordInputWatchType = {
   person: 'person',
+  position: 'position',
   organization: 'organization',
   'x-account': 'x-account',
   attribution: 'attribution',
@@ -120,6 +121,9 @@ export interface RecordInput {
      */
   tier?: number;
   watchType?: RecordInputWatchType;
+  organization?: string;
+  position?: string;
+  individual?: string;
   aliases?: string[];
   enabled?: boolean;
   feedUrl?: string;

@@ -37,6 +37,9 @@ export interface RecordInput {
      */
   tier?: number;
   watchType?: RecordInputWatchType;
+  organization?: string;
+  position?: string;
+  individual?: string;
   aliases?: string[];
   enabled?: boolean;
   feedUrl?: string;

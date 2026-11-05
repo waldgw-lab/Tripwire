@@ -10,6 +10,7 @@ export type RecordInputWatchType = typeof RecordInputWatchType[keyof typeof Reco
 
 export const RecordInputWatchType = {
   person: 'person',
+  position: 'position',
   organization: 'organization',
   'x-account': 'x-account',
   attribution: 'attribution',

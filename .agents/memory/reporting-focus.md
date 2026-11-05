@@ -13,3 +13,9 @@ Evaluate anonymous source descriptions against each article's actual sourcing. S
 **Why:** The user explicitly requires earliest verified origin → outlet's own sourcing or evidence → independently reported additions → republications/commentary.
 
 **How to apply:** Preserve attribution wording, article linkage, journalist linkage, evidence, time, and verification per claim observation. Never manufacture source identities or equate earliest detected coverage with verified origin.
+
+The watchlist is organization → position → individual, with the original relevance factors attached to the role. Use POSITION rather than PERSON as the visible category.
+
+**Why:** The user explicitly requested institutional grouping rather than a flat list of people.
+
+**How to apply:** Keep roles distinct from named individuals, preserve research-specific qualifiers such as former or acting, and leave unnamed role holders unassigned rather than infer them from the focus document.

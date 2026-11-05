@@ -73,7 +73,7 @@ export async function refreshFeeds(userId?: string | null) {
             for (const key of [...url.searchParams.keys()]) if (/^(utm_|fbclid|gclid)/.test(key)) url.searchParams.delete(key);
             url.hash = "";
             const id = stableId(`article:${url.href}`);
-            const entities = watches.filter(w => [w.title, ...(w.aliases ?? [])].some(a => a.length > 2 && text.toLowerCase().includes(a.toLowerCase()))).map(w => w.title);
+            const entities = watches.filter(w => [w.title, w.position ?? "", w.individual ?? "", ...(w.aliases ?? [])].some(a => a.length > 2 && text.toLowerCase().includes(a.toLowerCase()))).map(w => w.title);
             const published = item.isoDate ?? item.pubDate;
             const publishedAt = published && !isNaN(Date.parse(published)) ? new Date(published).toISOString() : undefined;
             const creator = strip(item.creator ?? "");
