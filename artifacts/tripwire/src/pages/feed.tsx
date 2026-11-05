@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Empty, ErrorState, PageHead, ReportingChip, RowsSkeleton, SentimentMark, SignInAction } from '@/components/bits';
 import { ArticleEditor, ConfirmDelete } from '@/components/editors';
+import { OutletBrand } from '@/components/outlet-brand';
 import { FOCUS, REPORTING, SENTIMENT, byKind, fmtDate, toInput, useRefresh, useSave, useWorkspace } from '@/lib/workspace';
 
 const ALL = '__all';
@@ -112,7 +113,9 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
                   <time className="hidden w-20 shrink-0 pt-0.5 font-mono text-[11px] text-muted-foreground sm:block">{fmtDate(a.publishedAt ?? a.createdAt)}</time>
                   <div className="min-w-0 flex-1">
                     <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-                      <span className="font-semibold uppercase tracking-wide">{a.sourceType === 'x' ? `X · ${a.outlet ?? ''}` : a.outlet ?? '—'}</span>
+                      {a.sourceType === 'x'
+                        ? <span className="font-semibold uppercase tracking-wide">X · {a.outlet ?? ''}</span>
+                        : <OutletBrand name={a.outlet ?? '—'} />}
                       {(a.journalists ?? []).length > 0 && <span className="text-muted-foreground">{a.journalists!.join(', ')}</span>}
                       <ReportingChip value={a.reportingType} />
                       <SentimentMark value={a.sentiment} focus={a.focus} />

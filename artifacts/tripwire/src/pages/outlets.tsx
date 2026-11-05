@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Empty, ErrorState, PageHead, RowsSkeleton, SignInAction } from '@/components/bits';
 import { ConfirmDelete, OutletEditor } from '@/components/editors';
+import { OutletBrand } from '@/components/outlet-brand';
 import { byKind, fmtDate, toInput, useSave, useWorkspace } from '@/lib/workspace';
 
 export default function OutletsPage() {
@@ -49,7 +50,7 @@ export default function OutletsPage() {
                 const failed = o.feedStatus && /fail|error/i.test(o.feedStatus);
                 return (
                   <tr key={o.id} className={cn('group hover:bg-card', o.enabled === false && 'text-muted-foreground')} data-testid={`row-outlet-${o.id}`}>
-                    <td className="px-5 py-2.5 font-medium md:px-8">{o.url ? <a href={o.url} target="_blank" rel="noreferrer" className="hover:text-accent">{o.title}</a> : o.title}</td>
+                    <td className="px-5 py-2.5 font-medium md:px-8">{o.url ? <a href={o.url} target="_blank" rel="noreferrer" className="inline-flex"><OutletBrand name={o.title} variant="wordmark" /></a> : <OutletBrand name={o.title} variant="wordmark" />}</td>
                     <td className="px-3 py-2.5 font-mono text-xs">{o.tier ?? '—'}</td>
                     <td className="max-w-[260px] truncate px-3 py-2.5 font-mono text-[11px] text-muted-foreground" title={o.feedUrl}>{o.feedUrl || '—'}</td>
                     <td className={cn('px-3 py-2.5 font-mono text-[11px]', failed ? 'text-destructive' : 'text-muted-foreground')}>{o.feedStatus || '—'}</td>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { OutletBrand } from '@/components/outlet-brand';
 import { ExternalLink, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -109,7 +110,7 @@ export default function JournalistsPage() {
                     <li key={a.id} className="flex items-start gap-3 py-2.5">
                       <time className="w-20 shrink-0 font-mono text-[11px] text-muted-foreground">{fmtDate(a.publishedAt ?? a.createdAt)}</time>
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2 text-xs"><span className="font-semibold uppercase">{a.outlet}</span><ReportingChip value={a.reportingType} /><SentimentMark value={a.sentiment} focus={a.focus} /></div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs">{a.sourceType === 'x' ? <span>X · {a.outlet}</span> : <OutletBrand name={a.outlet ?? '—'} />}<ReportingChip value={a.reportingType} /><SentimentMark value={a.sentiment} focus={a.focus} /></div>
                         <p className="font-serif text-[15px] leading-snug">{a.title}</p>
                       </div>
                       {a.url && <a href={a.url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground"><ExternalLink className="h-4 w-4" /></a>}
