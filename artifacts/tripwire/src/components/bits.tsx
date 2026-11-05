@@ -1,6 +1,4 @@
 import type { ReactNode } from 'react';
-import { Link } from 'wouter';
-import { LogIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { reportingTone, sentimentTone } from '@/lib/workspace';
 
@@ -33,18 +31,6 @@ export function SentimentMark({ value, focus }: { value?: string; focus?: string
       {v !== 'unassessed' && <span className={sentimentTone[v]}>{v}</span>}
       {focus && <span className="text-muted-foreground">{v !== 'unassessed' ? ' / ' : ''}{focus}</span>}
     </span>
-  );
-}
-
-export function SignInAction({ label = 'Sign in', className }: { label?: string; className?: string }) {
-  return (
-    <Link
-      href="/sign-in"
-      data-testid="link-sign-in"
-      className={cn('inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-card px-3 text-xs font-medium hover:border-accent hover:text-accent', className)}
-    >
-      <LogIn className="h-3.5 w-3.5" /> {label}
-    </Link>
   );
 }
 

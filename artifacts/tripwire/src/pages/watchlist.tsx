@@ -3,7 +3,7 @@ import { useAuth } from '@clerk/react';
 import type { TrackedRecord } from '@workspace/api-client-react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Empty, ErrorState, PageHead, RowsSkeleton, SignInAction } from '@/components/bits';
+import { Empty, ErrorState, PageHead, RowsSkeleton } from '@/components/bits';
 import { ConfirmDelete, WatchEditor } from '@/components/editors';
 import { WATCH_TYPES, byKind, useWorkspace } from '@/lib/workspace';
 
@@ -83,7 +83,7 @@ export default function WatchlistPage() {
   const otherTypes = ['position', 'journalist', 'x-account', 'attribution', 'topic'];
   return <div className="tw-rise">
     <PageHead title="Watchlist" count={items.length}>
-      {isSignedIn ? <button onClick={() => setCreating(true)} data-testid="button-add-watch" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground"><Plus className="h-3.5 w-3.5" /> Watch</button> : <SignInAction />}
+      {isSignedIn && <button onClick={() => setCreating(true)} data-testid="button-add-watch" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground"><Plus className="h-3.5 w-3.5" /> Watch</button>}
     </PageHead>
     <div className="flex flex-wrap gap-1 border-b border-border px-5 py-2.5 md:px-8">
       {['all', ...WATCH_TYPES].map(t => <button key={t} onClick={() => setType(t)} data-testid={`filter-watch-${t}`} className={cn('h-7 rounded-md px-2.5 font-mono text-[11px] uppercase tracking-wider', type === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary')}>

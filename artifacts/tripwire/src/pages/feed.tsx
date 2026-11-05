@@ -5,7 +5,7 @@ import { Bookmark, ChevronDown, ExternalLink, Pencil, Plus, Search, Trash2, X } 
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Empty, ErrorState, PageHead, ReportingChip, RowsSkeleton, SentimentMark, SignInAction } from '@/components/bits';
+import { Empty, ErrorState, PageHead, ReportingChip, RowsSkeleton, SentimentMark } from '@/components/bits';
 import { ArticleEditor, ConfirmDelete } from '@/components/editors';
 import { OutletBrand } from '@/components/outlet-brand';
 import { FOCUS, REPORTING, SENTIMENT, byKind, fmtDate, toInput, useRefresh, useSave, useWorkspace } from '@/lib/workspace';
@@ -69,7 +69,7 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
   const toggleSave = (a: TrackedRecord) => save.mutate({ data: { ...toInput(a), saved: !a.saved } });
 
   if (mode === 'saved' && !isSignedIn) {
-    return (<><PageHead title="Saved" /><Empty title="Retained articles are private"><SignInAction /></Empty></>);
+    return (<><PageHead title="Saved" /><Empty title="Retained articles are private" /></>);
   }
 
   return (
@@ -79,7 +79,7 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
           <button onClick={() => setCreating(true)} data-testid="button-intake" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground">
             <Plus className="h-3.5 w-3.5" /> Intake
           </button>
-        ) : <SignInAction label="Sign in to intake" />}
+        ) : null}
       </PageHead>
 
       <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-border bg-background/95 px-5 py-2.5 backdrop-blur md:px-8">
@@ -133,7 +133,7 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
                         )}
                         {a.fullText ? (
                           <div className="max-h-[420px] overflow-y-auto whitespace-pre-wrap font-serif text-[15px] leading-relaxed" data-testid={`text-fulltext-${a.id}`}>{a.fullText}</div>
-                        ) : !isSignedIn ? <SignInAction label="Sign in for full text" /> : null}
+                        ) : null}
                       </div>
                     )}
                   </div>

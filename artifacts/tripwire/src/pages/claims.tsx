@@ -3,7 +3,7 @@ import { useAuth } from '@clerk/react';
 import type { TrackedRecord } from '@workspace/api-client-react';
 import { BadgeCheck, CircleDashed, ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Empty, ErrorState, PageHead, RowsSkeleton, SignInAction } from '@/components/bits';
+import { Empty, ErrorState, PageHead, RowsSkeleton } from '@/components/bits';
 import { ClaimEditor, ConfirmDelete } from '@/components/editors';
 import { STAGES, byKind, fmtDate, useWorkspace } from '@/lib/workspace';
 
@@ -28,10 +28,10 @@ export default function ClaimsPage() {
       <PageHead title="Claims" count={claims.length}>
         {isSignedIn
           ? <button onClick={() => setCreating(true)} data-testid="button-new-claim" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground"><Plus className="h-3.5 w-3.5" /> Claim</button>
-          : <SignInAction />}
+          : null}
       </PageHead>
       {isLoading ? <RowsSkeleton /> : isError ? <ErrorState onRetry={() => refetch()} /> : claims.length === 0 ? (
-        <Empty title="No claim histories">{!isSignedIn && <SignInAction />}</Empty>
+        <Empty title="No claim histories" />
       ) : (
         <div className="grid flex-1 md:grid-cols-[320px_1fr]">
           <ul className="border-b border-border md:border-b-0 md:border-r">

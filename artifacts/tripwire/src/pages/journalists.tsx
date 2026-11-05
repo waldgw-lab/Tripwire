@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearch } from 'wouter';
 import { OutletBrand } from '@/components/outlet-brand';
 import { ExternalLink, Search, Plus, Pencil } from 'lucide-react';
 import { useAuth } from '@clerk/react';
@@ -20,12 +21,18 @@ type Dossier = {
 
 export default function JournalistsPage() {
   const { isSignedIn } = useAuth();
+  const search = useSearch();
   const { data, isLoading, isError, refetch } = useWorkspace();
   const [q, setQ] = useState('');
   const [sel, setSel] = useState<string | null>(null);
   const [trackedOnly, setTrackedOnly] = useState(true);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<TrackedRecord | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    setSel(params.get('name'));
+    setTrackedOnly(params.get('scope') !== 'all');
+  }, [search]);
 
   const dossiers = useMemo(() => {
     const map = new Map<string, Dossier>();

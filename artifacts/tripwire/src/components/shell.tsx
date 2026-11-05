@@ -4,14 +4,13 @@ import { Show, UserButton } from '@clerk/react';
 import { Bookmark, Crosshair, GitBranch, Newspaper, RefreshCw, Rss, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fmtDate, useRefresh, useWorkspace } from '@/lib/workspace';
-import { SignInAction } from '@/components/bits';
 
 const NAV = [
   { href: '/feed', label: 'Feed', icon: Newspaper, publicHref: '/' },
   { href: '/claims', label: 'Claims', icon: GitBranch },
   { href: '/journalists', label: 'Journalists', icon: Users },
   { href: '/watchlist', label: 'Watchlist', icon: Crosshair },
-  { href: '/outlets', label: 'Outlets', icon: Rss },
+  { href: '/outlets', label: 'News Media', icon: Rss },
   { href: '/saved', label: 'Saved', icon: Bookmark },
 ];
 
@@ -85,9 +84,6 @@ export function Shell({ children, signedIn }: { children: ReactNode; signedIn: b
             <Show when="signed-in">
               <UserButton />
             </Show>
-            <Show when="signed-out">
-              <SignInAction className="w-full justify-center border-sidebar-border bg-transparent text-sidebar-foreground" />
-            </Show>
           </div>
         </div>
       </aside>
@@ -97,7 +93,6 @@ export function Shell({ children, signedIn }: { children: ReactNode; signedIn: b
             <RefreshCw className={cn('h-3.5 w-3.5', refresh.isPending && 'animate-spin')} /> Refresh
           </button>
           <Show when="signed-in"><UserButton /></Show>
-          <Show when="signed-out"><SignInAction /></Show>
         </div>
         {children}
       </main>
