@@ -12,6 +12,9 @@ const brands: Record<string, { wordmark: string; mark?: string; wide?: boolean }
   cbs: { wordmark: 'cbs', mark: 'cbs-mark' },
   reuters: { wordmark: 'reuters', mark: 'reuters-mark' },
   abc: { wordmark: 'abc', mark: 'abc-mark' },
+  nbc: { wordmark: 'nbc', mark: 'nbc-mark', wide: true },
+  'nbc news': { wordmark: 'nbc', mark: 'nbc-mark', wide: true },
+  'daily mail': { wordmark: 'daily-mail', mark: 'daily-mail-mark', wide: true },
 };
 
 /** Supplied brand assets, cropped to their artwork without changing proportions. */
