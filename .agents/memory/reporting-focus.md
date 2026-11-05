@@ -19,3 +19,16 @@ The watchlist is organization → position → individual, with the original rel
 **Why:** The user explicitly requested institutional grouping rather than a flat list of people.
 
 **How to apply:** Keep roles distinct from named individuals, preserve research-specific qualifiers such as former or acting, and leave unnamed role holders unassigned rather than infer them from the focus document.
+
+The user supplied this non-exclusive journalist monitoring scope, grouped by outlet:
+- Axios: Marc Caputo, Alex Isenstadt, Tom Novelly, Barak Ravid.
+- Washington Post: Tara Copp, Noah Robertson, Dan Lamothe, Alex Horton.
+- New York Times: Greg Jaffe, Eric Schmitt, Helene Cooper, Julian Barnes.
+- Wall Street Journal: Michael Gordon, Lara Seligman, Alex Ward, Heather Somerville.
+- The Atlantic: Nancy Youssef, Missy Ryan, Johnathan Lemiere.
+- CBS: Eleanor Watson, Jim Laporta, Jennifer Jacobs, Emma Nicholson.
+- NBC: Courtney Kube, Gordon Lubold, Moshes Gaines, Ken Dilanian.
+
+**Why:** The user explicitly identified these as additional monitoring targets, including but not limited to this list.
+
+**How to apply:** Treat this as user-defined scope, not verified current employment or canonical name spellings. Distinguish an explicit monitoring roster from journalists merely discovered in collected bylines.
