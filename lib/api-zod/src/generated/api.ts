@@ -13,6 +13,7 @@ export const HealthCheckResponse = zod.object({
 
 
 
+
 export const getWorkspaceResponseRecordsItemOneTierMax = 3;
 
 
@@ -25,6 +26,12 @@ export const GetWorkspaceResponse = zod.object({
   "url": zod.string().optional(),
   "outlet": zod.string().optional(),
   "journalists": zod.array(zod.string()).optional(),
+  "byline": zod.string().optional(),
+  "credits": zod.array(zod.object({
+  "name": zod.string().min(1),
+  "role": zod.enum(['author', 'contributor', 'reporting', 'research', 'photography', 'editing', 'other']),
+  "attribution": zod.string().optional()
+})).optional(),
   "publishedAt": zod.string().optional(),
   "fullText": zod.string().optional(),
   "fullTextComplete": zod.boolean().optional(),
@@ -78,6 +85,7 @@ export const GetWorkspaceResponse = zod.object({
 
 
 
+
 export const saveRecordBodyTierMax = 3;
 
 
@@ -89,6 +97,12 @@ export const SaveRecordBody = zod.object({
   "url": zod.string().optional(),
   "outlet": zod.string().optional(),
   "journalists": zod.array(zod.string()).optional(),
+  "byline": zod.string().optional(),
+  "credits": zod.array(zod.object({
+  "name": zod.string().min(1),
+  "role": zod.enum(['author', 'contributor', 'reporting', 'research', 'photography', 'editing', 'other']),
+  "attribution": zod.string().optional()
+})).optional(),
   "publishedAt": zod.string().optional(),
   "fullText": zod.string().optional(),
   "fullTextComplete": zod.boolean().optional(),
@@ -126,6 +140,7 @@ export const SaveRecordBody = zod.object({
 })
 
 
+
 export const saveRecordResponseOneTierMax = 3;
 
 
@@ -137,6 +152,12 @@ export const SaveRecordResponse = zod.object({
   "url": zod.string().optional(),
   "outlet": zod.string().optional(),
   "journalists": zod.array(zod.string()).optional(),
+  "byline": zod.string().optional(),
+  "credits": zod.array(zod.object({
+  "name": zod.string().min(1),
+  "role": zod.enum(['author', 'contributor', 'reporting', 'research', 'photography', 'editing', 'other']),
+  "attribution": zod.string().optional()
+})).optional(),
   "publishedAt": zod.string().optional(),
   "fullText": zod.string().optional(),
   "fullTextComplete": zod.boolean().optional(),

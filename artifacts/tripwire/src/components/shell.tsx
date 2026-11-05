@@ -1,14 +1,13 @@
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Show, UserButton } from '@clerk/react';
-import { Bookmark, Crosshair, GitBranch, Newspaper, RefreshCw, Rss, Users } from 'lucide-react';
+import { Bookmark, Crosshair, GitBranch, Newspaper, RefreshCw, Rss } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fmtDate, useRefresh, useWorkspace } from '@/lib/workspace';
 
 const NAV = [
   { href: '/feed', label: 'Feed', icon: Newspaper, publicHref: '/' },
   { href: '/claims', label: 'Claims', icon: GitBranch },
-  { href: '/journalists', label: 'Journalists', icon: Users },
   { href: '/watchlist', label: 'Watchlist', icon: Crosshair },
   { href: '/outlets', label: 'News Media', icon: Rss },
   { href: '/saved', label: 'Saved', icon: Bookmark },
@@ -87,7 +86,7 @@ export function Shell({ children, signedIn }: { children: ReactNode; signedIn: b
           </div>
         </div>
       </aside>
-      <main className="min-w-0 flex-1">
+      <main className="tw-waves min-w-0 flex-1" style={{ ['--tw-waves-url' as string]: `url(${import.meta.env.BASE_URL}workspace-waves.webp)` }}>
         <div className="flex items-center justify-end gap-2 border-b border-border px-4 py-2 md:hidden">
           <button onClick={() => refresh.mutate()} disabled={refresh.isPending} data-testid="button-refresh-mobile" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-xs text-accent-foreground">
             <RefreshCw className={cn('h-3.5 w-3.5', refresh.isPending && 'animate-spin')} /> Refresh

@@ -4,6 +4,7 @@
  * Api
  * OpenAPI spec version: 1.0.0
  */
+import type { ArticleCredit } from './articleCredit';
 import type { Observation } from './observation';
 import type { RecordInputFocus } from './recordInputFocus';
 import type { RecordInputImpact } from './recordInputImpact';
@@ -21,6 +22,8 @@ export interface RecordInput {
   url?: string;
   outlet?: string;
   journalists?: string[];
+  byline?: string;
+  credits?: ArticleCredit[];
   publishedAt?: string;
   fullText?: string;
   fullTextComplete?: boolean;

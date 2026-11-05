@@ -5,6 +5,8 @@ import { db, tripwireRecords } from "@workspace/db";
 import { recordsFor } from "./tripwire-store";
 import { stableId } from "./tripwire-config";
 import { logger } from "./logger";
+import { and, eq, sql } from "drizzle-orm";
+import { parseByline } from "./tripwire-bylines";
 
 const parser = new Parser({customFields: {item: [["dc:creator", "creator"]]}});
 const locks = new Set<string>();
@@ -77,11 +79,18 @@ export async function refreshFeeds(userId?: string | null) {
             const published = item.isoDate ?? item.pubDate;
             const publishedAt = published && !isNaN(Date.parse(published)) ? new Date(published).toISOString() : undefined;
             const creator = strip(item.creator ?? "");
-            const journalists = creator ? creator.replace(/^By\s+/i, "").split(/\s+and\s+|,\s*/).filter(Boolean) : [];
+            const credits = parseByline(creator);
+            const journalists = credits.filter(c => c.role === "author").map(c => c.name);
             const topic = /intelligence|cia|spy|classified/i.test(text) ? "Intelligence" : /military|operation|strike|troops/i.test(text) ? "Military Operations" : /diploma|foreign|state department/i.test(text) ? "Foreign Policy" : /pentagon|defense|munitions/i.test(text) ? "Defense" : /iran|israel|ukraine|russia|china|nato/i.test(text) ? "Geopolitics" : "Politics";
-            const data = {kind: "article", title, url: url.href, outlet: outlet.title, journalists, publishedAt, summary: strip(item.contentSnippet ?? "").slice(0, 450), entities, topic, sentiment: "unassessed", reportingType: "unassessed", sourceType: "article", saved: false};
+            const data = {kind: "article", title, url: url.href, outlet: outlet.title, journalists, ...(creator ? {byline: creator, credits} : {}), publishedAt, summary: strip(item.contentSnippet ?? "").slice(0, 450), entities, topic, sentiment: "unassessed", reportingType: "unassessed", sourceType: "article", saved: false};
             const result = await db.insert(tripwireRecords).values({id: owner === "public" ? id : `${owner}:${id}`, owner, kind: "article", data: owner === "public" ? data : {...data, baseId: id}}).onConflictDoNothing().returning({id: tripwireRecords.id});
             added += result.length;
+            // Repair cached RSS bylines once, without touching private edits or existing structured credits.
+            if (!result.length && owner === "public" && credits.length) {
+              await db.update(tripwireRecords).set({
+                data: sql`${tripwireRecords.data} || ${JSON.stringify({byline: creator, credits, journalists})}::jsonb`,
+              }).where(and(eq(tripwireRecords.id, id), eq(tripwireRecords.owner, "public"), sql`NOT (${tripwireRecords.data} ? 'credits')`));
+            }
           }
         } catch (err) {
           feedStatus = err instanceof Error ? err.message : "Feed unavailable";

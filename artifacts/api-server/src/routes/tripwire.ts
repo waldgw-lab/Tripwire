@@ -12,7 +12,7 @@ router.get("/tripwire/workspace", async (req, res): Promise<void> => {
   res.setHeader("Cache-Control", "private, no-store");
   res.json(GetWorkspaceResponse.parse({records, lastRefreshed: dates.at(-1) ?? null, stats: {
     articles: articles.length, claims: records.filter(r => r.kind === "claim").length,
-    journalists: new Set(articles.flatMap(r => r.journalists ?? [])).size,
+    journalists: new Set(articles.flatMap(r => r.credits?.map(c => c.name.trim().toLowerCase()) ?? r.journalists?.map(name => name.trim().toLowerCase()) ?? [])).size,
     outlets: records.filter(r => r.kind === "outlet" && r.enabled !== false).length,
     original: articles.filter(r => r.reportingType === "original").length,
     negative: articles.filter(r => r.sentiment === "negative").length,

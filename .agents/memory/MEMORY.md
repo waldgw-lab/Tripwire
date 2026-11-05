@@ -1,1 +1,2 @@
 - [Reporting focus](reporting-focus.md) — user-defined accountability focus and attribution rules; avoid treating repeated coverage as independent sourcing.
+- [Journalist attribution](journalist-attribution.md) — roles belong to article credits, not people; preserve bylines and avoid cross-outlet coverage leakage.

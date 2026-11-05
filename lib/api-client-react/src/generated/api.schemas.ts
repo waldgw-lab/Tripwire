@@ -84,6 +84,26 @@ export const RecordInputWatchType = {
   topic: 'topic',
 } as const;
 
+export type ArticleCreditRole = typeof ArticleCreditRole[keyof typeof ArticleCreditRole];
+
+
+export const ArticleCreditRole = {
+  author: 'author',
+  contributor: 'contributor',
+  reporting: 'reporting',
+  research: 'research',
+  photography: 'photography',
+  editing: 'editing',
+  other: 'other',
+} as const;
+
+export interface ArticleCredit {
+  /** @minLength 1 */
+  name: string;
+  role: ArticleCreditRole;
+  attribution?: string;
+}
+
 export type ObservationStage = typeof ObservationStage[keyof typeof ObservationStage];
 
 
@@ -114,6 +134,8 @@ export interface RecordInput {
   url?: string;
   outlet?: string;
   journalists?: string[];
+  byline?: string;
+  credits?: ArticleCredit[];
   publishedAt?: string;
   fullText?: string;
   fullTextComplete?: boolean;

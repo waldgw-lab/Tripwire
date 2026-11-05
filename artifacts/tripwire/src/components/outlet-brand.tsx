@@ -28,9 +28,9 @@ export function OutletBrand({ name, variant = 'compact', className }: {
     const img = brand && !failed ? (brand.mark ?? brand.wordmark) : null;
     return (
       <span title={name} role="img" aria-label={name}
-        className={cn('flex aspect-square h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-border bg-white', isX && 'border-foreground bg-foreground text-background', className)}>
+        className={cn('flex aspect-square h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white', isX && 'bg-foreground text-background', className)}>
         {img ? (
-          <img src={`${import.meta.env.BASE_URL}outlet-logos/${img}.png`} alt="" className={cn('max-h-full max-w-full object-contain', brand!.mark ? 'p-0.5' : 'p-1')} onError={() => setFailed(true)} decoding="async" />
+          <img src={`${import.meta.env.BASE_URL}outlet-logos/${img}.png`} alt="" className={cn('max-h-full max-w-full object-contain', brand!.mark ? 'h-full w-full' : 'h-full w-full p-0.5')} onError={() => setFailed(true)} decoding="async" />
         ) : (
           <span className={cn('font-display font-bold leading-none tracking-tight', isX ? 'text-lg' : initials.length > 2 ? 'text-[11px]' : 'text-sm')}>{initials}</span>
         )}

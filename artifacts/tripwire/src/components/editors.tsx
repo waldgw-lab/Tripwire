@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import type { Observation, RecordInput, TrackedRecord } from '@workspace/api-client-react';
+import type { ArticleCredit, Observation, RecordInput, TrackedRecord } from '@workspace/api-client-react';
+import { articleCredits, creditRoles } from '@/lib/media-coverage';
 import { Plus, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -53,12 +54,14 @@ type EditorProps = { open: boolean; onOpenChange: (o: boolean) => void; record?:
 
 export function ArticleEditor({ open, onOpenChange, record }: EditorProps) {
   const save = useSave();
-  const [f, setF] = useState({ sourceType: 'article', title: '', url: '', outlet: '', journalists: '', publishedAt: '', topic: '', entities: '', reportingType: 'unassessed', sentiment: 'unassessed', focus: '', summary: '', fullText: '', fullTextComplete: false, impact: 'auto', saved: false });
+  const [credits, setCredits] = useState<ArticleCredit[]>([]);
+  const [f, setF] = useState({ sourceType: 'article', title: '', url: '', outlet: '', publishedAt: '', topic: '', entities: '', reportingType: 'unassessed', sentiment: 'unassessed', focus: '', summary: '', fullText: '', fullTextComplete: false, impact: 'auto', saved: false });
   useEffect(() => {
     if (!open) return;
+    setCredits(record ? articleCredits(record) : [{ name: '', role: 'author' }]);
     setF({
       sourceType: record?.sourceType ?? 'article', title: record?.title ?? '', url: record?.url ?? '', outlet: record?.outlet ?? '',
-      journalists: (record?.journalists ?? []).join(', '), publishedAt: toLocalInput(record?.publishedAt), topic: record?.topic ?? '',
+      publishedAt: toLocalInput(record?.publishedAt), topic: record?.topic ?? '',
       entities: (record?.entities ?? []).join(', '), reportingType: record?.reportingType ?? 'unassessed', sentiment: record?.sentiment ?? 'unassessed',
       focus: record?.focus ?? '', summary: record?.summary ?? '', fullText: record?.fullText ?? '', fullTextComplete: record?.fullTextComplete ?? false, impact: record?.impact ?? 'auto', saved: record?.saved ?? false,
     });
@@ -70,7 +73,9 @@ export function ArticleEditor({ open, onOpenChange, record }: EditorProps) {
     const data: RecordInput = {
       ...(record ? toInput(record) : {}), kind: 'article', title: f.title.trim(),
       sourceType: f.sourceType as RecordInput['sourceType'], url: f.url || undefined, outlet: f.outlet || undefined,
-      journalists: splitList(f.journalists), publishedAt: fromLocalInput(f.publishedAt), topic: f.topic || undefined,
+      credits: credits.filter(c => c.name.trim()).map(c => ({ ...c, name: c.name.trim() })),
+      journalists: [...new Set(credits.filter(c => c.role === 'author' && c.name.trim()).map(c => c.name.trim()))],
+      publishedAt: fromLocalInput(f.publishedAt), topic: f.topic || undefined,
       entities: splitList(f.entities), reportingType: f.reportingType as RecordInput['reportingType'],
       sentiment: f.sentiment as RecordInput['sentiment'], focus: (f.focus || undefined) as RecordInput['focus'],
       summary: f.summary || undefined, fullText: f.fullText || undefined, fullTextComplete: f.fullTextComplete,
@@ -88,11 +93,21 @@ export function ArticleEditor({ open, onOpenChange, record }: EditorProps) {
       <div className="grid gap-3 sm:grid-cols-2">
         <F label="URL"><Input data-testid="input-url" value={f.url} onChange={(e) => set('url')(e.target.value)} /></F>
         <F label={isX ? 'Account' : 'Outlet'}><Input data-testid="input-outlet" value={f.outlet} onChange={(e) => set('outlet')(e.target.value)} /></F>
-        <F label={isX ? 'Author(s), comma separated' : 'Journalists, comma separated'}><Input data-testid="input-journalists" value={f.journalists} onChange={(e) => set('journalists')(e.target.value)} /></F>
         <F label="Published"><Input type="datetime-local" data-testid="input-published" value={f.publishedAt} onChange={(e) => set('publishedAt')(e.target.value)} /></F>
         <F label="Topic"><Input data-testid="input-topic" value={f.topic} onChange={(e) => set('topic')(e.target.value)} /></F>
         <F label="Entities, comma separated"><Input data-testid="input-entities" value={f.entities} onChange={(e) => set('entities')(e.target.value)} /></F>
       </div>
+      <fieldset className="space-y-2">
+        <legend className="mb-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Byline credits</legend>
+        {credits.map((credit, index) => <div key={index} className="grid grid-cols-[1fr_130px_28px] gap-2">
+          <Input aria-label={`Credited name ${index + 1}`} placeholder="Name as credited" data-testid={`input-credit-name-${index}`} value={credit.name} onChange={e => setCredits(current => current.map((c, i) => i === index ? { ...c, name: e.target.value } : c))} />
+          <Pick value={credit.role} options={creditRoles} testId={`select-credit-role-${index}`} onChange={role => setCredits(current => current.map((c, i) => i === index ? { ...c, role: role as ArticleCredit['role'] } : c))} />
+          <button type="button" aria-label={`Remove credit ${index + 1}`} data-testid={`button-remove-credit-${index}`} onClick={() => setCredits(current => current.filter((_, i) => i !== index))} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+          <Input aria-label={`Credit wording ${index + 1}`} placeholder="Original credit wording (optional)" className="col-span-3 h-8 text-xs" value={credit.attribution ?? ''} onChange={e => setCredits(current => current.map((c, i) => i === index ? { ...c, attribution: e.target.value } : c))} />
+        </div>)}
+        <button type="button" data-testid="button-add-credit" className="inline-flex items-center gap-1 text-xs" onClick={() => setCredits(current => [...current, { name: '', role: 'author' }])}><Plus className="h-3.5 w-3.5" /> Credit</button>
+        {record?.byline && <p className="text-xs text-muted-foreground">{record.byline}</p>}
+      </fieldset>
       <div className="grid gap-3 sm:grid-cols-3">
         <F label="Reporting"><Pick testId="select-reporting" value={f.reportingType} onChange={set('reportingType')} options={REPORTING} /></F>
         <F label="Sentiment"><Pick testId="select-sentiment" value={f.sentiment} onChange={set('sentiment')} options={SENTIMENT} /></F>
@@ -128,7 +143,8 @@ export function ClaimEditor({ open, onOpenChange, record, articles }: EditorProp
 
   const linkArticle = (i: number, id: string) => {
     const a = articles.find((x) => x.id === id);
-    patch(i, { articleId: id, url: a?.url ?? obs[i].url, journalist: obs[i].journalist || a?.journalists?.[0] || '', observedAt: a?.publishedAt ?? obs[i].observedAt });
+    const credits = a ? articleCredits(a) : [];
+    patch(i, { articleId: id, url: a?.url ?? obs[i].url, journalist: obs[i].journalist || credits.find(c => c.role === 'author')?.name || credits[0]?.name || '', observedAt: a?.publishedAt ?? obs[i].observedAt });
   };
 
   const submit = () => {

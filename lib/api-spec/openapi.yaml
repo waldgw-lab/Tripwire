@@ -70,6 +70,10 @@ components:
         url: { type: string }
         outlet: { type: string }
         journalists: { type: array, items: { type: string } }
+        byline: { type: string }
+        credits:
+          type: array
+          items: { $ref: "#/components/schemas/ArticleCredit" }
         publishedAt: { type: string }
         fullText: { type: string }
         fullTextComplete: { type: boolean }
@@ -96,6 +100,13 @@ components:
         observations:
           type: array
           items: { $ref: "#/components/schemas/Observation" }
+    ArticleCredit:
+      type: object
+      required: [name, role]
+      properties:
+        name: { type: string, minLength: 1 }
+        role: { type: string, enum: [author, contributor, reporting, research, photography, editing, other] }
+        attribution: { type: string }
     TrackedRecord:
       allOf:
         - { $ref: "#/components/schemas/RecordInput" }

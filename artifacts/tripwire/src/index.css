@@ -476,3 +476,6 @@
 .tw-grid-bg{background-image:linear-gradient(hsl(var(--border)/.55) 1px,transparent 1px),linear-gradient(90deg,hsl(var(--border)/.55) 1px,transparent 1px);background-size:28px 28px}
 @keyframes tw-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .tw-rise{animation:tw-rise .35s cubic-bezier(.2,.7,.2,1) both}
+
+.tw-waves{position:relative;isolation:isolate;background-image:linear-gradient(hsl(0 0% 98%/.88),hsl(0 0% 98%/.84)),var(--tw-waves-url);background-size:cover;background-position:center;background-attachment:fixed}
+.tw-glass{background:hsl(0 0% 99%/.78);backdrop-filter:blur(8px)}

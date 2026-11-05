@@ -43,7 +43,11 @@ Tracks the requested twelve outlets (including NBC), an entity/account watchlist
 - Black-and-white UI with restrained semantic color; use an Agency FB–like condensed heading font with complementary readable UI typography.
 - The published app is intended to be private/invite-only. Keep sign-in promotion out of the workspace UI; this does not replace configuring publishing access restrictions.
 - News Media should provide an All hierarchy of outlets and their journalists, alongside separate outlet and journalist views.
-- Feed rows use square outlet marks and metadata ordered publication date → 24-hour ET time → publisher → journalists → tags.
+- Keep journalists within News Media, not a separate sidebar destination. Expand outlets into journalists and journalists into coverage.
+- Display full names as credited on bylines, including middle names, initials and suffixes; default to last-name A–Z sorting, with newest-coverage and item-count options.
+- Feed rows use borderless rounded-square outlet marks. Metadata: DD MMM (year only when not current) · HHMM in ET · OUTLET · full single byline or comma-separated surnames · colored impact word · tags without hashtags · content dot.
+- Clicking a feed item opens a right-hand detail pane; keep full byline names and per-article credit roles in that view.
+- Use a softened grayscale-wave background only behind the light main workspace; retain high text contrast and the black sidebar.
 - Feed impact categories are CRITICAL, HIGH, LOW; keep prioritization separate from sourcing verification. Content dots indicate complete retained text, partial content, or minimal metadata.
 
 ## Gotchas

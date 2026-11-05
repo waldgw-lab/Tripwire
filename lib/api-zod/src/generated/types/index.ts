@@ -5,6 +5,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
+export * from './articleCredit';
+export * from './articleCreditRole';
 export * from './healthStatus';
 export * from './observation';
 export * from './observationStage';
