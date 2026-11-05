@@ -1,8 +1,9 @@
 import { db, tripwireRecords } from "@workspace/db";
-import { eq, inArray, and } from "drizzle-orm";
+import { eq, inArray, and, sql } from "drizzle-orm";
 import { outlets, people, organizations, attributions, topics, stableId, journalistRoster } from "./tripwire-config";
 import { SaveRecordBody } from "@workspace/api-zod";
 import { scopeDefaults, unassignedPositions } from "./tripwire-scope";
+import { mergeArticleContent, type Capture } from "./tripwire-content";
 
 export type RecordData = typeof SaveRecordBody._output;
 export async function seedConfig() {
@@ -25,22 +26,46 @@ export async function seedConfig() {
 export async function recordsFor(userId?: string | null) {
   const rows = await db.select().from(tripwireRecords).where(inArray(tripwireRecords.owner, userId ? ["public", userId] : ["public"]));
   const privateIds = new Set(rows.filter(r => r.owner !== "public").map(r => String(r.data.baseId ?? r.id)));
-  return rows.filter(r => (r.owner !== "public" || !privateIds.has(r.id)) && r.data.hidden !== true).map(r => ({
-    ...(r.kind === "watch" ? scopeDefaults(String(r.data.title)) : {}), ...r.data,
+  const publicRows = new Map(rows.filter(r => r.owner === "public").map(r => [r.id, r]));
+  return rows.filter(r => ["article", "claim", "watch", "outlet"].includes(r.kind) && (r.owner !== "public" || !privateIds.has(r.id)) && r.data.hidden !== true).map(r => {
+    const base = publicRows.get(String(r.data.baseId ?? r.id));
+    const data = { ...r.data };
+    if (r.kind === "article") {
+      const content = mergeArticleContent((r.owner !== "public" ? data : base?.data ?? {}) as { fullText?: string; retainedContent?: Capture[]; fullTextComplete?: boolean },
+        (r.owner !== "public" ? base?.data ?? {} : data) as { fullText?: string; retainedContent?: Capture[]; fullTextComplete?: boolean });
+      Object.assign(data, content, { flagged: data.flagged ?? data.saved ?? false });
+      // Raw publisher content and complete article bodies are never returned anonymously.
+      if (!userId) { delete data.fullText; delete data.retainedContent; data.fullTextComplete = false; }
+    }
+    return ({
+    ...(r.kind === "watch" ? scopeDefaults(String(r.data.title)) : {}),
+    ...data,
     ...(r.kind === "watch" && r.data.watchType === "person" ? {watchType: "position", ...Object.fromEntries(Object.entries(scopeDefaults(String(r.data.title))).filter(([key]) => r.data[key] === undefined))} : {}),
     id: String(r.data.baseId ?? r.id), kind: r.kind, title: String(r.data.title),
     createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString(),
-  })) as (RecordData & {id: string; createdAt: string; updatedAt: string})[];
+  }); }) as (RecordData & {id: string; createdAt: string; updatedAt: string})[];
 }
 
 export async function writeRecord(userId: string, data: RecordData) {
   const baseId = data.id ?? crypto.randomUUID();
   // Per-user shadow copies allow edits/bookmarks without mutating shared feed metadata.
   const id = `${userId}:${baseId}`;
+  return db.transaction(async tx => {
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${id}))`);
+  if (data.kind === "article") {
+    const [existing] = await tx.select().from(tripwireRecords).where(and(eq(tripwireRecords.id, id), eq(tripwireRecords.owner, userId)));
+    if (existing) {
+      const preserved = mergeArticleContent(existing.data as { fullText?: string; fullTextComplete?: boolean; retainedContent?: Capture[] }, data);
+      // Editing metadata or flagging must not erase already retained source captures.
+      data = { ...data, retainedContent: preserved.retainedContent, contentRetained: preserved.contentRetained, retainedCharacters: preserved.retainedCharacters };
+      if (!data.fullText) { data.fullText = preserved.fullText; data.fullTextComplete = preserved.fullTextComplete; }
+    }
+  }
   const now = new Date();
-  const [row] = await db.insert(tripwireRecords).values({id, owner: userId, kind: data.kind, data: {...data, baseId}, updatedAt: now})
+  const [row] = await tx.insert(tripwireRecords).values({id, owner: userId, kind: data.kind, data: {...data, baseId}, updatedAt: now})
     .onConflictDoUpdate({target: tripwireRecords.id, set: {data: {...data, baseId}, kind: data.kind, updatedAt: now}}).returning();
   return {...data, id: baseId, createdAt: row!.createdAt.toISOString(), updatedAt: now.toISOString()};
+  });
 }
 
 export async function removeRecord(userId: string, id: string) {

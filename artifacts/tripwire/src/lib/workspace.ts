@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   getGetWorkspaceQueryKey,
   useDeleteRecord,
+  useFlagArticle,
   useGetWorkspace,
   useRefreshFeeds,
   useSaveRecord,
@@ -115,3 +116,18 @@ export const sentimentTone: Record<string, string> = {
   neutral: 'text-muted-foreground',
   unassessed: 'text-muted-foreground/60',
 };
+
+export const isFlagged = (r: Pick<RecordInput, 'flagged' | 'saved'>) => r.flagged ?? r.saved ?? false;
+
+export function useFlag() {
+  const invalidate = useInvalidate();
+  const { toast } = useToast();
+  return useFlagArticle({
+    mutation: {
+      onSuccess: () => invalidate(),
+      onError: (e: unknown) => toast({ title: 'Flag update failed', description: errText(e), variant: 'destructive' }),
+    },
+  });
+}
+
+export function useInvalidateWorkspace() { return useInvalidate(); }

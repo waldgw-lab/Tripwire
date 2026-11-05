@@ -4,6 +4,48 @@
  * Api
  * OpenAPI spec version: 1.0.0
  */
+export interface FlagRequest {
+  flagged: boolean;
+}
+
+export interface ImportUploadRequest {
+  name: string;
+  /**
+     * @minimum 1
+     * @maximum 10485760
+     */
+  size: number;
+  contentType: string;
+}
+
+export interface ImportAnalyzeRequest {
+  /** @maxLength 1000000 */
+  text?: string;
+  url?: string;
+  uploadId?: string;
+  targetId?: string;
+}
+
+export type ImportCommitRequestSourceType = typeof ImportCommitRequestSourceType[keyof typeof ImportCommitRequestSourceType];
+
+
+export const ImportCommitRequestSourceType = {
+  article: 'article',
+  x: 'x',
+} as const;
+
+export interface ImportCommitRequest {
+  draftId: string;
+  /** @minLength 1 */
+  title: string;
+  outlet?: string;
+  url?: string;
+  byline?: string;
+  publishedAt?: string;
+  sourceType?: ImportCommitRequestSourceType;
+  fullTextComplete?: boolean;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -104,6 +146,17 @@ export interface ArticleCredit {
   attribution?: string;
 }
 
+export interface ContentCapture {
+  id: string;
+  text: string;
+  raw?: string;
+  source: string;
+  sourceUrl?: string;
+  capturedAt: string;
+  fileName?: string;
+  uploadId?: string;
+}
+
 export type ObservationStage = typeof ObservationStage[keyof typeof ObservationStage];
 
 
@@ -139,6 +192,9 @@ export interface RecordInput {
   publishedAt?: string;
   fullText?: string;
   fullTextComplete?: boolean;
+  retainedContent?: ContentCapture[];
+  contentRetained?: boolean;
+  retainedCharacters?: number;
   impact?: RecordInputImpact;
   summary?: string;
   topic?: string;
@@ -148,6 +204,8 @@ export interface RecordInput {
   reportingType?: RecordInputReportingType;
   sourceType?: RecordInputSourceType;
   saved?: boolean;
+  flagged?: boolean;
+  flaggedAt?: string;
   articleId?: string;
   /**
      * @minimum 1
@@ -166,10 +224,25 @@ export interface RecordInput {
   observations?: Observation[];
 }
 
+export interface ImportDraft {
+  draftId: string;
+  candidate: RecordInput;
+  matchedId?: string;
+  matchReason?: string;
+  warnings: string[];
+  characterCount: number;
+  source: string;
+}
+
 export type TrackedRecord = RecordInput & {
   id: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type WorkspaceAccess = {
+  signedIn: boolean;
+  canEnrich: boolean;
 };
 
 export interface Stats {
@@ -180,10 +253,12 @@ export interface Stats {
   original: number;
   negative: number;
   positive: number;
+  flagged?: number;
 }
 
 export interface Workspace {
   records: TrackedRecord[];
+  access?: WorkspaceAccess;
   stats: Stats;
   /** @nullable */
   lastRefreshed: string | null;
@@ -195,4 +270,9 @@ export interface RefreshResult {
   failures: string[];
   refreshedAt: string;
 }
+
+export type RequestImportUpload200 = {
+  uploadId: string;
+  uploadUrl: string;
+};
 

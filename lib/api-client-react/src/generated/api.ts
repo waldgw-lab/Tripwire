@@ -24,9 +24,15 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  FlagRequest,
   HealthStatus,
+  ImportAnalyzeRequest,
+  ImportCommitRequest,
+  ImportDraft,
+  ImportUploadRequest,
   RecordInput,
   RefreshResult,
+  RequestImportUpload200,
   TrackedRecord,
   Workspace
 } from './api.schemas';
@@ -465,4 +471,428 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getRefreshFeedsMutationOptions(options), queryClient);
     }
+
+export const getFlagArticleUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/records/${id}/flag`
+}
+
+export const flagArticle = async (id: string,
+    flagRequest: FlagRequest, options?: Parameters<typeof customFetch>[1]): Promise<TrackedRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<TrackedRecord>(getFlagArticleUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(flagRequest)
+  }
+);}
+
+
+
+
+
+export const getFlagArticleMutationKey = () => ['flagArticle'] as const;
+
+export const getFlagArticleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof flagArticle>>, TError,FlagArticleMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof flagArticle>>, TError,FlagArticleMutationVariables, TContext> => {
+
+const mutationKey = getFlagArticleMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof flagArticle>>, FlagArticleMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  flagArticle(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type FlagArticleMutationResult = NonNullable<Awaited<ReturnType<typeof flagArticle>>>
+    export type FlagArticleMutationBody = BodyType<FlagRequest>
+    export type FlagArticleMutationError = ErrorType<unknown>
+    export type FlagArticleMutationVariables = {id: string;data: BodyType<FlagRequest>}
+
+    export const useFlagArticle = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof flagArticle>>, TError,FlagArticleMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof flagArticle>>,
+        TError,
+        FlagArticleMutationVariables,
+        TContext
+      > => {
+      return useMutation(getFlagArticleMutationOptions(options), queryClient);
+    }
+
+export const getRequestImportUploadUrl = () => {
+
+
+
+
+  return `/api/tripwire/imports/uploads`
+}
+
+export const requestImportUpload = async (importUploadRequest: ImportUploadRequest, options?: Parameters<typeof customFetch>[1]): Promise<RequestImportUpload200> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<RequestImportUpload200>(getRequestImportUploadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(importUploadRequest)
+  }
+);}
+
+
+
+
+
+export const getRequestImportUploadMutationKey = () => ['requestImportUpload'] as const;
+
+export const getRequestImportUploadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestImportUpload>>, TError,RequestImportUploadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestImportUpload>>, TError,RequestImportUploadMutationVariables, TContext> => {
+
+const mutationKey = getRequestImportUploadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestImportUpload>>, RequestImportUploadMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestImportUpload(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestImportUploadMutationResult = NonNullable<Awaited<ReturnType<typeof requestImportUpload>>>
+    export type RequestImportUploadMutationBody = BodyType<ImportUploadRequest>
+    export type RequestImportUploadMutationError = ErrorType<unknown>
+    export type RequestImportUploadMutationVariables = {data: BodyType<ImportUploadRequest>}
+
+    export const useRequestImportUpload = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestImportUpload>>, TError,RequestImportUploadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof requestImportUpload>>,
+        TError,
+        RequestImportUploadMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRequestImportUploadMutationOptions(options), queryClient);
+    }
+
+export const getAnalyzeImportUrl = () => {
+
+
+
+
+  return `/api/tripwire/imports/analyze`
+}
+
+export const analyzeImport = async (importAnalyzeRequest: ImportAnalyzeRequest, options?: Parameters<typeof customFetch>[1]): Promise<ImportDraft> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ImportDraft>(getAnalyzeImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(importAnalyzeRequest)
+  }
+);}
+
+
+
+
+
+export const getAnalyzeImportMutationKey = () => ['analyzeImport'] as const;
+
+export const getAnalyzeImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzeImport>>, TError,AnalyzeImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyzeImport>>, TError,AnalyzeImportMutationVariables, TContext> => {
+
+const mutationKey = getAnalyzeImportMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyzeImport>>, AnalyzeImportMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  analyzeImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyzeImportMutationResult = NonNullable<Awaited<ReturnType<typeof analyzeImport>>>
+    export type AnalyzeImportMutationBody = BodyType<ImportAnalyzeRequest>
+    export type AnalyzeImportMutationError = ErrorType<unknown>
+    export type AnalyzeImportMutationVariables = {data: BodyType<ImportAnalyzeRequest>}
+
+    export const useAnalyzeImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzeImport>>, TError,AnalyzeImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof analyzeImport>>,
+        TError,
+        AnalyzeImportMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAnalyzeImportMutationOptions(options), queryClient);
+    }
+
+export const getCommitImportUrl = () => {
+
+
+
+
+  return `/api/tripwire/imports/commit`
+}
+
+export const commitImport = async (importCommitRequest: ImportCommitRequest, options?: Parameters<typeof customFetch>[1]): Promise<TrackedRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<TrackedRecord>(getCommitImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(importCommitRequest)
+  }
+);}
+
+
+
+
+
+export const getCommitImportMutationKey = () => ['commitImport'] as const;
+
+export const getCommitImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commitImport>>, TError,CommitImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof commitImport>>, TError,CommitImportMutationVariables, TContext> => {
+
+const mutationKey = getCommitImportMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commitImport>>, CommitImportMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  commitImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommitImportMutationResult = NonNullable<Awaited<ReturnType<typeof commitImport>>>
+    export type CommitImportMutationBody = BodyType<ImportCommitRequest>
+    export type CommitImportMutationError = ErrorType<unknown>
+    export type CommitImportMutationVariables = {data: BodyType<ImportCommitRequest>}
+
+    export const useCommitImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commitImport>>, TError,CommitImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commitImport>>,
+        TError,
+        CommitImportMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCommitImportMutationOptions(options), queryClient);
+    }
+
+export const getDownloadImportFileUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/imports/uploads/${id}/file`
+}
+
+export const downloadImportFile = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getDownloadImportFileUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadImportFileQueryKey = (id: string,) => {
+    return [
+    `/api/tripwire/imports/uploads/${id}/file`
+    ] as const;
+    }
+
+
+export const getDownloadImportFileQueryOptions = <TData = Awaited<ReturnType<typeof downloadImportFile>>, TError = ErrorType<unknown>>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadImportFile>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadImportFileQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadImportFile>>> = ({ signal }) => downloadImportFile(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadImportFile>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type DownloadImportFileQueryResult = NonNullable<Awaited<ReturnType<typeof downloadImportFile>>>
+export type DownloadImportFileQueryError = ErrorType<unknown>
+
+
+export function useDownloadImportFile<TData = Awaited<ReturnType<typeof downloadImportFile>>, TError = ErrorType<unknown>>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadImportFile>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadImportFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadImportFile>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDownloadImportFile<TData = Awaited<ReturnType<typeof downloadImportFile>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadImportFile>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadImportFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadImportFile>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDownloadImportFile<TData = Awaited<ReturnType<typeof downloadImportFile>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadImportFile>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useDownloadImportFile<TData = Awaited<ReturnType<typeof downloadImportFile>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadImportFile>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getDownloadImportFileQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

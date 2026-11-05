@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { ArticleCredit } from './articleCredit';
+import type { ContentCapture } from './contentCapture';
 import type { Observation } from './observation';
 import type { RecordInputFocus } from './recordInputFocus';
 import type { RecordInputImpact } from './recordInputImpact';
@@ -27,6 +28,9 @@ export interface RecordInput {
   publishedAt?: string;
   fullText?: string;
   fullTextComplete?: boolean;
+  retainedContent?: ContentCapture[];
+  contentRetained?: boolean;
+  retainedCharacters?: number;
   impact?: RecordInputImpact;
   summary?: string;
   topic?: string;
@@ -36,6 +40,8 @@ export interface RecordInput {
   reportingType?: RecordInputReportingType;
   sourceType?: RecordInputSourceType;
   saved?: boolean;
+  flagged?: boolean;
+  flaggedAt?: string;
   articleId?: string;
   /**
      * @minimum 1

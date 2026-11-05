@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { TrackedRecord } from '@workspace/api-client-react';
-import { ArrowUpRight, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { OutletBrand } from '@/components/outlet-brand';
 import { publicationET } from '@/lib/article-signals';
@@ -11,7 +11,7 @@ export function Disclosure({ open, onToggle, label, id, children, className }: {
 }) {
   return <button type="button" onClick={onToggle} aria-expanded={open} aria-controls={id} aria-label={`${open ? 'Collapse' : 'Expand'} ${label}`}
     className={cn('flex min-w-0 items-center gap-2 rounded-sm text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground', className)}>
-    <ChevronRight className={cn('h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform', open && 'rotate-90')} />
+    {open ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
     {children}
   </button>;
 }

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Show, UserButton } from '@clerk/react';
-import { Bookmark, Crosshair, GitBranch, Newspaper, PanelLeftClose, PanelLeftOpen, RefreshCw, Rss } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Crosshair, Flag, GitBranch, LayoutDashboard, Newspaper, RefreshCw, Rss } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fmtDate, useRefresh, useWorkspace } from '@/lib/workspace';
 
@@ -10,7 +10,7 @@ const NAV = [
   { href: '/claims', label: 'Claims', icon: GitBranch },
   { href: '/watchlist', label: 'Watchlist', icon: Crosshair },
   { href: '/outlets', label: 'News Media', icon: Rss },
-  { href: '/saved', label: 'Saved', icon: Bookmark },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 ];
 
 export function Shell({ children, signedIn }: { children: ReactNode; signedIn: boolean }) {
@@ -29,7 +29,7 @@ export function Shell({ children, signedIn }: { children: ReactNode; signedIn: b
           <button onClick={() => setCollapsed(value => !value)} aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'} title={collapsed ? 'Expand navigation' : 'Collapse navigation'}
             aria-expanded={!collapsed} aria-controls="primary-navigation" data-testid="button-toggle-sidebar"
             className="hidden h-6 w-6 shrink-0 items-center justify-center rounded-md border border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent focus-visible:outline-2 focus-visible:outline-offset-2 md:flex">
-            {collapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
+            {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
           </button>
         </div>
         <nav id="primary-navigation" aria-label="Main navigation" className="flex gap-0.5 overflow-x-auto px-2 pb-2 md:flex-col md:overflow-visible">
@@ -54,9 +54,15 @@ export function Shell({ children, signedIn }: { children: ReactNode; signedIn: b
             );
           })}
         </nav>
+        {stats && collapsed && (
+          <Link href="/?flagged=1" title={`${stats.flagged ?? 0} flagged`} aria-label={`${stats.flagged ?? 0} flagged articles`} data-testid="stat-flagged-collapsed"
+            className="mx-auto mt-3 hidden flex-col items-center gap-0.5 rounded-md px-2 py-1.5 font-mono text-[11px] hover:bg-sidebar-accent/60 md:flex">
+            <Flag className="h-4 w-4 opacity-70" /><span>{stats.flagged ?? 0}</span>
+          </Link>
+        )}
         {stats && !collapsed && (
           <dl className="mx-4 mt-4 hidden grid-cols-2 gap-x-3 gap-y-2 border-t border-sidebar-border pt-4 font-mono text-[11px] md:grid">
-            {([['articles', stats.articles], ['claims', stats.claims], ['original', stats.original], ['journalists', stats.journalists], ['negative', stats.negative], ['positive', stats.positive]] as const).map(([k, v]) => (
+            {([['articles', stats.articles], ['claims', stats.claims], ['original', stats.original], ['journalists', stats.journalists], ['negative', stats.negative], ['positive', stats.positive], ['flagged', stats.flagged ?? 0]] as const).map(([k, v]) => (
               <div key={k} data-testid={`stat-${k}`}>
                 <dt className="uppercase tracking-wider opacity-50">{k}</dt>
                 <dd className="text-sm text-sidebar-accent-foreground">{v}</dd>

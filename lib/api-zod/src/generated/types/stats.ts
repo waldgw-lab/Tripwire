@@ -13,4 +13,5 @@ export interface Stats {
   original: number;
   negative: number;
   positive: number;
+  flagged?: number;
 }

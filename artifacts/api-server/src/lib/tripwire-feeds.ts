@@ -7,6 +7,7 @@ import { stableId } from "./tripwire-config";
 import { logger } from "./logger";
 import { and, eq, sql } from "drizzle-orm";
 import { parseByline } from "./tripwire-bylines";
+import { rssContent, mergeArticleContent, type Capture } from "./tripwire-content";
 
 const parser = new Parser({customFields: {item: [["dc:creator", "creator"]]}});
 const locks = new Set<string>();
@@ -69,7 +70,8 @@ export async function refreshFeeds(userId?: string | null) {
           for (const item of feed.items.slice(0, 60)) {
             if (!item.title || !item.link || !/^https?:\/\//i.test(item.link)) continue;
             const title = strip(item.title);
-            const text = `${title} ${strip(item.contentSnippet ?? item.content ?? "")}`;
+            const retained = rssContent(item, item.link);
+            const text = `${title} ${retained.fullText ?? ""}`;
             if (!relevant.test(text)) continue;
             const url = new URL(item.link);
             for (const key of [...url.searchParams.keys()]) if (/^(utm_|fbclid|gclid)/.test(key)) url.searchParams.delete(key);
@@ -82,9 +84,20 @@ export async function refreshFeeds(userId?: string | null) {
             const credits = parseByline(creator);
             const journalists = credits.filter(c => c.role === "author").map(c => c.name);
             const topic = /intelligence|cia|spy|classified/i.test(text) ? "Intelligence" : /military|operation|strike|troops/i.test(text) ? "Military Operations" : /diploma|foreign|state department/i.test(text) ? "Foreign Policy" : /pentagon|defense|munitions/i.test(text) ? "Defense" : /iran|israel|ukraine|russia|china|nato/i.test(text) ? "Geopolitics" : "Politics";
-            const data = {kind: "article", title, url: url.href, outlet: outlet.title, journalists, ...(creator ? {byline: creator, credits} : {}), publishedAt, summary: strip(item.contentSnippet ?? "").slice(0, 450), entities, topic, sentiment: "unassessed", reportingType: "unassessed", sourceType: "article", saved: false};
+            const data = {kind: "article", title, url: url.href, outlet: outlet.title, journalists, ...(creator ? {byline: creator, credits} : {}), publishedAt, summary: strip(item.contentSnippet ?? "").slice(0, 450), entities, topic, sentiment: "unassessed", reportingType: "unassessed", sourceType: "article", saved: false, ...retained, fullTextComplete: false};
             const result = await db.insert(tripwireRecords).values({id: owner === "public" ? id : `${owner}:${id}`, owner, kind: "article", data: owner === "public" ? data : {...data, baseId: id}}).onConflictDoNothing().returning({id: tripwireRecords.id});
             added += result.length;
+            // Existing feed items also receive retained content; no excerpt-only cache remains
+            // simply because its canonical URL was seen on an earlier refresh.
+            if (!result.length && retained.retainedContent.length) {
+              const recordId = owner === "public" ? id : `${owner}:${id}`;
+              await db.transaction(async tx => {
+                const [current] = await tx.select().from(tripwireRecords).where(and(eq(tripwireRecords.id, recordId), eq(tripwireRecords.owner, owner))).for("update");
+                if (!current) return;
+                const merged = mergeArticleContent(current.data as { fullText?: string; fullTextComplete?: boolean; retainedContent?: Capture[] }, retained);
+                await tx.update(tripwireRecords).set({ data: { ...current.data, ...merged }, updatedAt: new Date() }).where(and(eq(tripwireRecords.id, recordId), eq(tripwireRecords.owner, owner)));
+              });
+            }
             // Repair cached RSS bylines once, without touching private edits or existing structured credits.
             if (!result.length && owner === "public" && credits.length) {
               await db.update(tripwireRecords).set({

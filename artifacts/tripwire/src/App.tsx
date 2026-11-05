@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { ClerkProvider, SignIn, SignUp, Show, useAuth, useClerk } from '@clerk/react';
+import { ClerkProvider, RedirectToSignIn, SignIn, SignUp, useAuth, useClerk } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import { Redirect, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
@@ -14,6 +14,7 @@ import ClaimsPage from '@/pages/claims';
 import JournalistsPage from '@/pages/journalists';
 import WatchlistPage from '@/pages/watchlist';
 import OutletsPage from '@/pages/outlets';
+import DashboardPage from '@/pages/dashboard';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -130,24 +131,6 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
-function HomeRedirect() {
-  return (
-    <>
-      <Show when="signed-in"><Redirect to="/feed" /></Show>
-      <Show when="signed-out"><FeedPage mode="public" /></Show>
-    </>
-  );
-}
-
-function SignedFeed() {
-  return (
-    <>
-      <Show when="signed-in"><FeedPage mode="feed" /></Show>
-      <Show when="signed-out"><Redirect to="/" /></Show>
-    </>
-  );
-}
-
 function AppShell({ children }: { children: ReactNode }) {
   const { isSignedIn } = useAuth();
   const [location] = useLocation();
@@ -160,6 +143,7 @@ function AppShell({ children }: { children: ReactNode }) {
 
 function Router() {
   const [location] = useLocation();
+  const { isLoaded, isSignedIn } = useAuth();
   if (location.startsWith('/sign-in') || location.startsWith('/sign-up')) {
     return (
       <Switch>
@@ -168,16 +152,23 @@ function Router() {
       </Switch>
     );
   }
+  if (!isLoaded) {
+    return <AuthFrame><span role="status" className="text-sm text-muted-foreground">Loading Tripwire…</span></AuthFrame>;
+  }
+  if (!isSignedIn) {
+    return <RedirectToSignIn signInForceRedirectUrl={window.location.href} />;
+  }
   return (
     <AppShell>
       <Switch>
-        <Route path="/" component={HomeRedirect} />
-        <Route path="/feed" component={SignedFeed} />
+        <Route path="/">{() => <FeedPage mode="feed" />}</Route>
+        <Route path="/feed">{() => <FeedPage mode="feed" />}</Route>
         <Route path="/claims" component={ClaimsPage} />
         <Route path="/journalists" component={JournalistsPage} />
         <Route path="/watchlist" component={WatchlistPage} />
         <Route path="/outlets" component={OutletsPage} />
-        <Route path="/saved">{() => <FeedPage mode="saved" />}</Route>
+        <Route path="/saved"><Redirect to="/?flagged=1" /></Route>
+        <Route path="/dashboard" component={DashboardPage} />
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
         <Route component={NotFound} />

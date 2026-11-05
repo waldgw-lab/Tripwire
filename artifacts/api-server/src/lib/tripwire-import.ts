@@ -1,0 +1,116 @@
+import { Readability } from "@mozilla/readability";
+import { parseHTML } from "linkedom";
+import { extractText } from "unpdf";
+import mammoth from "mammoth";
+import WordExtractor from "word-extractor";
+import { parseByline } from "./tripwire-bylines";
+import { captureContent, plainText, type Capture } from "./tripwire-content";
+import type { RecordData } from "./tripwire-store";
+
+const publishers: [string, string][] = [
+  ["washingtonpost.com", "The Washington Post"], ["nytimes.com", "The New York Times"], ["axios.com", "Axios"],
+  ["cbsnews.com", "CBS"], ["theatlantic.com", "The Atlantic"], ["wsj.com", "The Wall Street Journal"],
+  ["reuters.com", "Reuters"], ["abcnews.go.com", "ABC"], ["cnn.com", "CNN"], ["washingtonexaminer.com", "Washington Examiner"],
+  ["dailymail.co.uk", "Daily Mail"], ["nbcnews.com", "NBC"],
+];
+export function canonicalUrl(raw?: string) {
+  if (!raw?.trim()) return undefined;
+  const url = new URL(raw.trim());
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new Error("Use an http or https source URL");
+  for (const key of [...url.searchParams.keys()]) if (/^(utm_|fbclid|gclid)/i.test(key)) url.searchParams.delete(key);
+  url.hash = ""; url.hostname = url.hostname.replace(/^www\./, "");
+  url.pathname = url.pathname.replace(/\/+$/, "") || "/";
+  return url.href;
+}
+export function inferOutlet(url?: string, text = "") {
+  if (url) {
+    const hostname = new URL(url).hostname;
+    const known = publishers.find(([host]) => hostname === host || hostname.endsWith(`.${host}`));
+    if (known) return known[1];
+  }
+  return publishers.find(([, name]) => text.split("\n").slice(0, 15).some(line => line.trim().toLowerCase() === name.toLowerCase()))?.[1];
+}
+export function matchImport<T extends RecordData & { id: string }>(candidate: Pick<RecordData, "title" | "url" | "outlet">, records: T[]) {
+  const articles = records.filter(r => r.kind === "article");
+  const safeUrl = (value?: string) => { try { return canonicalUrl(value); } catch { return undefined; } };
+  const url = safeUrl(candidate.url);
+  const byUrl = url ? articles.filter(r => safeUrl(r.url) === url) : [];
+  if (byUrl.length === 1) return { record: byUrl[0], reason: "Matching source URL" };
+  if (byUrl.length > 1) return { ambiguous: true };
+  const titleKey = (value: string) => value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const title = titleKey(candidate.title);
+  if (title.length < 8) return {};
+  const byTitle = articles.filter(r => titleKey(r.title) === title && (!candidate.outlet || r.outlet?.toLowerCase() === candidate.outlet.toLowerCase()));
+  return byTitle.length === 1 ? { record: byTitle[0], reason: "Matching headline and publisher" } : byTitle.length > 1 ? { ambiguous: true } : {};
+}
+
+export async function documentText(bytes: Buffer, filename: string) {
+  if (bytes.length > 10485760) throw new Error("Files must be 10 MB or smaller");
+  let text: string;
+  if (bytes.subarray(0, 5).toString() === "%PDF-") {
+    const result = await extractText(new Uint8Array(bytes), { mergePages: true });
+    text = result.text;
+  } else if (bytes.subarray(0, 8).toString("hex") === "d0cf11e0a1b11ae1") {
+    const document = await new WordExtractor().extract(bytes);
+    text = [document.getHeaders(), document.getBody(), document.getTextboxes(), document.getFootnotes(), document.getEndnotes()].filter(Boolean).join("\n\n");
+  } else if (bytes.subarray(0, 2).toString() === "PK" && /\.docx$/i.test(filename)) {
+    let total = 0, entries = 0;
+    for (let offset = 0; offset < bytes.length - 46; offset++) if (bytes.readUInt32LE(offset) === 0x02014b50) {
+      total += bytes.readUInt32LE(offset + 24); entries++;
+      if (total > 25_000_000 || entries > 3000) throw new Error("Document expands beyond the safe parsing limit");
+    }
+    text = (await mammoth.extractRawText({ buffer: bytes })).value;
+  } else throw new Error("The file is not a supported PDF, DOC or DOCX document");
+  text = text.trim();
+  if (!text) throw new Error("No readable text was found. Scanned or encrypted documents need text extraction before import.");
+  if (text.length > 1_000_000) throw new Error("Extracted text exceeds the 1,000,000-character intake limit; no content was saved or truncated.");
+  return text;
+}
+
+export function textCandidate(text: string, url?: string): RecordData {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const sourceUrl = url ?? lines.slice(0, 20).find(l => /^https?:\/\/\S+$/i.test(l));
+  const cleanUrl = sourceUrl ? canonicalUrl(sourceUrl) : undefined;
+  const outlet = inferOutlet(cleanUrl, text);
+  const byline = lines.slice(0, 20).find(l => /^by\s+\S+/i.test(l));
+  const title = (lines.find(l => l !== outlet && l !== sourceUrl && l !== byline && !/^(published|updated)\s*:/i.test(l)) ?? "").slice(0, 250);
+  const dateLine = lines.slice(0, 20).find(l => /^(published|date)\s*:/i.test(l));
+  const date = dateLine?.replace(/^[^:]+:\s*/, "");
+  const credits = byline ? parseByline(byline) : undefined;
+  return { kind: "article", title, url: cleanUrl, outlet, byline, credits, journalists: credits?.filter(c => c.role === "author").map(c => c.name),
+    publishedAt: date && !isNaN(Date.parse(date)) ? new Date(date).toISOString() : undefined,
+    fullText: text, fullTextComplete: false, sourceType: cleanUrl && /^(?:www\.)?(?:x|twitter)\.com$/i.test(new URL(cleanUrl).hostname) ? "x" : "article",
+    sentiment: "unassessed", reportingType: "unassessed" };
+}
+
+export function htmlCandidate(html: string, sourceUrl: string) {
+  const { document } = parseHTML(html);
+  const meta = (name: string) => document.querySelector(`meta[property="${name}"],meta[name="${name}"]`)?.getAttribute("content") ?? undefined;
+  let ld: Record<string, unknown> | undefined;
+  for (const element of document.querySelectorAll('script[type="application/ld+json"]')) {
+    try {
+      const data = JSON.parse(element.textContent ?? "");
+      const nodes = Array.isArray(data) ? data : [data, ...(Array.isArray(data?.["@graph"]) ? data["@graph"] : [])];
+      ld = nodes.find(node => /article|report|posting/i.test(String(node?.["@type"])));
+      if (ld) break;
+    } catch { /* Invalid publisher JSON-LD does not prevent extracting its visible article text. */ }
+  }
+  const readable = new Readability(document.cloneNode(true) as never).parse();
+  const text = (typeof ld?.articleBody === "string" ? plainText(ld.articleBody) : readable?.textContent ?? "").trim();
+  if (!text || text.length < 40) throw new Error("No usable article text was available at this URL. Paste or upload the content instead.");
+  if (text.length > 1_000_000) throw new Error("Article text exceeds the intake limit; no content was truncated.");
+  const candidate = textCandidate(text, sourceUrl);
+  const authors = ld?.author;
+  const authorNames = (Array.isArray(authors) ? authors : authors ? [authors] : []).flatMap(author => typeof author === "string" ? [author] : author && typeof author === "object" && "name" in author ? [String(author.name)] : []);
+  const byline = authorNames.join(", ") || meta("author") || readable?.byline || undefined;
+  const published = typeof ld?.datePublished === "string" ? ld.datePublished : meta("article:published_time");
+  const title = String(ld?.headline ?? meta("og:title") ?? readable?.title ?? candidate.title).trim();
+  const outlet = inferOutlet(sourceUrl) ?? meta("og:site_name");
+  const credits = byline ? parseByline(byline) : undefined;
+  return { ...candidate, title, outlet, byline, credits, journalists: credits?.filter(c => c.role === "author").map(c => c.name),
+    publishedAt: published && !isNaN(Date.parse(published)) ? new Date(published).toISOString() : undefined,
+    summary: meta("description") ?? meta("og:description") };
+}
+export function importCapture(candidate: RecordData, source: string, extra: Partial<Capture> = {}) {
+  return captureContent(candidate.fullText ?? "", source, { ...extra, sourceUrl: candidate.url ?? extra.sourceUrl });
+}

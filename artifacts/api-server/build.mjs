@@ -28,6 +28,11 @@ async function buildAll() {
     // - uses native modules and loads them dynamically (e.g. sharp)
     // - use path traversal to read files (e.g. @google-cloud/secret-manager loads sibling .proto files)
     external: [
+      "@google-cloud/storage",
+      "google-auth-library",
+      "unpdf",
+      "mammoth",
+      "word-extractor",
       "*.node",
       "sharp",
       "better-sqlite3",

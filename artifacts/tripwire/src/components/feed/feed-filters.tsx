@@ -3,11 +3,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { emptyFeedFilters, filterSelectionCount, type FeedFilterKey, type FeedFilters } from '@/lib/feed-filters';
 import { cn } from '@/lib/utils';
 
-export function FeedFilterMenu({ value, onChange, topics, outlets, reporting, sentiment, focus }: {
+export function FeedFilterMenu({ value, onChange, topics, outlets, reporting, sentiment, focus, flagged, onFlaggedChange, flaggedFirst, onFlaggedFirstChange }: {
   value: FeedFilters; onChange: (filters: FeedFilters) => void;
   topics: string[]; outlets: string[]; reporting: readonly string[]; sentiment: readonly string[]; focus: readonly string[];
+  flagged: boolean; onFlaggedChange: (v: boolean) => void; flaggedFirst: boolean; onFlaggedFirstChange: (v: boolean) => void;
 }) {
-  const count = filterSelectionCount(value);
+  const count = filterSelectionCount(value) + (flagged ? 1 : 0);
   const categories: { key: FeedFilterKey; label: string; options: readonly string[] }[] = [
     { key: 'impact', label: 'Impact', options: ['critical', 'high', 'low'] },
     { key: 'topic', label: 'Topic', options: topics },
@@ -26,7 +27,13 @@ export function FeedFilterMenu({ value, onChange, topics, outlets, reporting, se
     <PopoverContent align="end" className="w-[min(720px,calc(100vw-24px))] overflow-hidden p-0" aria-label="Feed filters" data-testid="panel-feed-filters">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <h2 className="text-sm font-semibold">Filters</h2>
-        <button onClick={() => onChange(emptyFeedFilters())} disabled={!count} className="text-xs underline underline-offset-4 disabled:opacity-40" data-testid="button-reset-feed-filters">Reset</button>
+        <div className="ml-auto mr-4 flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-4 text-xs">
+          <label className="flex cursor-pointer items-center gap-1.5"><input type="checkbox" checked={flagged} onChange={e => onFlaggedChange(e.target.checked)} className="h-3.5 w-3.5 accent-black" data-testid="filter-flagged-only" /> Flagged only</label>
+          <label className="flex cursor-pointer items-center gap-1.5"><input type="checkbox" checked={flaggedFirst} onChange={e => onFlaggedFirstChange(e.target.checked)} className="h-3.5 w-3.5 accent-black" data-testid="sort-flagged-first" /> Flagged first</label>
+        </div>
+        </div>
+        <button onClick={() => { onChange(emptyFeedFilters()); onFlaggedChange(false); }} disabled={!count} className="text-xs underline underline-offset-4 disabled:opacity-40" data-testid="button-reset-feed-filters">Reset</button>
       </div>
       <div className="grid max-h-[min(65dvh,520px)] grid-cols-1 gap-3 overflow-y-auto p-4 min-[420px]:grid-cols-2 md:grid-cols-3">
         {categories.map(category => <fieldset key={category.key} className="min-w-0 rounded-lg border border-border p-3" data-testid={`filter-category-${category.key}`}>

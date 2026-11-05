@@ -7,7 +7,14 @@
 
 export * from './articleCredit';
 export * from './articleCreditRole';
+export * from './contentCapture';
+export * from './flagRequest';
 export * from './healthStatus';
+export * from './importAnalyzeRequest';
+export * from './importCommitRequest';
+export * from './importCommitRequestSourceType';
+export * from './importDraft';
+export * from './importUploadRequest';
 export * from './observation';
 export * from './observationStage';
 export * from './recordInput';
@@ -19,6 +26,8 @@ export * from './recordInputSentiment';
 export * from './recordInputSourceType';
 export * from './recordInputWatchType';
 export * from './refreshResult';
+export * from './requestImportUpload200';
 export * from './stats';
 export * from './trackedRecord';
 export * from './workspace';
+export * from './workspaceAccess';

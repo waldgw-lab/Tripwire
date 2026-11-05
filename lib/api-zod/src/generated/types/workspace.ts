@@ -6,9 +6,11 @@
  */
 import type { Stats } from './stats';
 import type { TrackedRecord } from './trackedRecord';
+import type { WorkspaceAccess } from './workspaceAccess';
 
 export interface Workspace {
   records: TrackedRecord[];
+  access?: WorkspaceAccess;
   stats: Stats;
   /** @nullable */
   lastRefreshed: string | null;

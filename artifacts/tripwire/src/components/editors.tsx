@@ -63,7 +63,7 @@ export function ArticleEditor({ open, onOpenChange, record }: EditorProps) {
       sourceType: record?.sourceType ?? 'article', title: record?.title ?? '', url: record?.url ?? '', outlet: record?.outlet ?? '',
       publishedAt: toLocalInput(record?.publishedAt), topic: record?.topic ?? '',
       entities: (record?.entities ?? []).join(', '), reportingType: record?.reportingType ?? 'unassessed', sentiment: record?.sentiment ?? 'unassessed',
-      focus: record?.focus ?? '', summary: record?.summary ?? '', fullText: record?.fullText ?? '', fullTextComplete: record?.fullTextComplete ?? false, impact: record?.impact ?? 'auto', saved: record?.saved ?? false,
+      focus: record?.focus ?? '', summary: record?.summary ?? '', fullText: record?.fullText ?? '', fullTextComplete: record?.fullTextComplete ?? false, impact: record?.impact ?? 'auto', saved: record ? (record.flagged ?? record.saved ?? false) : false,
     });
   }, [open, record]);
   const set = (k: keyof typeof f) => (v: string | boolean) => setF((p) => ({ ...p, [k]: v }));
@@ -79,7 +79,7 @@ export function ArticleEditor({ open, onOpenChange, record }: EditorProps) {
       entities: splitList(f.entities), reportingType: f.reportingType as RecordInput['reportingType'],
       sentiment: f.sentiment as RecordInput['sentiment'], focus: (f.focus || undefined) as RecordInput['focus'],
       summary: f.summary || undefined, fullText: f.fullText || undefined, fullTextComplete: f.fullTextComplete,
-      impact: f.impact === 'auto' ? undefined : f.impact as RecordInput['impact'], saved: f.saved,
+      impact: f.impact === 'auto' ? undefined : f.impact as RecordInput['impact'], saved: f.saved, flagged: f.saved, flaggedAt: f.saved ? (record?.flaggedAt ?? new Date().toISOString()) : undefined,
     };
     save.mutate({ data }, { onSuccess: () => onOpenChange(false) });
   };
@@ -120,7 +120,7 @@ export function ArticleEditor({ open, onOpenChange, record }: EditorProps) {
       <F label="Summary" className="block"><Textarea rows={2} data-testid="input-summary" value={f.summary} onChange={(e) => set('summary')(e.target.value)} /></F>
       <F label="Full text" className="block"><Textarea rows={9} className="font-serif text-[15px] leading-relaxed" data-testid="input-fulltext" value={f.fullText} onChange={(e) => set('fullText')(e.target.value)} /></F>
       <label className="flex items-center gap-2 text-sm"><Checkbox checked={f.fullTextComplete} onCheckedChange={value => set('fullTextComplete')(value === true)} data-testid="checkbox-fulltext-complete" /> Full article text is complete</label>
-      <label className="flex items-center gap-2 text-sm"><Switch checked={f.saved} onCheckedChange={set('saved')} data-testid="switch-saved" /> Retain in Saved</label>
+      <label className="flex items-center gap-2 text-sm"><Switch checked={f.saved} onCheckedChange={set('saved')} data-testid="switch-flagged" /> Flagged</label>
     </Shell>
   );
 }
