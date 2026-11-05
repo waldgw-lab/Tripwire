@@ -48,6 +48,7 @@ Tracks the requested twelve outlets (including NBC), an entity/account watchlist
 - Feed rows use borderless rounded-square outlet marks. Metadata: DD MMM (year only when not current) · HHMM in ET · OUTLET · full single byline or comma-separated surnames · colored impact word · tags without hashtags · content dot.
 - Clicking a feed item opens a right-hand detail pane; keep full byline names and per-article credit roles in that view.
 - Use a visible grayscale-wave background with light translucent feed-item surfaces and prominent outlet logos; retain high text contrast and the black sidebar.
+- Feed filters belong in one Filters control with per-category multi-select checkboxes, category clearing and a global reset. Empty selections mean all; omit “: all” labels.
 - Feed impact categories are CRITICAL, HIGH, LOW; keep prioritization separate from sourcing verification. Content dots indicate complete retained text, partial content, or minimal metadata.
 
 ## Gotchas

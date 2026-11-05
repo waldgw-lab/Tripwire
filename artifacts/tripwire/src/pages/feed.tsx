@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@clerk/react';
 import type { TrackedRecord } from '@workspace/api-client-react';
-import { Bookmark, ExternalLink, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { Bookmark, ExternalLink, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FeedFilterMenu } from '@/components/feed/feed-filters';
+import { emptyFeedFilters, filterSelectionCount, matchesFeedFilters } from '@/lib/feed-filters';
 import { Empty, ErrorState, PageHead, RowsSkeleton } from '@/components/bits';
 import { impactRating } from '@/lib/article-signals';
 import { FeedMeta } from '@/components/feed/feed-meta';
@@ -14,27 +15,11 @@ import { OutletBrand } from '@/components/outlet-brand';
 import { articleCredits } from '@/lib/media-coverage';
 import { FOCUS, REPORTING, SENTIMENT, byKind, toInput, useRefresh, useSave, useWorkspace } from '@/lib/workspace';
 
-const ALL = '__all';
-const IMPACTS = ['critical', 'high', 'low'];
 const readParam = () => new URLSearchParams(window.location.search).get('article');
 function writeParam(id: string | null) {
   const url = new URL(window.location.href);
   if (id) url.searchParams.set('article', id); else url.searchParams.delete('article');
   window.history.replaceState(window.history.state, '', url);
-}
-
-function Filter({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: string[] }) {
-  return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger data-testid={`filter-${label.toLowerCase()}`} className={cn('h-8 w-auto min-w-[110px] gap-1 bg-card text-xs', value !== ALL && 'border-accent text-accent')}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={ALL}>{label}: all</SelectItem>
-        {options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-      </SelectContent>
-    </Select>
-  );
 }
 
 export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }) {
@@ -43,12 +28,7 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
   const save = useSave();
   const refresh = useRefresh();
   const [q, setQ] = useState('');
-  const [topic, setTopic] = useState(ALL);
-  const [outlet, setOutlet] = useState(ALL);
-  const [rt, setRt] = useState(ALL);
-  const [sent, setSent] = useState(ALL);
-  const [focus, setFocus] = useState(ALL);
-  const [impact, setImpact] = useState(ALL);
+  const [filters, setFilters] = useState(emptyFeedFilters);
   const [open, setOpenState] = useState<string | null>(() => readParam());
   const setOpen = useCallback((id: string | null) => { setOpenState(id); writeParam(id); }, []);
   const [editing, setEditing] = useState<TrackedRecord | null>(null);
@@ -68,17 +48,12 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
     const needle = q.trim().toLowerCase();
     return articles.filter((a) => {
       if (mode === 'saved' && !a.saved) return false;
-      if (topic !== ALL && a.topic !== topic) return false;
-      if (outlet !== ALL && a.outlet !== outlet) return false;
-      if (rt !== ALL && (a.reportingType ?? 'unassessed') !== rt) return false;
-      if (sent !== ALL && (a.sentiment ?? 'unassessed') !== sent) return false;
-      if (focus !== ALL && a.focus !== focus) return false;
-      if (impact !== ALL && impacts.get(a.id)?.value !== impact) return false;
+      if (!matchesFeedFilters(a, impacts.get(a.id)?.value, filters)) return false;
       if (!needle) return true;
       return [a.title, a.summary, a.fullText, a.outlet, a.topic, a.byline, ...articleCredits(a).map(c => c.name), ...(a.entities ?? [])]
         .some((s) => s?.toLowerCase().includes(needle));
     });
-  }, [articles, impacts, q, topic, outlet, rt, sent, focus, impact, mode]);
+  }, [articles, impacts, q, filters, mode]);
 
   const selected = useMemo(() => (open ? articles.find((a) => a.id === open) ?? null : null), [articles, open]);
   useEffect(() => {
@@ -113,8 +88,8 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
     return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', trapTab); };
   }, [selected, narrow]);
 
-  const filtered = q || [topic, outlet, rt, sent, focus, impact].some((v) => v !== ALL);
-  const clear = () => { setQ(''); setTopic(ALL); setOutlet(ALL); setRt(ALL); setSent(ALL); setFocus(ALL); setImpact(ALL); };
+  const filtered = q || filterSelectionCount(filters) > 0;
+  const clear = () => { setQ(''); setFilters(emptyFeedFilters()); };
   const toggleSave = (a: TrackedRecord) => save.mutate({ data: { ...toInput(a), saved: !a.saved } });
 
   if (mode === 'saved' && !isSignedIn) {
@@ -136,13 +111,7 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search headline, text, journalist, entity" className="h-8 bg-card pl-8 text-sm" data-testid="input-search" />
         </div>
-        <Filter label="Impact" value={impact} onChange={setImpact} options={IMPACTS} />
-        <Filter label="Topic" value={topic} onChange={setTopic} options={topics} />
-        <Filter label="Outlet" value={outlet} onChange={setOutlet} options={outlets} />
-        <Filter label="Reporting" value={rt} onChange={setRt} options={[...REPORTING]} />
-        <Filter label="Sentiment" value={sent} onChange={setSent} options={[...SENTIMENT]} />
-        <Filter label="Focus" value={focus} onChange={setFocus} options={[...FOCUS]} />
-        {filtered && <button onClick={clear} data-testid="button-clear-filters" className="inline-flex h-8 items-center gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /> Clear</button>}
+        <FeedFilterMenu value={filters} onChange={setFilters} topics={topics} outlets={outlets} reporting={REPORTING} sentiment={SENTIMENT} focus={FOCUS} />
       </div>
 
       <div className={cn(selected && 'lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(380px,46%)]')}>
