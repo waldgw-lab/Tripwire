@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Tripwire"
+description = "Private reporting intelligence workspace tracking outlets, journalists, consequential claims, attribution and earliest verified origins across national security and politics."
+version = "1.0.0"
+id = "artifacts/tripwire"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24567
+
+[services.development]
+run = "pnpm --filter @workspace/tripwire run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tripwire", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/tripwire/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24567"
+BASE_PATH = "/"

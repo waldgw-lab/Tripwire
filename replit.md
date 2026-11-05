@@ -1,10 +1,10 @@
-# [Project name]
+# Tripwire
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Reporting intelligence workspace tracking relevant outlet releases, journalists, consequential claims, and source provenance in politics and national security.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- Use managed workflows `artifacts/api-server: API Server` and `artifacts/tripwire: web`.
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
@@ -22,23 +22,30 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/tripwire` — React interface.
+- `artifacts/api-server/src/lib/tripwire-*` — configuration, private record storage, public RSS polling.
+- `lib/db/src/schema/tripwire.ts` — persistence schema.
+- `lib/api-spec/openapi.yaml` — source of API contract.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Public RSS metadata is shared; user-entered text, claims, and edits require Clerk and remain isolated by user.
+- Feed discovery never establishes independent sourcing, verified origin, or sentiment. These require analyst assessment.
+- No paywall bypass or externally shared full-text archive.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Tracks the requested eleven outlets, an entity/account watchlist, article and X-post intake, journalist associations, and claim observations across origin, sourcing, independent additions, and republications.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Keep the interface focused: no unnecessary UI, explainer copy, unrelated warnings, or out-of-scope tags.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- X automation requires an authorized workspace X integration; X intake and account tracking are currently manual.
+- Reuters has no default feed; use manual intake or configure a licensed feed. Other feed failures are reported per outlet.
+- Public feeds refresh every ten minutes while the API process runs.
 
 ## Pointers
 

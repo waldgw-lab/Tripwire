@@ -1,0 +1,1 @@
+- [Reporting focus](reporting-focus.md) — user-defined accountability focus and attribution rules; avoid treating repeated coverage as independent sourcing.

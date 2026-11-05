@@ -1,36 +1,141 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 1.0.0
 servers:
   - url: /api
-    description: Base API path
-tags:
-  - name: health
-    description: Health operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
-      tags: [health]
-      summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/HealthStatus"
+              schema: { $ref: "#/components/schemas/HealthStatus" }
+  /tripwire/workspace:
+    get:
+      operationId: getWorkspace
+      responses:
+        "200":
+          description: Workspace
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workspace" }
+  /tripwire/records:
+    post:
+      operationId: saveRecord
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecordInput" }
+      responses:
+        "200":
+          description: Saved record
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TrackedRecord" }
+  /tripwire/records/{id}:
+    delete:
+      operationId: deleteRecord
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Deleted }
+  /tripwire/refresh:
+    post:
+      operationId: refreshFeeds
+      responses:
+        "200":
+          description: Feed refresh results
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RefreshResult" }
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
-        status:
-          type: string
-      required:
-        - status
-
+        status: { type: string }
+    RecordInput:
+      type: object
+      required: [kind, title]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [article, claim, watch, outlet] }
+        title: { type: string, minLength: 1 }
+        url: { type: string }
+        outlet: { type: string }
+        journalists: { type: array, items: { type: string } }
+        publishedAt: { type: string }
+        fullText: { type: string }
+        summary: { type: string }
+        topic: { type: string }
+        entities: { type: array, items: { type: string } }
+        sentiment: { type: string, enum: [negative, positive, neutral, unassessed] }
+        focus: { type: string, enum: [blame, performance, replacement, decision-making, institutional, other] }
+        reportingType: { type: string, enum: [unassessed, original, independent, republication, commentary, official-response] }
+        sourceType: { type: string, enum: [article, x, statement, document] }
+        saved: { type: boolean }
+        articleId: { type: string }
+        tier: { type: integer, minimum: 1, maximum: 3 }
+        watchType: { type: string, enum: [person, organization, x-account, attribution, topic] }
+        aliases: { type: array, items: { type: string } }
+        enabled: { type: boolean }
+        feedUrl: { type: string }
+        lastChecked: { type: string }
+        feedStatus: { type: string }
+        observations:
+          type: array
+          items: { $ref: "#/components/schemas/Observation" }
+    TrackedRecord:
+      allOf:
+        - { $ref: "#/components/schemas/RecordInput" }
+        - type: object
+          required: [id, createdAt, updatedAt]
+          properties:
+            id: { type: string }
+            createdAt: { type: string }
+            updatedAt: { type: string }
+    Observation:
+      type: object
+      required: [id, stage, articleId, journalist, attribution, evidence, observedAt, verified]
+      properties:
+        id: { type: string }
+        stage: { type: string, enum: [origin, sourcing, addition, republication] }
+        articleId: { type: string }
+        journalist: { type: string }
+        attribution: { type: string }
+        evidence: { type: string }
+        observedAt: { type: string }
+        verified: { type: boolean }
+        url: { type: string }
+    Workspace:
+      type: object
+      required: [records, stats, lastRefreshed]
+      properties:
+        records: { type: array, items: { $ref: "#/components/schemas/TrackedRecord" } }
+        stats: { $ref: "#/components/schemas/Stats" }
+        lastRefreshed: { type: ["string", "null"] }
+    Stats:
+      type: object
+      required: [articles, claims, journalists, outlets, original, negative, positive]
+      properties:
+        articles: { type: integer }
+        claims: { type: integer }
+        journalists: { type: integer }
+        outlets: { type: integer }
+        original: { type: integer }
+        negative: { type: integer }
+        positive: { type: integer }
+    RefreshResult:
+      type: object
+      required: [added, checked, failures, refreshedAt]
+      properties:
+        added: { type: integer }
+        checked: { type: integer }
+        failures: { type: array, items: { type: string } }
+        refreshedAt: { type: string }
