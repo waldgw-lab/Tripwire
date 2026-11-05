@@ -156,14 +156,14 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
               </button>
             </Empty>
       ) : (
-        <ol className="divide-y divide-border">
+        <ol className="space-y-2.5 px-3 py-3 md:px-5 md:py-4">
           {rows.map((a) => {
             const active = open === a.id;
             const imp = impacts.get(a.id) ?? impactRating(a, watches);
             return (
-              <li key={a.id} onClick={() => setOpen(a.id)} className={cn('group relative cursor-pointer px-5 py-3.5 transition-colors md:px-8', active ? 'bg-card/90 shadow-[inset_3px_0_0_hsl(var(--foreground))]' : 'hover:bg-card/60')} data-testid={`row-article-${a.id}`}>
+              <li key={a.id} onClick={() => setOpen(a.id)} className={cn('tw-feed-item group relative cursor-pointer rounded-xl px-3 py-3.5 transition-colors md:px-5', active && 'tw-feed-item-active')} data-testid={`row-article-${a.id}`}>
                 <div className="flex items-start gap-3 sm:gap-4">
-                  <OutletBrand name={a.sourceType === 'x' ? 'X' : (a.outlet ?? '—')} variant="square" className="mt-0.5" />
+                  <OutletBrand name={a.sourceType === 'x' ? 'X' : (a.outlet ?? '—')} variant="square" className="mt-0.5 h-14 w-14 rounded-xl shadow-sm sm:h-16 sm:w-16" />
                   <div className="min-w-0 flex-1">
                     <FeedMeta article={a} impact={imp} />
                     <button onClick={(e) => { e.stopPropagation(); setOpen(a.id); }} aria-expanded={active} aria-controls="article-reader" className="block w-full text-left focus-visible:outline-2 focus-visible:outline-offset-2" data-testid={`button-expand-${a.id}`}>

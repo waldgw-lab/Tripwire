@@ -35,15 +35,15 @@ export function FeedMeta({ article: a, impact }: { article: TrackedRecord; impac
   const tags = articleTags(a);
   return (
     <div className="mb-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
-      <time dateTime={a.publishedAt ?? undefined} title={`${pub.label} ET`} className="font-mono text-[11px] text-muted-foreground" data-testid={`text-published-${a.id}`}>{pub.date}</time>
+      <time dateTime={a.publishedAt ?? undefined} title={`${pub.label} ET`} className="font-mono text-[11px] text-neutral-600" data-testid={`text-published-${a.id}`}>{pub.date}</time>
       <Sep />
-      <span className="font-mono text-[11px] text-muted-foreground">{pub.time}</span>
+      <span className="font-mono text-[11px] text-neutral-600">{pub.time}</span>
       <Sep />
       <span className="font-semibold uppercase tracking-wide" data-testid={`text-outlet-${a.id}`}>{outlet}</span>
-      {byline && <><Sep /><span className="text-muted-foreground" title={a.byline} data-testid={`text-byline-${a.id}`}>{byline}</span></>}
+      {byline && <><Sep /><span className="text-neutral-600" title={a.byline} data-testid={`text-byline-${a.id}`}>{byline}</span></>}
       <Sep />
       <ImpactWord value={impact.value} reason={impact.reason} id={a.id} />
-      {tags.length > 0 && <><Sep /><span className="font-mono text-[10.5px] text-muted-foreground" data-testid={`text-tags-${a.id}`}>{tags.join(' · ')}</span></>}
+      {tags.length > 0 && <><Sep /><span className="font-mono text-[10.5px] text-neutral-600" data-testid={`text-tags-${a.id}`}>{tags.join(' · ')}</span></>}
       <Sep />
       <ContentDot article={a} />
     </div>

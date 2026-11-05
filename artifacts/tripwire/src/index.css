@@ -477,5 +477,8 @@
 @keyframes tw-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .tw-rise{animation:tw-rise .35s cubic-bezier(.2,.7,.2,1) both}
 
-.tw-waves{position:relative;isolation:isolate;background-image:linear-gradient(hsl(0 0% 98%/.88),hsl(0 0% 98%/.84)),var(--tw-waves-url);background-size:cover;background-position:center;background-attachment:fixed}
+.tw-waves{position:relative;isolation:isolate;background-image:linear-gradient(hsl(0 0% 98%/.66),hsl(0 0% 98%/.5)),var(--tw-waves-url);background-size:cover;background-position:center;background-attachment:fixed}
 .tw-glass{background:hsl(0 0% 99%/.78);backdrop-filter:blur(8px)}
+.tw-feed-item{background:rgba(255,255,255,.86);border:1px solid rgba(255,255,255,.55);box-shadow:0 2px 12px rgba(0,0,0,.035);backdrop-filter:blur(5px)}
+.tw-feed-item:hover{background:rgba(255,255,255,.95)}
+.tw-feed-item-active{background:rgba(255,255,255,.97);box-shadow:inset 3px 0 0 #202020,0 2px 12px rgba(0,0,0,.05)}
