@@ -103,9 +103,9 @@ export const WATCH_TYPES = ['person', 'organization', 'x-account', 'attribution'
 
 export const reportingTone: Record<string, string> = {
   original: 'bg-accent text-accent-foreground',
-  independent: 'bg-[hsl(196_42%_36%)] text-white',
+  independent: 'bg-[hsl(0_0%_32%)] text-white',
   republication: 'bg-secondary text-secondary-foreground',
-  commentary: 'bg-[hsl(42_70%_88%)] text-[hsl(32_60%_28%)]',
+  commentary: 'bg-[hsl(0_0%_88%)] text-[hsl(0_0%_25%)]',
   'official-response': 'bg-primary text-primary-foreground',
   unassessed: 'border border-dashed border-input text-muted-foreground',
 };

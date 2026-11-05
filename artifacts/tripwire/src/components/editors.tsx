@@ -34,7 +34,7 @@ function Shell({ open, onOpenChange, title, onSubmit, pending, canSubmit = true,
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={wide ? 'max-h-[92dvh] overflow-y-auto sm:max-w-3xl' : 'max-h-[92dvh] overflow-y-auto sm:max-w-xl'}>
-        <DialogHeader><DialogTitle className="font-serif text-2xl font-normal">{title}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="font-display text-3xl font-semibold">{title}</DialogTitle></DialogHeader>
         <form onSubmit={(e) => { e.preventDefault(); if (canSubmit) onSubmit(); }} className="space-y-4">
           {children}
           <DialogFooter>

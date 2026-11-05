@@ -8,7 +8,7 @@ import { ClaimEditor, ConfirmDelete } from '@/components/editors';
 import { STAGES, byKind, fmtDate, useWorkspace } from '@/lib/workspace';
 
 const stageColor: Record<string, string> = {
-  origin: 'bg-accent', sourcing: 'bg-[hsl(196_42%_36%)]', addition: 'bg-[hsl(42_70%_46%)]', republication: 'bg-muted-foreground/50',
+  origin: 'bg-accent', sourcing: 'bg-[hsl(0_0%_35%)]', addition: 'bg-[hsl(0_0%_55%)]', republication: 'bg-muted-foreground/50',
 };
 
 export default function ClaimsPage() {

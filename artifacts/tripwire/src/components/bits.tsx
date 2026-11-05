@@ -7,7 +7,7 @@ import { reportingTone, sentimentTone } from '@/lib/workspace';
 export function PageHead({ title, count, children }: { title: string; count?: number; children?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border px-5 pb-4 pt-6 md:px-8">
-      <h1 className="font-serif text-3xl leading-none tracking-tight" data-testid="text-page-title">
+      <h1 className="font-display text-4xl font-semibold leading-none tracking-tight" data-testid="text-page-title">
         {title}
         {count !== undefined && <span className="ml-2 align-top font-mono text-xs text-muted-foreground">{count}</span>}
       </h1>

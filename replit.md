@@ -40,6 +40,7 @@ Tracks the requested eleven outlets, an entity/account watchlist, article and X-
 ## User preferences
 
 - Keep the interface focused: no unnecessary UI, explainer copy, unrelated warnings, or out-of-scope tags.
+- Black-and-white UI with restrained semantic color; use an Agency FB–like condensed heading font with complementary readable UI typography.
 
 ## Gotchas
 
