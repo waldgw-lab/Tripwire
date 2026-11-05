@@ -53,14 +53,14 @@ type EditorProps = { open: boolean; onOpenChange: (o: boolean) => void; record?:
 
 export function ArticleEditor({ open, onOpenChange, record }: EditorProps) {
   const save = useSave();
-  const [f, setF] = useState({ sourceType: 'article', title: '', url: '', outlet: '', journalists: '', publishedAt: '', topic: '', entities: '', reportingType: 'unassessed', sentiment: 'unassessed', focus: '', summary: '', fullText: '', saved: false });
+  const [f, setF] = useState({ sourceType: 'article', title: '', url: '', outlet: '', journalists: '', publishedAt: '', topic: '', entities: '', reportingType: 'unassessed', sentiment: 'unassessed', focus: '', summary: '', fullText: '', fullTextComplete: false, impact: 'auto', saved: false });
   useEffect(() => {
     if (!open) return;
     setF({
       sourceType: record?.sourceType ?? 'article', title: record?.title ?? '', url: record?.url ?? '', outlet: record?.outlet ?? '',
       journalists: (record?.journalists ?? []).join(', '), publishedAt: toLocalInput(record?.publishedAt), topic: record?.topic ?? '',
       entities: (record?.entities ?? []).join(', '), reportingType: record?.reportingType ?? 'unassessed', sentiment: record?.sentiment ?? 'unassessed',
-      focus: record?.focus ?? '', summary: record?.summary ?? '', fullText: record?.fullText ?? '', saved: record?.saved ?? false,
+      focus: record?.focus ?? '', summary: record?.summary ?? '', fullText: record?.fullText ?? '', fullTextComplete: record?.fullTextComplete ?? false, impact: record?.impact ?? 'auto', saved: record?.saved ?? false,
     });
   }, [open, record]);
   const set = (k: keyof typeof f) => (v: string | boolean) => setF((p) => ({ ...p, [k]: v }));
@@ -73,7 +73,8 @@ export function ArticleEditor({ open, onOpenChange, record }: EditorProps) {
       journalists: splitList(f.journalists), publishedAt: fromLocalInput(f.publishedAt), topic: f.topic || undefined,
       entities: splitList(f.entities), reportingType: f.reportingType as RecordInput['reportingType'],
       sentiment: f.sentiment as RecordInput['sentiment'], focus: (f.focus || undefined) as RecordInput['focus'],
-      summary: f.summary || undefined, fullText: f.fullText || undefined, saved: f.saved,
+      summary: f.summary || undefined, fullText: f.fullText || undefined, fullTextComplete: f.fullTextComplete,
+      impact: f.impact === 'auto' ? undefined : f.impact as RecordInput['impact'], saved: f.saved,
     };
     save.mutate({ data }, { onSuccess: () => onOpenChange(false) });
   };
@@ -96,9 +97,14 @@ export function ArticleEditor({ open, onOpenChange, record }: EditorProps) {
         <F label="Reporting"><Pick testId="select-reporting" value={f.reportingType} onChange={set('reportingType')} options={REPORTING} /></F>
         <F label="Sentiment"><Pick testId="select-sentiment" value={f.sentiment} onChange={set('sentiment')} options={SENTIMENT} /></F>
         <F label="Focus"><Pick testId="select-focus" value={f.focus} onChange={set('focus')} options={FOCUS} placeholder="None" /></F>
+        <F label="Impact"><Select value={f.impact} onValueChange={set('impact')}>
+          <SelectTrigger data-testid="select-impact" className="h-9 bg-card"><SelectValue /></SelectTrigger>
+          <SelectContent>{[['auto', 'Automatic'], ['critical', 'CRITICAL'], ['high', 'HIGH'], ['low', 'LOW']].map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
+        </Select></F>
       </div>
       <F label="Summary" className="block"><Textarea rows={2} data-testid="input-summary" value={f.summary} onChange={(e) => set('summary')(e.target.value)} /></F>
       <F label="Full text" className="block"><Textarea rows={9} className="font-serif text-[15px] leading-relaxed" data-testid="input-fulltext" value={f.fullText} onChange={(e) => set('fullText')(e.target.value)} /></F>
+      <label className="flex items-center gap-2 text-sm"><Checkbox checked={f.fullTextComplete} onCheckedChange={value => set('fullTextComplete')(value === true)} data-testid="checkbox-fulltext-complete" /> Full article text is complete</label>
       <label className="flex items-center gap-2 text-sm"><Switch checked={f.saved} onCheckedChange={set('saved')} data-testid="switch-saved" /> Retain in Saved</label>
     </Shell>
   );

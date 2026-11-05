@@ -72,6 +72,8 @@ components:
         journalists: { type: array, items: { type: string } }
         publishedAt: { type: string }
         fullText: { type: string }
+        fullTextComplete: { type: boolean }
+        impact: { type: string, enum: [critical, high, low] }
         summary: { type: string }
         topic: { type: string }
         entities: { type: array, items: { type: string } }

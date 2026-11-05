@@ -6,6 +6,7 @@
  */
 import type { Observation } from './observation';
 import type { RecordInputFocus } from './recordInputFocus';
+import type { RecordInputImpact } from './recordInputImpact';
 import type { RecordInputKind } from './recordInputKind';
 import type { RecordInputReportingType } from './recordInputReportingType';
 import type { RecordInputSentiment } from './recordInputSentiment';
@@ -22,6 +23,8 @@ export interface RecordInput {
   journalists?: string[];
   publishedAt?: string;
   fullText?: string;
+  fullTextComplete?: boolean;
+  impact?: RecordInputImpact;
   summary?: string;
   topic?: string;
   entities?: string[];

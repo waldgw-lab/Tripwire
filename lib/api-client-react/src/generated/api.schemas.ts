@@ -18,6 +18,15 @@ export const RecordInputKind = {
   outlet: 'outlet',
 } as const;
 
+export type RecordInputImpact = typeof RecordInputImpact[keyof typeof RecordInputImpact];
+
+
+export const RecordInputImpact = {
+  critical: 'critical',
+  high: 'high',
+  low: 'low',
+} as const;
+
 export type RecordInputSentiment = typeof RecordInputSentiment[keyof typeof RecordInputSentiment];
 
 
@@ -107,6 +116,8 @@ export interface RecordInput {
   journalists?: string[];
   publishedAt?: string;
   fullText?: string;
+  fullTextComplete?: boolean;
+  impact?: RecordInputImpact;
   summary?: string;
   topic?: string;
   entities?: string[];

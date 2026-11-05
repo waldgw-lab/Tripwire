@@ -10,6 +10,7 @@ export * from './observation';
 export * from './observationStage';
 export * from './recordInput';
 export * from './recordInputFocus';
+export * from './recordInputImpact';
 export * from './recordInputKind';
 export * from './recordInputReportingType';
 export * from './recordInputSentiment';

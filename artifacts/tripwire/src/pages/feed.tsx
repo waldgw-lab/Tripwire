@@ -6,11 +6,18 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Empty, ErrorState, PageHead, ReportingChip, RowsSkeleton, SentimentMark } from '@/components/bits';
+import { contentStatus, impactRating, publicationET } from '@/lib/article-signals';
 import { ArticleEditor, ConfirmDelete } from '@/components/editors';
 import { OutletBrand } from '@/components/outlet-brand';
-import { FOCUS, REPORTING, SENTIMENT, byKind, fmtDate, toInput, useRefresh, useSave, useWorkspace } from '@/lib/workspace';
+import { FOCUS, REPORTING, SENTIMENT, byKind, toInput, useRefresh, useSave, useWorkspace } from '@/lib/workspace';
 
 const ALL = '__all';
+const IMPACTS = ['critical', 'high', 'low'];
+const impactTone: Record<string, string> = {
+  critical: 'bg-red-700 text-white border-red-700',
+  high: 'border-foreground text-foreground',
+  low: 'border-border text-muted-foreground',
+};
 
 function Filter({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: string[] }) {
   return (
@@ -37,6 +44,7 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
   const [rt, setRt] = useState(ALL);
   const [sent, setSent] = useState(ALL);
   const [focus, setFocus] = useState(ALL);
+  const [impact, setImpact] = useState(ALL);
   const [open, setOpen] = useState<string | null>(null);
   const [editing, setEditing] = useState<TrackedRecord | null>(null);
   const [creating, setCreating] = useState(false);
@@ -46,6 +54,8 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
     const a = byKind(data?.records, 'article');
     return a.sort((x, y) => (y.publishedAt ?? y.createdAt).localeCompare(x.publishedAt ?? x.createdAt));
   }, [data]);
+  const watches = useMemo(() => byKind(data?.records, 'watch'), [data]);
+  const impacts = useMemo(() => new Map(articles.map((a) => [a.id, impactRating(a, watches)])), [articles, watches]);
   const topics = useMemo(() => [...new Set(articles.map((a) => a.topic).filter(Boolean) as string[])].sort(), [articles]);
   const outlets = useMemo(() => [...new Set(articles.map((a) => a.outlet).filter(Boolean) as string[])].sort(), [articles]);
 
@@ -58,14 +68,15 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
       if (rt !== ALL && (a.reportingType ?? 'unassessed') !== rt) return false;
       if (sent !== ALL && (a.sentiment ?? 'unassessed') !== sent) return false;
       if (focus !== ALL && a.focus !== focus) return false;
+      if (impact !== ALL && impacts.get(a.id)?.value !== impact) return false;
       if (!needle) return true;
       return [a.title, a.summary, a.fullText, a.outlet, a.topic, ...(a.journalists ?? []), ...(a.entities ?? [])]
         .some((s) => s?.toLowerCase().includes(needle));
     });
-  }, [articles, q, topic, outlet, rt, sent, focus, mode]);
+  }, [articles, impacts, q, topic, outlet, rt, sent, focus, impact, mode]);
 
-  const filtered = q || [topic, outlet, rt, sent, focus].some((v) => v !== ALL);
-  const clear = () => { setQ(''); setTopic(ALL); setOutlet(ALL); setRt(ALL); setSent(ALL); setFocus(ALL); };
+  const filtered = q || [topic, outlet, rt, sent, focus, impact].some((v) => v !== ALL);
+  const clear = () => { setQ(''); setTopic(ALL); setOutlet(ALL); setRt(ALL); setSent(ALL); setFocus(ALL); setImpact(ALL); };
   const toggleSave = (a: TrackedRecord) => save.mutate({ data: { ...toInput(a), saved: !a.saved } });
 
   if (mode === 'saved' && !isSignedIn) {
@@ -87,6 +98,7 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search headline, text, journalist, entity" className="h-8 bg-card pl-8 text-sm" data-testid="input-search" />
         </div>
+        <Filter label="Impact" value={impact} onChange={setImpact} options={IMPACTS} />
         <Filter label="Topic" value={topic} onChange={setTopic} options={topics} />
         <Filter label="Outlet" value={outlet} onChange={setOutlet} options={outlets} />
         <Filter label="Reporting" value={rt} onChange={setRt} options={[...REPORTING]} />
@@ -107,17 +119,22 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
         <ol className="divide-y divide-border">
           {rows.map((a) => {
             const expanded = open === a.id;
+            const pub = publicationET(a.publishedAt ?? undefined);
+            const imp = impacts.get(a.id) ?? impactRating(a, watches);
+            const status = contentStatus(a);
             return (
               <li key={a.id} className={cn('group px-5 py-3.5 transition-colors md:px-8', expanded ? 'bg-card' : 'hover:bg-card/60')} data-testid={`row-article-${a.id}`}>
-                <div className="flex items-start gap-4">
-                  <time className="hidden w-20 shrink-0 pt-0.5 font-mono text-[11px] text-muted-foreground sm:block">{fmtDate(a.publishedAt ?? a.createdAt)}</time>
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <OutletBrand name={a.sourceType === 'x' ? 'X' : (a.outlet ?? '—')} variant="square" className="mt-0.5" />
                   <div className="min-w-0 flex-1">
                     <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-                      {a.sourceType === 'x'
-                        ? <span className="font-semibold uppercase tracking-wide">X · {a.outlet ?? ''}</span>
-                        : <OutletBrand name={a.outlet ?? '—'} />}
+                      <time dateTime={a.publishedAt ?? undefined} title={pub.label} className="font-mono text-[11px] text-muted-foreground" data-testid={`text-published-${a.id}`}>{pub.date}</time>
+                      <span className="font-mono text-[11px] text-muted-foreground">{pub.time}</span>
+                      <span className="font-semibold" data-testid={`text-outlet-${a.id}`}>{a.sourceType === 'x' ? (a.outlet ?? 'X') : (a.outlet ?? '—')}</span>
                       {(a.journalists ?? []).length > 0 && <span className="text-muted-foreground">{a.journalists!.join(', ')}</span>}
-                      <ReportingChip value={a.reportingType} />
+                      <span title={imp.reason} className={cn('inline-flex h-5 items-center rounded-sm border px-1.5 font-mono text-[10px] font-medium uppercase tracking-wider', impactTone[imp.value])} data-testid={`status-impact-${a.id}`}>{imp.value}</span>
+                      <span role="img" aria-label={status.label} title={status.label} className={cn('inline-block h-2 w-2 shrink-0 rounded-full', status.color)} data-testid={`status-content-${a.id}`} />
+                      {a.reportingType && a.reportingType !== 'unassessed' && <ReportingChip value={a.reportingType} />}
                       <SentimentMark value={a.sentiment} focus={a.focus} />
                       {a.topic && <span className="font-mono text-[10px] text-muted-foreground">#{a.topic}</span>}
                     </div>

@@ -32,3 +32,9 @@ The user supplied this non-exclusive journalist monitoring scope, grouped by out
 **Why:** The user explicitly identified these as additional monitoring targets, including but not limited to this list.
 
 **How to apply:** Treat this as user-defined scope, not verified current employment or canonical name spellings. Distinguish an explicit monitoring roster from journalists merely discovered in collected bylines.
+
+Impact/prominence and content completeness are separate from claim verification. Automatic prominence must not turn an RSS item into assessed original reporting. A complete-text indicator requires explicitly confirmed complete text, not a long RSS summary.
+
+**Why:** The user requested impact ratings and enrichment dots alongside an existing provenance workflow. Conflating these would imply evidence or retained content that the app does not have.
+
+**How to apply:** Explain automated prominence through its actual signals, allow analyst overrides, and keep sourcing verification independent. Use publisher publication times, not ingestion times, for displayed feed metadata.
