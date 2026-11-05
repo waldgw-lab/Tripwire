@@ -41,6 +41,7 @@ Tracks the requested twelve outlets (including NBC), an entity/account watchlist
 
 - Keep the interface focused: no unnecessary UI, explainer copy, unrelated warnings, or out-of-scope tags.
 - Black-and-white UI with restrained semantic color; use an Agency FB–like condensed heading font with complementary readable UI typography.
+- Use the supplied Tripwire logo pack for branding; the 1:1 open-corner monogram is the browser tab icon.
 - The published app is intended to be private/invite-only. Keep sign-in promotion out of the workspace UI; this does not replace configuring publishing access restrictions.
 - News Media should provide an All hierarchy of outlets and their journalists, alongside separate outlet and journalist views.
 - Keep journalists within News Media, not a separate sidebar destination. Expand outlets into journalists and journalists into coverage.

@@ -13,16 +13,6 @@ const NAV = [
   { href: '/saved', label: 'Saved', icon: Bookmark },
 ];
 
-function Mark() {
-  return (
-    <svg viewBox="0 0 64 64" className="h-7 w-7 shrink-0" aria-hidden>
-      <rect width="64" height="64" rx="10" fill="hsl(0 0% 16%)" />
-      <path d="M8 40h14l6-16 8 26 6-14h14" fill="none" stroke="hsl(0 0% 94%)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="42" cy="36" r="4.5" fill="white" />
-    </svg>
-  );
-}
-
 export function Shell({ children, signedIn }: { children: ReactNode; signedIn: boolean }) {
   const [loc] = useLocation();
   const { data } = useWorkspace();
@@ -33,8 +23,7 @@ export function Shell({ children, signedIn }: { children: ReactNode; signedIn: b
     <div className="flex min-h-[100dvh] flex-col md:flex-row">
       <aside className="flex shrink-0 flex-col bg-sidebar text-sidebar-foreground md:sticky md:top-0 md:h-[100dvh] md:w-56">
         <div className="flex items-center gap-2.5 px-4 py-4">
-          <Mark />
-          <span className="font-display text-2xl font-semibold uppercase tracking-widest text-sidebar-accent-foreground">Tripwire</span>
+          <img src={`${import.meta.env.BASE_URL}tripwire-wordmark-white.png`} alt="Tripwire" className="h-12 w-[174px] max-w-full object-contain object-left" />
         </div>
         <nav className="flex gap-0.5 overflow-x-auto px-2 pb-2 md:flex-col md:overflow-visible">
           {NAV.map(({ href, label, icon: Icon, publicHref }) => {
