@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import type { TrackedRecord } from '@workspace/api-client-react';
-import { ChevronLeft, ChevronDown, ChevronRight, Download, ExternalLink, Flag } from 'lucide-react';
+import { getGetArticleContentQueryKey, useGetArticleContent, type TrackedRecord } from '@workspace/api-client-react';
+import { ChevronLeft, ChevronDown, ChevronRight, Download, ExternalLink, Flag, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { fmtDate, isFlagged } from '@/lib/workspace';
+import { ACTIVE_RETRIEVAL, fmtDate, isFlagged, useEnrich } from '@/lib/workspace';
 import { Importer } from '@/components/importer';
-import { contentStatus, publicationET, type Impact } from '@/lib/article-signals';
+import { contentStatus, hasMainText, publicationET, type Impact } from '@/lib/article-signals';
 import { articleCredits } from '@/lib/media-coverage';
 import { OutletBrand } from '@/components/outlet-brand';
 import { ContentDot, ImpactWord, articleTags } from './feed-meta';
@@ -18,19 +18,63 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+const n = (v?: number) => (v ?? 0).toLocaleString('en-US');
+const label = (v?: string) => (v ? v.replace(/-/g, ' ') : 'unclassified');
+
+function ContentBody({ articleId, captureId, revision, complete, showComplete, onRawToggle, rawOpen }: {
+  articleId: string; captureId: string | null; revision: string; complete?: boolean; showComplete: boolean; rawOpen: boolean; onRawToggle: () => void;
+}) {
+  const params = captureId ? { capture: captureId } : undefined;
+  const q = useGetArticleContent(articleId, params, { query: { queryKey: [...getGetArticleContentQueryKey(articleId, params), { revision }], staleTime: 5 * 60_000, gcTime: 10 * 60_000, retry: 1 } });
+  if (q.isLoading) return (
+    <div className="space-y-2 py-1" aria-busy data-testid="content-loading">
+      {[92, 100, 84, 97, 60].map((w, i) => <div key={i} className="h-3 animate-pulse rounded bg-muted" style={{ width: `${w}%` }} />)}
+    </div>
+  );
+  if (q.isError || !q.data) return (
+    <div className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-xs" data-testid="content-error">
+      <span className="text-muted-foreground">Text could not be loaded.</span>
+      <button type="button" onClick={() => q.refetch()} className="inline-flex items-center gap-1 underline underline-offset-4" data-testid="button-content-retry"><RefreshCw className="h-3 w-3" /> Retry</button>
+    </div>
+  );
+  const { text, raw, characters, rawCharacters } = q.data;
+  return (
+    <>
+      {text ? <div className="whitespace-pre-wrap font-serif text-[15px] leading-relaxed" data-testid={`text-fulltext-${articleId}`}>{text}</div>
+        : <p className="text-xs text-muted-foreground">No extracted text in this capture.</p>}
+      <div className="mt-3 border-t border-border pt-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+        {n(characters)} chars{rawCharacters ? ` · raw ${n(rawCharacters)}` : ''}{showComplete && !complete ? ' · text incomplete' : ''}
+      </div>
+      {raw && (
+        <div className="mt-2 text-xs">
+          <button type="button" onClick={onRawToggle} aria-expanded={rawOpen} className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground" data-testid="button-toggle-raw">
+            {rawOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />} Raw source (shown as text)
+          </button>
+          {rawOpen && <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all rounded bg-muted p-2 font-mono text-[11px]">{raw}</pre>}
+        </div>
+      )}
+    </>
+  );
+}
+
 export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleFlag, flagPending }: {
   article: TrackedRecord; impact: { value: Impact; reason: string }; onClose: () => void;
   signedIn: boolean; onToggleFlag: () => void; flagPending: boolean;
 }) {
   const captures = a.retainedContent ?? [];
-  const defaultCapture = a.fullText ? 'main' : (captures[0]?.id ?? 'main');
+  const hasMain = hasMainText(a);
+  const defaultCapture = hasMain ? 'main' : (captures[0]?.id ?? 'main');
+  const enrich = useEnrich();
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
+  const r = a.retrieval;
+  const evidence = [...(a.classificationEvidence ?? [])].sort((x, y) => (x.rank ?? 99) - (y.rank ?? 99));
   const [captureId, setCaptureId] = useState<string>(defaultCapture);
   useEffect(() => { setCaptureId(defaultCapture); }, [a.id, defaultCapture]);
   const capture = captures.find(c => c.id === captureId);
   const flagged = isFlagged(a);
   const [importOpen, setImportOpen] = useState(false);
   const [rawOpen, setRawOpen] = useState(false);
-  useEffect(() => { setImportOpen(false); setRawOpen(false); }, [a.id]);
+  useEffect(() => { setImportOpen(false); setRawOpen(false); setEvidenceOpen(false); }, [a.id]);
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -111,6 +155,41 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
               <div className="flex flex-wrap gap-1">{a.entities!.map((e) => <span key={e} className="rounded-sm bg-secondary px-1.5 py-0.5 text-[11px]">{e}</span>)}</div>
             </Field>
           )}
+          <Field label="Type">
+            <span className="font-mono text-xs uppercase tracking-wider" data-testid="text-reader-type">{label(a.contentType)} · {label(a.contentFormat ?? 'text')}</span>
+            {evidence.length > 0 && (
+              <div className="mt-1">
+                <button type="button" onClick={() => setEvidenceOpen(v => !v)} aria-expanded={evidenceOpen} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground" data-testid="button-toggle-evidence">
+                  {evidenceOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />} Evidence ({evidence.length})
+                </button>
+                {evidenceOpen && (
+                  <ul className="mt-1 space-y-0.5 font-mono text-[11px] text-muted-foreground" data-testid="list-reader-evidence">
+                    {evidence.map((e, i) => (
+                      <li key={i} className="break-words"><span className="text-foreground">{e.signal}</span> {e.value}{(e.contentType || e.contentFormat) && <> {'->'} {[e.contentType, e.contentFormat].filter(Boolean).join(' / ')}</>}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </Field>
+          <Field label="Retrieval">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px]" data-testid="text-reader-retrieval">
+              <span className="uppercase tracking-wider">{r?.status ?? 'not attempted'}</span>
+              {r?.method && <span className="text-muted-foreground">{r.method}</span>}
+              {r?.characters != null && <span className="text-muted-foreground">{n(r.characters)} chars</span>}
+              {r?.rawCharacters != null && <span className="text-muted-foreground">raw {n(r.rawCharacters)}</span>}
+              {r?.attempts != null && <span className="text-muted-foreground">{r.attempts} att.</span>}
+              {r?.lastAttempt && <span className="text-muted-foreground">{fmtDate(r.lastAttempt, true)}</span>}
+              {r?.nextAttemptAt && <span className="text-muted-foreground">next {fmtDate(r.nextAttemptAt, true)}</span>}
+              {a.url && (
+                <button type="button" onClick={() => enrich.mutate({ data: { articleId: a.id } })} disabled={enrich.isPending || ACTIVE_RETRIEVAL.has(r?.status ?? '')}
+                  className="inline-flex h-6 items-center gap-1 rounded border border-border px-2 font-sans text-[11px] hover:border-foreground disabled:opacity-50" data-testid="button-reader-fetch">
+                  <RefreshCw className={cn('h-3 w-3', enrich.isPending && 'animate-spin')} /> Fetch source
+                </button>
+              )}
+            </div>
+            {r?.message && <p className="mt-1 text-xs text-muted-foreground">{r.message}</p>}
+          </Field>
           <Field label="Content">
             <span className="inline-flex items-center gap-2"><ContentDot article={a} /> {status.label}</span>
           </Field>
@@ -126,8 +205,8 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
         {captures.length > 0 && (
           <div className="mt-6 flex flex-wrap items-center gap-2" data-testid="select-reader-capture">
             <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Source</span>
-            <select value={captureId} onChange={e => setCaptureId(e.target.value)} aria-label="Content capture" className="h-7 max-w-full rounded-md border border-input bg-background px-2 text-xs">
-              {a.fullText && <option value="main">Article text</option>}
+            <select value={captureId} onChange={e => { setCaptureId(e.target.value); setRawOpen(false); }} aria-label="Content capture" className="h-7 max-w-full rounded-md border border-input bg-background px-2 text-xs">
+              {hasMain && <option value="main">Article text</option>}
               {captures.map(c => <option key={c.id} value={c.id}>{c.fileName ?? c.source} · {fmtDate(c.capturedAt, true)}</option>)}
             </select>
           </div>
@@ -136,29 +215,22 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
         {capture && (
           <section className="mt-3" data-testid={`capture-${capture.id}`}>
             <h3 className="mb-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Retained capture · {capture.source}</h3>
-            <div className="whitespace-pre-wrap font-serif text-[15px] leading-relaxed">{capture.text}</div>
-            <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-2 text-xs">
-              {capture.sourceUrl && <a href={capture.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline underline-offset-4"><ExternalLink className="h-3 w-3" /> Capture source</a>}
-              {capture.uploadId && signedIn && <a href={`${import.meta.env.BASE_URL}api/tripwire/imports/uploads/${capture.uploadId}/file`.replace(/\/\/api/, '/api')} className="inline-flex items-center gap-1 underline underline-offset-4" data-testid={`link-capture-download-${capture.id}`}><Download className="h-3 w-3" /> Original file</a>}
-              {capture.raw && (
-                <div className="w-full">
-                  <button type="button" onClick={() => setRawOpen(v => !v)} aria-expanded={rawOpen} className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground" data-testid="button-toggle-raw">
-                    {rawOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />} Raw source (shown as text)
-                  </button>
-                  {rawOpen && <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all rounded bg-muted p-2 font-mono text-[11px]">{capture.raw}</pre>}
-                </div>
-              )}
-            </div>
+            <ContentBody key={`${a.id}:${capture.id}`} articleId={a.id} captureId={capture.id} revision={capture.bodyHash ?? a.updatedAt ?? ''} showComplete={false} rawOpen={rawOpen} onRawToggle={() => setRawOpen(v => !v)} />
+            {(capture.sourceUrl || (capture.uploadId && signedIn)) && (
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-2 text-xs">
+                {capture.sourceUrl && <a href={capture.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline underline-offset-4"><ExternalLink className="h-3 w-3" /> Capture source</a>}
+                {capture.uploadId && signedIn && <a href={`${import.meta.env.BASE_URL}api/tripwire/imports/uploads/${capture.uploadId}/file`.replace(/\/\/api/, '/api')} className="inline-flex items-center gap-1 underline underline-offset-4" data-testid={`link-capture-download-${capture.id}`}><Download className="h-3 w-3" /> Original file</a>}
+              </div>
+            )}
           </section>
         )}
 
-        {!capture && a.fullText && (
+        {!capture && hasMain && (
           <section className="mt-6">
             <h3 className="mb-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
               {a.fullTextComplete ? 'Full text' : 'Partial text'}
             </h3>
-            <div className="whitespace-pre-wrap font-serif text-[15px] leading-relaxed" data-testid={`text-fulltext-${a.id}`}>{a.fullText}</div>
-            {!a.fullTextComplete && <p className="mt-3 border-t border-border pt-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Text incomplete</p>}
+            <ContentBody key={`${a.id}:main`} articleId={a.id} captureId={null} revision={a.fullTextHash ?? a.updatedAt ?? ''} complete={a.fullTextComplete} showComplete rawOpen={rawOpen} onRawToggle={() => setRawOpen(v => !v)} />
           </section>
         )}
 

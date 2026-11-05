@@ -1,2 +1,3 @@
 - [Reporting focus](reporting-focus.md) — user-defined accountability focus and attribution rules; avoid treating repeated coverage as independent sourcing.
 - [Journalist attribution](journalist-attribution.md) — roles belong to article credits, not people; preserve bylines and avoid cross-outlet coverage leakage.
+- [Content storage strategy](content-storage-strategy.md) — prefer PostgreSQL for searchable article text and immutable source versions; reuse retained HTML when extraction improves.

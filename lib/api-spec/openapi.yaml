@@ -23,6 +23,57 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Workspace" }
+  /tripwire/records/{id}/content:
+    get:
+      operationId: getArticleContent
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: capture, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Retained content for this article or selected source capture
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArticleContent" }
+  /tripwire/content-search:
+    get:
+      operationId: searchArticleContent
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string, maxLength: 300 } }
+      responses:
+        "200":
+          description: Articles matching retained text
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ContentSearch" }
+  /tripwire/retrieval:
+    get:
+      operationId: getRetrievalReport
+      responses:
+        "200":
+          description: Actual per-outlet retrieval progress and durable storage
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RetrievalReport" }
+    post:
+      operationId: enqueueEnrichment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                articleId: { type: string }
+      responses:
+        "200":
+          description: Scheduled due items without bypassing publisher backoff
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [queued]
+                properties:
+                  queued: { type: integer }
   /tripwire/records:
     post:
       operationId: saveRecord
@@ -181,6 +232,13 @@ components:
           items: { $ref: "#/components/schemas/ArticleCredit" }
         publishedAt: { type: string }
         fullText: { type: string }
+        fullTextHash: { type: string }
+        fullTextLength: { type: integer }
+        contentNormalization: { $ref: "#/components/schemas/ContentNormalization" }
+        contentType: { type: string }
+        contentFormat: { type: string }
+        classificationEvidence: { type: array, items: { $ref: "#/components/schemas/ClassificationEvidence" } }
+        retrieval: { $ref: "#/components/schemas/Retrieval" }
         fullTextComplete: { type: boolean }
         retainedContent: { type: array, items: { $ref: "#/components/schemas/ContentCapture" } }
         contentRetained: { type: boolean }
@@ -212,7 +270,7 @@ components:
           items: { $ref: "#/components/schemas/Observation" }
     ContentCapture:
       type: object
-      required: [id, text, source, capturedAt]
+      required: [id, source, capturedAt]
       properties:
         id: { type: string }
         text: { type: string }
@@ -222,6 +280,73 @@ components:
         capturedAt: { type: string }
         fileName: { type: string }
         uploadId: { type: string }
+        bodyHash: { type: string }
+        textLength: { type: integer }
+        rawLength: { type: integer }
+    ContentNormalization:
+      type: object
+      required: [method, sourceCharacters, articleCharacters]
+      properties:
+        method: { type: string }
+        sourceCharacters: { type: integer }
+        articleCharacters: { type: integer }
+    ClassificationEvidence:
+      type: object
+      required: [signal, value]
+      properties:
+        signal: { type: string }
+        value: { type: string }
+        contentType: { type: string }
+        contentFormat: { type: string }
+        rank: { type: integer }
+    Retrieval:
+      type: object
+      properties:
+        status: { type: string }
+        method: { type: string }
+        lastAttempt: { type: string }
+        nextAttemptAt: { type: string }
+        message: { type: string }
+        characters: { type: integer }
+        rawCharacters: { type: integer }
+        attempts: { type: integer }
+    ArticleContent:
+      type: object
+      required: [text, raw, characters, rawCharacters]
+      properties:
+        text: { type: string }
+        raw: { type: string }
+        characters: { type: integer }
+        rawCharacters: { type: integer }
+    ContentSearch:
+      type: object
+      required: [articleIds]
+      properties:
+        articleIds: { type: array, items: { type: string } }
+    RetrievalReport:
+      type: object
+      required: [outlets, storage]
+      properties:
+        outlets:
+          type: array
+          items:
+            type: object
+            required: [outlet, articles, retrieved, blocked, failed, pending, characters]
+            properties:
+              outlet: { type: string }
+              articles: { type: integer }
+              retrieved: { type: integer }
+              blocked: { type: integer }
+              failed: { type: integer }
+              pending: { type: integer }
+              characters: { type: integer }
+              lastResult: { type: string }
+        storage:
+          type: object
+          required: [blobs, characters]
+          properties:
+            blobs: { type: integer }
+            characters: { type: integer }
     ImportDraft:
       type: object
       required: [draftId, candidate, warnings, characterCount, source]

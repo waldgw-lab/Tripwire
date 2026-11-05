@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useAuth } from '@clerk/react';
+import { useWorkspaceAccess } from '@/lib/workspace-access';
 import type { TrackedRecord } from '@workspace/api-client-react';
 import { BadgeCheck, CircleDashed, ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -12,7 +12,7 @@ const stageColor: Record<string, string> = {
 };
 
 export default function ClaimsPage() {
-  const { isSignedIn } = useAuth();
+  const { canEdit: isSignedIn } = useWorkspaceAccess();
   const { data, isLoading, isError, refetch } = useWorkspace();
   const claims = useMemo(() => byKind(data?.records, 'claim').sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)), [data]);
   const articles = useMemo(() => byKind(data?.records, 'article'), [data]);

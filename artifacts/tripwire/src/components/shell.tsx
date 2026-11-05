@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Show, UserButton } from '@clerk/react';
 import { ChevronLeft, ChevronRight, Crosshair, Flag, GitBranch, LayoutDashboard, Newspaper, RefreshCw, Rss } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fmtDate, useRefresh, useWorkspace } from '@/lib/workspace';
@@ -85,11 +84,6 @@ export function Shell({ children, signedIn }: { children: ReactNode; signedIn: b
           <p className={cn('mt-2 text-center font-mono text-[10px] opacity-50', collapsed && 'md:hidden')} data-testid="text-last-refreshed">
             {data?.lastRefreshed ? fmtDate(data.lastRefreshed, true) : 'Never refreshed'}
           </p>
-          <div className={cn('mt-3 flex items-center justify-between', collapsed && 'justify-center')}>
-            <Show when="signed-in">
-              <UserButton />
-            </Show>
-          </div>
         </div>
       </aside>
       <main className="tw-waves min-w-0 flex-1" style={{ ['--tw-waves-url' as string]: `url(${import.meta.env.BASE_URL}workspace-waves.webp)` }}>
@@ -97,7 +91,6 @@ export function Shell({ children, signedIn }: { children: ReactNode; signedIn: b
           <button onClick={() => refresh.mutate()} disabled={refresh.isPending} data-testid="button-refresh-mobile" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-xs text-accent-foreground">
             <RefreshCw className={cn('h-3.5 w-3.5', refresh.isPending && 'animate-spin')} /> Refresh
           </button>
-          <Show when="signed-in"><UserButton /></Show>
         </div>
         {children}
       </main>

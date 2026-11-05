@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 
-/** Fit the actual title into the space remaining below a card's metadata. */
+/** Use the shared pane-level font size; fit lines, never individual type sizes. */
 export function FittedHeadline({ text }: { text: string }) {
   const ref = useRef<HTMLSpanElement>(null);
 
@@ -12,30 +12,11 @@ export function FittedHeadline({ text }: { text: string }) {
     let disposed = false;
     const fit = () => {
       if (disposed || !box.clientWidth || !box.clientHeight) return;
-      const height = box.clientHeight;
-      title.style.display = 'block';
-      title.style.webkitLineClamp = '';
-      title.style.webkitBoxOrient = '';
-      const fits = (size: number) => {
-        title.style.fontSize = `${size}px`;
-        return title.scrollHeight <= height && title.scrollWidth <= box.clientWidth;
-      };
-      let low = 12;
-      let high = 26;
-      if (!fits(high)) {
-        while (high - low > 0.25) {
-          const middle = (low + high) / 2;
-          if (fits(middle)) low = middle;
-          else high = middle;
-        }
-        if (!fits(low)) {
-          // At very narrow widths, keep a readable minimum and expose the full
-          // headline through the button's accessible name, tooltip and reader.
-          title.style.display = '-webkit-box';
-          title.style.webkitBoxOrient = 'vertical';
-          title.style.webkitLineClamp = String(Math.max(1, Math.floor(height / (low * 1.2))));
-        }
-      }
+      const lineHeight = parseFloat(getComputedStyle(title).lineHeight);
+      if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
+      // The parent button exposes the complete title through its name/tooltip;
+      // opening the reader shows it without truncation.
+      title.style.webkitLineClamp = String(Math.max(1, Math.floor(box.clientHeight / lineHeight)));
     };
     const schedule = () => {
       cancelAnimationFrame(frame);

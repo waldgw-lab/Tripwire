@@ -1,16 +1,16 @@
 import { Router, type IRouter } from "express";
-import { getAuth } from "@clerk/express";
+import { workspaceIdentity } from "../lib/tripwire-access";
 import { SaveRecordBody, SaveRecordResponse, GetWorkspaceResponse, DeleteRecordParams, RefreshFeedsResponse, FlagArticleBody } from "@workspace/api-zod";
 import { recordsFor, writeRecord, removeRecord } from "../lib/tripwire-store";
 import { refreshFeeds } from "../lib/tripwire-feeds";
 
 const router: IRouter = Router();
 router.get("/tripwire/workspace", async (req, res): Promise<void> => {
-  const records = await recordsFor(getAuth(req).userId);
+  const records = await recordsFor(workspaceIdentity(req).userId, false);
   const articles = records.filter(r => r.kind === "article");
   const dates = records.filter(r => r.kind === "outlet").map(r => r.lastChecked).filter((x): x is string => !!x).sort();
   res.setHeader("Cache-Control", "private, no-store");
-  const signedIn = !!getAuth(req).userId;
+  const signedIn = true;
   res.json(GetWorkspaceResponse.parse({records, access: {signedIn, canEnrich: signedIn}, lastRefreshed: dates.at(-1) ?? null, stats: {
     articles: articles.length, claims: records.filter(r => r.kind === "claim").length,
     journalists: new Set(articles.flatMap(r => r.credits?.map(c => c.name.trim().toLowerCase()) ?? r.journalists?.map(name => name.trim().toLowerCase()) ?? [])).size,
@@ -22,7 +22,7 @@ router.get("/tripwire/workspace", async (req, res): Promise<void> => {
   }}));
 });
 router.post("/tripwire/records/:id/flag", async (req, res): Promise<void> => {
-  const userId = getAuth(req).userId;
+  const userId = workspaceIdentity(req).userId;
   if (!userId) { res.status(401).json({error: "App access required"}); return; }
   const parsed = FlagArticleBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({error: "Choose a flag state"}); return; }
@@ -32,7 +32,7 @@ router.post("/tripwire/records/:id/flag", async (req, res): Promise<void> => {
   res.json(SaveRecordResponse.parse(await writeRecord(userId, SaveRecordBody.parse({...current, flagged, saved: flagged, flaggedAt: flagged ? new Date().toISOString() : undefined}))));
 });
 router.post("/tripwire/records", async (req, res): Promise<void> => {
-  const userId = getAuth(req).userId;
+  const userId = workspaceIdentity(req).userId;
   if (!userId) { res.status(401).json({error: "Sign in to save records"}); return; }
   const parsed = SaveRecordBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({error: parsed.error.message}); return; }
@@ -49,7 +49,7 @@ router.post("/tripwire/records", async (req, res): Promise<void> => {
   res.json(SaveRecordResponse.parse(await writeRecord(userId, data)));
 });
 router.delete("/tripwire/records/:id", async (req, res): Promise<void> => {
-  const userId = getAuth(req).userId;
+  const userId = workspaceIdentity(req).userId;
   if (!userId) { res.status(401).json({error: "Sign in to delete records"}); return; }
   const params = DeleteRecordParams.parse(req.params);
   const removed = await removeRecord(userId, params.id);
@@ -57,6 +57,6 @@ router.delete("/tripwire/records/:id", async (req, res): Promise<void> => {
   res.status(204).end();
 });
 router.post("/tripwire/refresh", async (req, res): Promise<void> => {
-  res.json(RefreshFeedsResponse.parse(await refreshFeeds(getAuth(req).userId)));
+  res.json(RefreshFeedsResponse.parse(await refreshFeeds(workspaceIdentity(req).userId)));
 });
 export default router;

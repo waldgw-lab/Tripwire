@@ -26,9 +26,13 @@ export function impactRating(article: Article, watches: TrackedRecord[]): { valu
   return { value: 'low', reason: 'Broader relevant coverage; no higher-prominence signal recorded', manual: false };
 }
 
-export function contentStatus(article: Pick<Article, 'title' | 'summary' | 'fullText' | 'fullTextComplete'>) {
+export function hasMainText(article: Pick<TrackedRecord, 'fullText' | 'fullTextHash' | 'fullTextLength'>) {
+  return !!(article.fullText?.trim() || article.fullTextHash || (article.fullTextLength ?? 0) > 0);
+}
+
+export function contentStatus(article: Pick<TrackedRecord, 'title' | 'summary' | 'fullText' | 'fullTextComplete' | 'fullTextHash' | 'fullTextLength' | 'retainedCharacters' | 'retainedContent'>) {
   const title = article.title.trim();
-  const text = article.fullText?.trim();
+  const text = hasMainText(article) || (article.retainedCharacters ?? 0) > 0 || (article.retainedContent ?? []).some(c => (c.textLength ?? 0) > 0 || !!c.text?.trim());
   if (title && text && article.fullTextComplete === true) return { value: 'complete', label: 'Headline and full article text retained', color: 'bg-emerald-600' } as const;
   if (text || article.summary?.trim()) return { value: 'partial', label: 'Partial content: summary or incomplete article text retained', color: 'bg-amber-500' } as const;
   return { value: 'minimal', label: 'Minimal content: headline and metadata only', color: 'bg-red-600' } as const;

@@ -5,7 +5,9 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { ArticleCredit } from './articleCredit';
+import type { ClassificationEvidence } from './classificationEvidence';
 import type { ContentCapture } from './contentCapture';
+import type { ContentNormalization } from './contentNormalization';
 import type { Observation } from './observation';
 import type { RecordInputFocus } from './recordInputFocus';
 import type { RecordInputImpact } from './recordInputImpact';
@@ -14,6 +16,7 @@ import type { RecordInputReportingType } from './recordInputReportingType';
 import type { RecordInputSentiment } from './recordInputSentiment';
 import type { RecordInputSourceType } from './recordInputSourceType';
 import type { RecordInputWatchType } from './recordInputWatchType';
+import type { Retrieval } from './retrieval';
 
 export interface RecordInput {
   id?: string;
@@ -27,6 +30,13 @@ export interface RecordInput {
   credits?: ArticleCredit[];
   publishedAt?: string;
   fullText?: string;
+  fullTextHash?: string;
+  fullTextLength?: number;
+  contentNormalization?: ContentNormalization;
+  contentType?: string;
+  contentFormat?: string;
+  classificationEvidence?: ClassificationEvidence[];
+  retrieval?: Retrieval;
   fullTextComplete?: boolean;
   retainedContent?: ContentCapture[];
   contentRetained?: boolean;

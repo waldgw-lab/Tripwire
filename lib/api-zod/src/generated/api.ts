@@ -34,16 +34,45 @@ export const GetWorkspaceResponse = zod.object({
 })).optional(),
   "publishedAt": zod.string().optional(),
   "fullText": zod.string().optional(),
+  "fullTextHash": zod.string().optional(),
+  "fullTextLength": zod.number().int().optional(),
+  "contentNormalization": zod.object({
+  "method": zod.string(),
+  "sourceCharacters": zod.number().int(),
+  "articleCharacters": zod.number().int()
+}).optional(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "classificationEvidence": zod.array(zod.object({
+  "signal": zod.string(),
+  "value": zod.string(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "rank": zod.number().int().optional()
+})).optional(),
+  "retrieval": zod.object({
+  "status": zod.string().optional(),
+  "method": zod.string().optional(),
+  "lastAttempt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "message": zod.string().optional(),
+  "characters": zod.number().int().optional(),
+  "rawCharacters": zod.number().int().optional(),
+  "attempts": zod.number().int().optional()
+}).optional(),
   "fullTextComplete": zod.boolean().optional(),
   "retainedContent": zod.array(zod.object({
   "id": zod.string(),
-  "text": zod.string(),
+  "text": zod.string().optional(),
   "raw": zod.string().optional(),
   "source": zod.string(),
   "sourceUrl": zod.string().optional(),
   "capturedAt": zod.string(),
   "fileName": zod.string().optional(),
-  "uploadId": zod.string().optional()
+  "uploadId": zod.string().optional(),
+  "bodyHash": zod.string().optional(),
+  "textLength": zod.number().int().optional(),
+  "rawLength": zod.number().int().optional()
 })).optional(),
   "contentRetained": zod.boolean().optional(),
   "retainedCharacters": zod.number().int().optional(),
@@ -103,6 +132,62 @@ export const GetWorkspaceResponse = zod.object({
 })
 
 
+export const GetArticleContentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetArticleContentQueryParams = zod.object({
+  "capture": zod.coerce.string().optional()
+})
+
+export const GetArticleContentResponse = zod.object({
+  "text": zod.string(),
+  "raw": zod.string(),
+  "characters": zod.number().int(),
+  "rawCharacters": zod.number().int()
+})
+
+
+export const searchArticleContentQueryQMax = 300;
+
+
+
+export const SearchArticleContentQueryParams = zod.object({
+  "q": zod.coerce.string().max(searchArticleContentQueryQMax)
+})
+
+export const SearchArticleContentResponse = zod.object({
+  "articleIds": zod.array(zod.string())
+})
+
+
+export const GetRetrievalReportResponse = zod.object({
+  "outlets": zod.array(zod.object({
+  "outlet": zod.string(),
+  "articles": zod.number().int(),
+  "retrieved": zod.number().int(),
+  "blocked": zod.number().int(),
+  "failed": zod.number().int(),
+  "pending": zod.number().int(),
+  "characters": zod.number().int(),
+  "lastResult": zod.string().optional()
+})),
+  "storage": zod.object({
+  "blobs": zod.number().int(),
+  "characters": zod.number().int()
+})
+})
+
+
+export const EnqueueEnrichmentBody = zod.object({
+  "articleId": zod.string().optional()
+})
+
+export const EnqueueEnrichmentResponse = zod.object({
+  "queued": zod.number().int()
+})
+
+
 
 
 export const saveRecordBodyTierMax = 3;
@@ -124,16 +209,45 @@ export const SaveRecordBody = zod.object({
 })).optional(),
   "publishedAt": zod.string().optional(),
   "fullText": zod.string().optional(),
+  "fullTextHash": zod.string().optional(),
+  "fullTextLength": zod.number().int().optional(),
+  "contentNormalization": zod.object({
+  "method": zod.string(),
+  "sourceCharacters": zod.number().int(),
+  "articleCharacters": zod.number().int()
+}).optional(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "classificationEvidence": zod.array(zod.object({
+  "signal": zod.string(),
+  "value": zod.string(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "rank": zod.number().int().optional()
+})).optional(),
+  "retrieval": zod.object({
+  "status": zod.string().optional(),
+  "method": zod.string().optional(),
+  "lastAttempt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "message": zod.string().optional(),
+  "characters": zod.number().int().optional(),
+  "rawCharacters": zod.number().int().optional(),
+  "attempts": zod.number().int().optional()
+}).optional(),
   "fullTextComplete": zod.boolean().optional(),
   "retainedContent": zod.array(zod.object({
   "id": zod.string(),
-  "text": zod.string(),
+  "text": zod.string().optional(),
   "raw": zod.string().optional(),
   "source": zod.string(),
   "sourceUrl": zod.string().optional(),
   "capturedAt": zod.string(),
   "fileName": zod.string().optional(),
-  "uploadId": zod.string().optional()
+  "uploadId": zod.string().optional(),
+  "bodyHash": zod.string().optional(),
+  "textLength": zod.number().int().optional(),
+  "rawLength": zod.number().int().optional()
 })).optional(),
   "contentRetained": zod.boolean().optional(),
   "retainedCharacters": zod.number().int().optional(),
@@ -193,16 +307,45 @@ export const SaveRecordResponse = zod.object({
 })).optional(),
   "publishedAt": zod.string().optional(),
   "fullText": zod.string().optional(),
+  "fullTextHash": zod.string().optional(),
+  "fullTextLength": zod.number().int().optional(),
+  "contentNormalization": zod.object({
+  "method": zod.string(),
+  "sourceCharacters": zod.number().int(),
+  "articleCharacters": zod.number().int()
+}).optional(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "classificationEvidence": zod.array(zod.object({
+  "signal": zod.string(),
+  "value": zod.string(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "rank": zod.number().int().optional()
+})).optional(),
+  "retrieval": zod.object({
+  "status": zod.string().optional(),
+  "method": zod.string().optional(),
+  "lastAttempt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "message": zod.string().optional(),
+  "characters": zod.number().int().optional(),
+  "rawCharacters": zod.number().int().optional(),
+  "attempts": zod.number().int().optional()
+}).optional(),
   "fullTextComplete": zod.boolean().optional(),
   "retainedContent": zod.array(zod.object({
   "id": zod.string(),
-  "text": zod.string(),
+  "text": zod.string().optional(),
   "raw": zod.string().optional(),
   "source": zod.string(),
   "sourceUrl": zod.string().optional(),
   "capturedAt": zod.string(),
   "fileName": zod.string().optional(),
-  "uploadId": zod.string().optional()
+  "uploadId": zod.string().optional(),
+  "bodyHash": zod.string().optional(),
+  "textLength": zod.number().int().optional(),
+  "rawLength": zod.number().int().optional()
 })).optional(),
   "contentRetained": zod.boolean().optional(),
   "retainedCharacters": zod.number().int().optional(),
@@ -290,16 +433,45 @@ export const FlagArticleResponse = zod.object({
 })).optional(),
   "publishedAt": zod.string().optional(),
   "fullText": zod.string().optional(),
+  "fullTextHash": zod.string().optional(),
+  "fullTextLength": zod.number().int().optional(),
+  "contentNormalization": zod.object({
+  "method": zod.string(),
+  "sourceCharacters": zod.number().int(),
+  "articleCharacters": zod.number().int()
+}).optional(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "classificationEvidence": zod.array(zod.object({
+  "signal": zod.string(),
+  "value": zod.string(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "rank": zod.number().int().optional()
+})).optional(),
+  "retrieval": zod.object({
+  "status": zod.string().optional(),
+  "method": zod.string().optional(),
+  "lastAttempt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "message": zod.string().optional(),
+  "characters": zod.number().int().optional(),
+  "rawCharacters": zod.number().int().optional(),
+  "attempts": zod.number().int().optional()
+}).optional(),
   "fullTextComplete": zod.boolean().optional(),
   "retainedContent": zod.array(zod.object({
   "id": zod.string(),
-  "text": zod.string(),
+  "text": zod.string().optional(),
   "raw": zod.string().optional(),
   "source": zod.string(),
   "sourceUrl": zod.string().optional(),
   "capturedAt": zod.string(),
   "fileName": zod.string().optional(),
-  "uploadId": zod.string().optional()
+  "uploadId": zod.string().optional(),
+  "bodyHash": zod.string().optional(),
+  "textLength": zod.number().int().optional(),
+  "rawLength": zod.number().int().optional()
 })).optional(),
   "contentRetained": zod.boolean().optional(),
   "retainedCharacters": zod.number().int().optional(),
@@ -393,16 +565,45 @@ export const AnalyzeImportResponse = zod.object({
 })).optional(),
   "publishedAt": zod.string().optional(),
   "fullText": zod.string().optional(),
+  "fullTextHash": zod.string().optional(),
+  "fullTextLength": zod.number().int().optional(),
+  "contentNormalization": zod.object({
+  "method": zod.string(),
+  "sourceCharacters": zod.number().int(),
+  "articleCharacters": zod.number().int()
+}).optional(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "classificationEvidence": zod.array(zod.object({
+  "signal": zod.string(),
+  "value": zod.string(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "rank": zod.number().int().optional()
+})).optional(),
+  "retrieval": zod.object({
+  "status": zod.string().optional(),
+  "method": zod.string().optional(),
+  "lastAttempt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "message": zod.string().optional(),
+  "characters": zod.number().int().optional(),
+  "rawCharacters": zod.number().int().optional(),
+  "attempts": zod.number().int().optional()
+}).optional(),
   "fullTextComplete": zod.boolean().optional(),
   "retainedContent": zod.array(zod.object({
   "id": zod.string(),
-  "text": zod.string(),
+  "text": zod.string().optional(),
   "raw": zod.string().optional(),
   "source": zod.string(),
   "sourceUrl": zod.string().optional(),
   "capturedAt": zod.string(),
   "fileName": zod.string().optional(),
-  "uploadId": zod.string().optional()
+  "uploadId": zod.string().optional(),
+  "bodyHash": zod.string().optional(),
+  "textLength": zod.number().int().optional(),
+  "rawLength": zod.number().int().optional()
 })).optional(),
   "contentRetained": zod.boolean().optional(),
   "retainedCharacters": zod.number().int().optional(),
@@ -483,16 +684,45 @@ export const CommitImportResponse = zod.object({
 })).optional(),
   "publishedAt": zod.string().optional(),
   "fullText": zod.string().optional(),
+  "fullTextHash": zod.string().optional(),
+  "fullTextLength": zod.number().int().optional(),
+  "contentNormalization": zod.object({
+  "method": zod.string(),
+  "sourceCharacters": zod.number().int(),
+  "articleCharacters": zod.number().int()
+}).optional(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "classificationEvidence": zod.array(zod.object({
+  "signal": zod.string(),
+  "value": zod.string(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "rank": zod.number().int().optional()
+})).optional(),
+  "retrieval": zod.object({
+  "status": zod.string().optional(),
+  "method": zod.string().optional(),
+  "lastAttempt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "message": zod.string().optional(),
+  "characters": zod.number().int().optional(),
+  "rawCharacters": zod.number().int().optional(),
+  "attempts": zod.number().int().optional()
+}).optional(),
   "fullTextComplete": zod.boolean().optional(),
   "retainedContent": zod.array(zod.object({
   "id": zod.string(),
-  "text": zod.string(),
+  "text": zod.string().optional(),
   "raw": zod.string().optional(),
   "source": zod.string(),
   "sourceUrl": zod.string().optional(),
   "capturedAt": zod.string(),
   "fileName": zod.string().optional(),
-  "uploadId": zod.string().optional()
+  "uploadId": zod.string().optional(),
+  "bodyHash": zod.string().optional(),
+  "textLength": zod.number().int().optional(),
+  "rawLength": zod.number().int().optional()
 })).optional(),
   "contentRetained": zod.boolean().optional(),
   "retainedCharacters": zod.number().int().optional(),

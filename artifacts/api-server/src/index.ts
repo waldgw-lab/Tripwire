@@ -2,6 +2,8 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { seedConfig } from "./lib/tripwire-store";
 import { startMonitoring } from "./lib/tripwire-feeds";
+import { migrateRetainedContent } from "./lib/tripwire-content-storage";
+import { classifyExistingArticles, reprocessSavedPages, startRetrieval } from "./lib/tripwire-retrieval";
 
 const rawPort = process.env["PORT"];
 
@@ -17,12 +19,20 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, (err) => {
+async function start() {
+  await seedConfig();
+  await migrateRetainedContent();
+  await classifyExistingArticles();
+  await reprocessSavedPages();
+  app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
   }
 
   logger.info({ port }, "Server listening");
-  seedConfig().then(startMonitoring).catch(err => logger.error({err}, "Tripwire initialization failed"));
-});
+    startMonitoring();
+    startRetrieval();
+  });
+}
+void start().catch(err => { logger.error({ err }, "Tripwire initialization failed"); process.exit(1); });

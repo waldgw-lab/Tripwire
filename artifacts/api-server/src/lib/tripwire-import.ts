@@ -6,12 +6,15 @@ import WordExtractor from "word-extractor";
 import { parseByline } from "./tripwire-bylines";
 import { captureContent, plainText, type Capture } from "./tripwire-content";
 import type { RecordData } from "./tripwire-store";
+import { classifyContent } from "./tripwire-classification";
+import { parsePublisherCopy, pasteSourceUrl } from "./tripwire-paste";
+import { inferArticleTopic } from "./tripwire-signals";
 
 const publishers: [string, string][] = [
   ["washingtonpost.com", "The Washington Post"], ["nytimes.com", "The New York Times"], ["axios.com", "Axios"],
   ["cbsnews.com", "CBS"], ["theatlantic.com", "The Atlantic"], ["wsj.com", "The Wall Street Journal"],
   ["reuters.com", "Reuters"], ["abcnews.go.com", "ABC"], ["cnn.com", "CNN"], ["washingtonexaminer.com", "Washington Examiner"],
-  ["dailymail.co.uk", "Daily Mail"], ["nbcnews.com", "NBC"],
+  ["dailymail.co.uk", "Daily Mail"], ["dailymail.com", "Daily Mail"], ["nbcnews.com", "NBC"],
 ];
 export function canonicalUrl(raw?: string) {
   if (!raw?.trim()) return undefined;
@@ -69,20 +72,50 @@ export async function documentText(bytes: Buffer, filename: string) {
 
 export function textCandidate(text: string, url?: string): RecordData {
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  const sourceUrl = url ?? lines.slice(0, 20).find(l => /^https?:\/\/\S+$/i.test(l));
+  const sourceUrl = url ?? pasteSourceUrl(text);
   const cleanUrl = sourceUrl ? canonicalUrl(sourceUrl) : undefined;
   const outlet = inferOutlet(cleanUrl, text);
-  const byline = lines.slice(0, 20).find(l => /^by\s+\S+/i.test(l));
-  const title = (lines.find(l => l !== outlet && l !== sourceUrl && l !== byline && !/^(published|updated)\s*:/i.test(l)) ?? "").slice(0, 250);
-  const dateLine = lines.slice(0, 20).find(l => /^(published|date)\s*:/i.test(l));
-  const date = dateLine?.replace(/^[^:]+:\s*/, "");
-  const credits = byline ? parseByline(byline) : undefined;
+  const copy = parsePublisherCopy(text, cleanUrl);
+  const byline = copy.byline;
+  const rawTitle = (lines.find(l => l !== outlet && l !== sourceUrl && l !== byline && !/^(published|updated)\s*:/i.test(l)) ?? "");
+  const title = (copy.contentNormalization ? copy.title : rawTitle.replace(/^\[([^\]]+)\]\(https?:\/\/[^)]+\)$/, "$1")).slice(0, 250);
+  const credits = copy.credits;
   return { kind: "article", title, url: cleanUrl, outlet, byline, credits, journalists: credits?.filter(c => c.role === "author").map(c => c.name),
-    publishedAt: date && !isNaN(Date.parse(date)) ? new Date(date).toISOString() : undefined,
-    fullText: text, fullTextComplete: false, sourceType: cleanUrl && /^(?:www\.)?(?:x|twitter)\.com$/i.test(new URL(cleanUrl).hostname) ? "x" : "article",
+    ...classifyContent({ url: cleanUrl, title }),
+    publishedAt: copy.publishedAt, topic: inferArticleTopic(title, copy.text, copy.section),
+    summary: copy.contentNormalization ? copy.text.slice(0, 450) : undefined,
+    fullText: copy.text, contentNormalization: copy.contentNormalization, fullTextComplete: false, sourceType: cleanUrl && /^(?:www\.)?(?:x|twitter)\.com$/i.test(new URL(cleanUrl).hostname) ? "x" : "article",
     sentiment: "unassessed", reportingType: "unassessed" };
 }
 
+export function htmlClassification(html: string, sourceUrl: string, title?: string) {
+  const { document } = parseHTML(html);
+  const labels: string[] = [];
+  const types: string[] = [];
+  const walk = (node: unknown, depth = 0) => {
+    if (!node || depth > 5) return;
+    if (Array.isArray(node)) { node.forEach(n => walk(n, depth + 1)); return; }
+    if (typeof node !== "object") return;
+    const data = node as Record<string, unknown>;
+    for (const type of Array.isArray(data["@type"]) ? data["@type"] : [data["@type"]]) if (typeof type === "string") types.push(type);
+    for (const label of Array.isArray(data.articleSection) ? data.articleSection : [data.articleSection]) if (typeof label === "string") labels.push(label);
+    walk(data["@graph"], depth + 1); walk(data.mainEntity, depth + 1);
+  };
+  for (const script of document.querySelectorAll('script[type="application/ld+json"]')) {
+    try { walk(JSON.parse(script.textContent ?? "")); } catch { /* Other signals remain valid. */ }
+  }
+  for (const name of ["article:section", "parsely-section", "section", "CG", "SCG", "genre"]) {
+    const value = document.querySelector(`meta[property="${name}"],meta[name="${name}"]`)?.getAttribute("content");
+    if (value) labels.push(...value.split(",").map((s: string) => s.trim()));
+  }
+  const ogType = document.querySelector('meta[property="og:type"]')?.getAttribute("content") ?? "";
+  const result = classifyContent({ url: sourceUrl, title, labels, schemaTypes: types });
+  // A video embedded in a NewsArticle does NOT make the article a video.
+  if (/^video[.:]/.test(ogType) || types.includes("VideoObject") && !types.some(t => /Article|Posting/.test(t))) {
+    return classifyContent({ evidence: [...result.classificationEvidence, { signal: "Primary publisher media type", value: ogType || "VideoObject", contentFormat: "video", rank: 95 }] });
+  }
+  return result;
+}
 export function htmlCandidate(html: string, sourceUrl: string) {
   const { document } = parseHTML(html);
   const meta = (name: string) => document.querySelector(`meta[property="${name}"],meta[name="${name}"]`)?.getAttribute("content") ?? undefined;
@@ -96,7 +129,11 @@ export function htmlCandidate(html: string, sourceUrl: string) {
     } catch { /* Invalid publisher JSON-LD does not prevent extracting its visible article text. */ }
   }
   const readable = new Readability(document.cloneNode(true) as never).parse();
-  const text = (typeof ld?.articleBody === "string" ? plainText(ld.articleBody) : readable?.textContent ?? "").trim();
+  // Mail's JSON-LD often contains only a teaser, and generic Readability can pick
+  // a short related-links block. Its own article paragraph markers are reliable.
+  const mailParagraphs = inferOutlet(sourceUrl) === "Daily Mail"
+    ? [...document.querySelectorAll("#js-article-text p.mol-para-with-font")].map(p => p.textContent?.trim()).filter(Boolean).join("\n\n") : "";
+  const text = (mailParagraphs || (typeof ld?.articleBody === "string" ? plainText(ld.articleBody) : readable?.textContent ?? "")).trim();
   if (!text || text.length < 40) throw new Error("No usable article text was available at this URL. Paste or upload the content instead.");
   if (text.length > 1_000_000) throw new Error("Article text exceeds the intake limit; no content was truncated.");
   const candidate = textCandidate(text, sourceUrl);
@@ -107,7 +144,10 @@ export function htmlCandidate(html: string, sourceUrl: string) {
   const title = String(ld?.headline ?? meta("og:title") ?? readable?.title ?? candidate.title).trim();
   const outlet = inferOutlet(sourceUrl) ?? meta("og:site_name");
   const credits = byline ? parseByline(byline) : undefined;
-  return { ...candidate, title, outlet, byline, credits, journalists: credits?.filter(c => c.role === "author").map(c => c.name),
+  const classification = htmlClassification(html, sourceUrl, title);
+  return { ...candidate, ...classification, title, outlet, byline, credits, journalists: credits?.filter(c => c.role === "author").map(c => c.name),
+    extractionMethod: mailParagraphs ? "publisher article paragraphs" : typeof ld?.articleBody === "string" ? "structured article body" : "article extraction",
+    contentNormalization: { method: "html:article-extraction", sourceCharacters: html.length, articleCharacters: text.length },
     publishedAt: published && !isNaN(Date.parse(published)) ? new Date(published).toISOString() : undefined,
     summary: meta("description") ?? meta("og:description") };
 }

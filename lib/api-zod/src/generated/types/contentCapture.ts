@@ -7,11 +7,14 @@
 
 export interface ContentCapture {
   id: string;
-  text: string;
+  text?: string;
   raw?: string;
   source: string;
   sourceUrl?: string;
   capturedAt: string;
   fileName?: string;
   uploadId?: string;
+  bodyHash?: string;
+  textLength?: number;
+  rawLength?: number;
 }

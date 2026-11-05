@@ -4,6 +4,8 @@ import { outlets, people, organizations, attributions, topics, stableId, journal
 import { SaveRecordBody } from "@workspace/api-zod";
 import { scopeDefaults, unassignedPositions } from "./tripwire-scope";
 import { mergeArticleContent, type Capture } from "./tripwire-content";
+import { archiveArticle, hydrateArticles } from "./tripwire-content-storage";
+import { mergeClassification } from "./tripwire-classification";
 
 export type RecordData = typeof SaveRecordBody._output;
 export async function seedConfig() {
@@ -23,11 +25,11 @@ export async function seedConfig() {
   }))).onConflictDoNothing();
 }
 
-export async function recordsFor(userId?: string | null) {
+export async function recordsFor(userId?: string | null, includeContent = true) {
   const rows = await db.select().from(tripwireRecords).where(inArray(tripwireRecords.owner, userId ? ["public", userId] : ["public"]));
   const privateIds = new Set(rows.filter(r => r.owner !== "public").map(r => String(r.data.baseId ?? r.id)));
   const publicRows = new Map(rows.filter(r => r.owner === "public").map(r => [r.id, r]));
-  return rows.filter(r => ["article", "claim", "watch", "outlet"].includes(r.kind) && (r.owner !== "public" || !privateIds.has(r.id)) && r.data.hidden !== true).map(r => {
+  const records = rows.filter(r => ["article", "claim", "watch", "outlet"].includes(r.kind) && (r.owner !== "public" || !privateIds.has(r.id)) && r.data.hidden !== true).map(r => {
     const base = publicRows.get(String(r.data.baseId ?? r.id));
     const data = { ...r.data };
     if (r.kind === "article") {
@@ -44,9 +46,10 @@ export async function recordsFor(userId?: string | null) {
     id: String(r.data.baseId ?? r.id), kind: r.kind, title: String(r.data.title),
     createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString(),
   }); }) as (RecordData & {id: string; createdAt: string; updatedAt: string})[];
+  return includeContent ? hydrateArticles(records) : records;
 }
 
-export async function writeRecord(userId: string, data: RecordData) {
+export async function writeRecord(userId: string, data: RecordData, protectMetadata = false) {
   const baseId = data.id ?? crypto.randomUUID();
   // Per-user shadow copies allow edits/bookmarks without mutating shared feed metadata.
   const id = `${userId}:${baseId}`;
@@ -55,12 +58,20 @@ export async function writeRecord(userId: string, data: RecordData) {
   if (data.kind === "article") {
     const [existing] = await tx.select().from(tripwireRecords).where(and(eq(tripwireRecords.id, id), eq(tripwireRecords.owner, userId)));
     if (existing) {
+      if (protectMetadata) {
+        const current = existing.data as RecordData;
+        const incoming = data;
+        data = { ...incoming, ...current, ...mergeArticleContent(current, incoming), ...mergeClassification(current, incoming), retrieval: incoming.retrieval,
+          ...(current.byline || !incoming.byline ? {} : { byline: incoming.byline, credits: incoming.credits, journalists: incoming.journalists }),
+          ...(current.publishedAt || !incoming.publishedAt ? {} : { publishedAt: incoming.publishedAt }) };
+      }
       const preserved = mergeArticleContent(existing.data as { fullText?: string; fullTextComplete?: boolean; retainedContent?: Capture[] }, data);
       // Editing metadata or flagging must not erase already retained source captures.
-      data = { ...data, retainedContent: preserved.retainedContent, contentRetained: preserved.contentRetained, retainedCharacters: preserved.retainedCharacters };
-      if (!data.fullText) { data.fullText = preserved.fullText; data.fullTextComplete = preserved.fullTextComplete; }
+      data = { ...data, ...preserved, ...mergeClassification(existing.data, data) };
+      if (!protectMetadata && existing.data.retrieval) data.retrieval = existing.data.retrieval as RecordData["retrieval"];
     }
   }
+  data = await archiveArticle(data);
   const now = new Date();
   const [row] = await tx.insert(tripwireRecords).values({id, owner: userId, kind: data.kind, data: {...data, baseId}, updatedAt: now})
     .onConflictDoUpdate({target: tripwireRecords.id, set: {data: {...data, baseId}, kind: data.kind, updatedAt: now}}).returning();

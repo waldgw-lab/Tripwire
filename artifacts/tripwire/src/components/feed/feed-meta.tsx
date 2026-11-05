@@ -13,6 +13,15 @@ export function articleTags(a: TrackedRecord) {
   ].filter(Boolean) as string[];
 }
 
+const TEXT_FORMATS = new Set(['', 'text']);
+const QUIET_TYPES = new Set(['', 'news', 'unclassified']);
+/** Feed rows show only non-default identifiers. */
+export function feedTypeLabels(a: TrackedRecord) {
+  const type = (a.contentType ?? '').toLowerCase();
+  const format = (a.contentFormat ?? '').toLowerCase();
+  return [QUIET_TYPES.has(type) ? null : type, TEXT_FORMATS.has(format) ? null : format].filter(Boolean) as string[];
+}
+
 export function ImpactWord({ value, reason, id }: { value: Impact; reason: string; id: string }) {
   return (
     <span title={reason} className={cn('font-mono text-[10.5px] font-semibold uppercase tracking-wider', impactTextColor[value])} data-testid={`status-impact-${id}`}>
@@ -33,6 +42,7 @@ export function FeedMeta({ article: a, impact }: { article: TrackedRecord; impac
   const byline = feedByline(articleCredits(a));
   const outlet = a.sourceType === 'x' ? (a.outlet ?? 'X') : (a.outlet ?? '—');
   const tags = articleTags(a);
+  const kinds = feedTypeLabels(a);
   return (
     <div className="mb-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
       <time dateTime={a.publishedAt ?? undefined} title={`${pub.label} ET`} className="font-mono text-[11px] text-neutral-600" data-testid={`text-published-${a.id}`}>{pub.date}</time>
@@ -43,6 +53,7 @@ export function FeedMeta({ article: a, impact }: { article: TrackedRecord; impac
       {byline && <><Sep /><span className="text-neutral-600" title={a.byline} data-testid={`text-byline-${a.id}`}>{byline}</span></>}
       <Sep />
       <ImpactWord value={impact.value} reason={impact.reason} id={a.id} />
+      {kinds.length > 0 && <><Sep /><span className="font-mono text-[10.5px] font-semibold uppercase tracking-wider text-foreground/80" data-testid={`text-kind-${a.id}`}>{kinds.join(' · ')}</span></>}
       {tags.length > 0 && <><Sep /><span className="font-mono text-[10.5px] text-neutral-600" data-testid={`text-tags-${a.id}`}>{tags.join(' · ')}</span></>}
       <Sep />
       <ContentDot article={a} />

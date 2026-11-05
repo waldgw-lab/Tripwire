@@ -1,6 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import {
+  getGetRetrievalReportQueryKey,
   getGetWorkspaceQueryKey,
+  useEnqueueEnrichment,
   useDeleteRecord,
   useFlagArticle,
   useGetWorkspace,
@@ -13,13 +15,30 @@ import { useToast } from '@/hooks/use-toast';
 
 export function useWorkspace() {
   return useGetWorkspace({
-    query: { queryKey: getGetWorkspaceQueryKey(), staleTime: 60_000, gcTime: 10 * 60_000, refetchInterval: 60_000, refetchOnWindowFocus: true },
+    query: { queryKey: getGetWorkspaceQueryKey(), staleTime: 60_000, gcTime: 10 * 60_000, refetchInterval: (query) => (query.state.data?.records ?? []).some(r => ACTIVE_RETRIEVAL.has(r.retrieval?.status ?? '')) ? 15_000 : 60_000, refetchOnWindowFocus: true },
   });
 }
 
 function useInvalidate() {
   const qc = useQueryClient();
-  return () => qc.invalidateQueries({ queryKey: getGetWorkspaceQueryKey() });
+  return () => Promise.all([
+    qc.invalidateQueries({ queryKey: getGetWorkspaceQueryKey() }),
+    qc.invalidateQueries({ queryKey: getGetRetrievalReportQueryKey() }),
+    qc.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === 'string' && (/^\/api\/tripwire\/records\/[^/]+\/content$/.test(q.queryKey[0]) || q.queryKey[0] === '/api/tripwire/content-search') }),
+  ]);
+}
+
+export const ACTIVE_RETRIEVAL = new Set(['pending', 'queued', 'running', 'retrying', 'fetching']);
+
+export function useEnrich() {
+  const invalidate = useInvalidate();
+  const { toast } = useToast();
+  return useEnqueueEnrichment({
+    mutation: {
+      onSuccess: (r) => { invalidate(); toast({ title: r.queued ? `${r.queued} queued for retrieval` : 'Nothing new to queue' }); },
+      onError: (e: unknown) => toast({ title: 'Queue failed', description: errText(e), variant: 'destructive' }),
+    },
+  });
 }
 
 export function useSave() {

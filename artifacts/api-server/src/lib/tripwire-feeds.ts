@@ -7,6 +7,10 @@ import { stableId } from "./tripwire-config";
 import { logger } from "./logger";
 import { and, eq, sql } from "drizzle-orm";
 import { parseByline } from "./tripwire-bylines";
+import { archiveArticle } from "./tripwire-content-storage";
+import { classifyContent, mergeClassification } from "./tripwire-classification";
+import type { RecordData } from "./tripwire-store";
+import { mentionedEntities, inferArticleTopic } from "./tripwire-signals";
 import { rssContent, mergeArticleContent, type Capture } from "./tripwire-content";
 
 const parser = new Parser({customFields: {item: [["dc:creator", "creator"]]}});
@@ -57,7 +61,7 @@ export async function refreshFeeds(userId?: string | null) {
   const failures: string[] = [];
   const refreshedAt = new Date().toISOString();
   try {
-    const records = await recordsFor(userId);
+    const records = await recordsFor(userId, false);
     const outlets = records.filter(r => r.kind === "outlet" && r.enabled !== false && r.feedUrl);
     const watches = records.filter(r => r.kind === "watch" && r.enabled !== false);
     // Limit concurrent external requests to avoid overwhelming feed servers.
@@ -77,14 +81,15 @@ export async function refreshFeeds(userId?: string | null) {
             for (const key of [...url.searchParams.keys()]) if (/^(utm_|fbclid|gclid)/.test(key)) url.searchParams.delete(key);
             url.hash = "";
             const id = stableId(`article:${url.href}`);
-            const entities = watches.filter(w => [w.title, w.position ?? "", w.individual ?? "", ...(w.aliases ?? [])].some(a => a.length > 2 && text.toLowerCase().includes(a.toLowerCase()))).map(w => w.title);
+            const entities = mentionedEntities(text, watches);
             const published = item.isoDate ?? item.pubDate;
             const publishedAt = published && !isNaN(Date.parse(published)) ? new Date(published).toISOString() : undefined;
             const creator = strip(item.creator ?? "");
             const credits = parseByline(creator);
             const journalists = credits.filter(c => c.role === "author").map(c => c.name);
-            const topic = /intelligence|cia|spy|classified/i.test(text) ? "Intelligence" : /military|operation|strike|troops/i.test(text) ? "Military Operations" : /diploma|foreign|state department/i.test(text) ? "Foreign Policy" : /pentagon|defense|munitions/i.test(text) ? "Defense" : /iran|israel|ukraine|russia|china|nato/i.test(text) ? "Geopolitics" : "Politics";
-            const data = {kind: "article", title, url: url.href, outlet: outlet.title, journalists, ...(creator ? {byline: creator, credits} : {}), publishedAt, summary: strip(item.contentSnippet ?? "").slice(0, 450), entities, topic, sentiment: "unassessed", reportingType: "unassessed", sourceType: "article", saved: false, ...retained, fullTextComplete: false};
+            const topic = inferArticleTopic(title, retained.fullText ?? "");
+            const classification = classifyContent({ url: url.href, title, labels: item.categories ?? [] });
+            const data = await archiveArticle({kind: "article", title, url: url.href, outlet: outlet.title, journalists, ...(creator ? {byline: creator, credits} : {}), publishedAt, summary: strip(item.contentSnippet ?? "").slice(0, 450), entities, topic, sentiment: "unassessed", reportingType: "unassessed", sourceType: "article", saved: false, ...retained, fullTextComplete: false, ...classification} as RecordData);
             const result = await db.insert(tripwireRecords).values({id: owner === "public" ? id : `${owner}:${id}`, owner, kind: "article", data: owner === "public" ? data : {...data, baseId: id}}).onConflictDoNothing().returning({id: tripwireRecords.id});
             added += result.length;
             // Existing feed items also receive retained content; no excerpt-only cache remains
@@ -95,7 +100,8 @@ export async function refreshFeeds(userId?: string | null) {
                 const [current] = await tx.select().from(tripwireRecords).where(and(eq(tripwireRecords.id, recordId), eq(tripwireRecords.owner, owner))).for("update");
                 if (!current) return;
                 const merged = mergeArticleContent(current.data as { fullText?: string; fullTextComplete?: boolean; retainedContent?: Capture[] }, retained);
-                await tx.update(tripwireRecords).set({ data: { ...current.data, ...merged }, updatedAt: new Date() }).where(and(eq(tripwireRecords.id, recordId), eq(tripwireRecords.owner, owner)));
+                const archived = await archiveArticle({ ...current.data, ...merged, ...mergeClassification(current.data, classification) } as RecordData);
+                await tx.update(tripwireRecords).set({ data: archived, updatedAt: new Date() }).where(and(eq(tripwireRecords.id, recordId), eq(tripwireRecords.owner, owner)));
               });
             }
             // Repair cached RSS bylines once, without touching private edits or existing structured credits.

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useAuth } from '@clerk/react';
+import { useWorkspaceAccess } from '@/lib/workspace-access';
 import type { TrackedRecord } from '@workspace/api-client-react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -8,7 +8,7 @@ import { ConfirmDelete, WatchEditor } from '@/components/editors';
 import { WATCH_TYPES, byKind, useWorkspace } from '@/lib/workspace';
 
 export default function WatchlistPage() {
-  const { isSignedIn } = useAuth();
+  const { canEdit: isSignedIn } = useWorkspaceAccess();
   const { data, isLoading, isError, refetch } = useWorkspace();
   const [type, setType] = useState('all');
   const [editing, setEditing] = useState<TrackedRecord | null>(null);

@@ -146,15 +146,43 @@ export interface ArticleCredit {
   attribution?: string;
 }
 
+export interface ContentNormalization {
+  method: string;
+  sourceCharacters: number;
+  articleCharacters: number;
+}
+
+export interface ClassificationEvidence {
+  signal: string;
+  value: string;
+  contentType?: string;
+  contentFormat?: string;
+  rank?: number;
+}
+
+export interface Retrieval {
+  status?: string;
+  method?: string;
+  lastAttempt?: string;
+  nextAttemptAt?: string;
+  message?: string;
+  characters?: number;
+  rawCharacters?: number;
+  attempts?: number;
+}
+
 export interface ContentCapture {
   id: string;
-  text: string;
+  text?: string;
   raw?: string;
   source: string;
   sourceUrl?: string;
   capturedAt: string;
   fileName?: string;
   uploadId?: string;
+  bodyHash?: string;
+  textLength?: number;
+  rawLength?: number;
 }
 
 export type ObservationStage = typeof ObservationStage[keyof typeof ObservationStage];
@@ -191,6 +219,13 @@ export interface RecordInput {
   credits?: ArticleCredit[];
   publishedAt?: string;
   fullText?: string;
+  fullTextHash?: string;
+  fullTextLength?: number;
+  contentNormalization?: ContentNormalization;
+  contentType?: string;
+  contentFormat?: string;
+  classificationEvidence?: ClassificationEvidence[];
+  retrieval?: Retrieval;
   fullTextComplete?: boolean;
   retainedContent?: ContentCapture[];
   contentRetained?: boolean;
@@ -222,6 +257,38 @@ export interface RecordInput {
   lastChecked?: string;
   feedStatus?: string;
   observations?: Observation[];
+}
+
+export interface ArticleContent {
+  text: string;
+  raw: string;
+  characters: number;
+  rawCharacters: number;
+}
+
+export interface ContentSearch {
+  articleIds: string[];
+}
+
+export type RetrievalReportOutletsItem = {
+  outlet: string;
+  articles: number;
+  retrieved: number;
+  blocked: number;
+  failed: number;
+  pending: number;
+  characters: number;
+  lastResult?: string;
+};
+
+export type RetrievalReportStorage = {
+  blobs: number;
+  characters: number;
+};
+
+export interface RetrievalReport {
+  outlets: RetrievalReportOutletsItem[];
+  storage: RetrievalReportStorage;
 }
 
 export interface ImportDraft {
@@ -270,6 +337,25 @@ export interface RefreshResult {
   failures: string[];
   refreshedAt: string;
 }
+
+export type GetArticleContentParams = {
+capture?: string;
+};
+
+export type SearchArticleContentParams = {
+/**
+ * @maxLength 300
+ */
+q: string;
+};
+
+export type EnqueueEnrichmentBody = {
+  articleId?: string;
+};
+
+export type EnqueueEnrichment200 = {
+  queued: number;
+};
 
 export type RequestImportUpload200 = {
   uploadId: string;

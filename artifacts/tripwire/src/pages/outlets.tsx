@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useAuth } from '@clerk/react';
+import { useWorkspaceAccess } from '@/lib/workspace-access';
 import { useLocation, useSearch } from 'wouter';
 import type { TrackedRecord } from '@workspace/api-client-react';
 import { Pencil, Plus, Search, Trash2, X } from 'lucide-react';
@@ -18,7 +18,7 @@ const TABS: Tab[] = ['all', 'outlets', 'journalists'];
 const SORTS: [JournalistSort, string][] = [['last-name', 'Last name A–Z'], ['recent', 'Newest coverage'], ['items', 'Most items']];
 
 export default function OutletsPage() {
-  const { isSignedIn } = useAuth();
+  const { canEdit: isSignedIn } = useWorkspaceAccess();
   const { data, isLoading, isError, refetch } = useWorkspace();
   const save = useSave();
   const search = useSearch();

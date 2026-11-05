@@ -5,10 +5,17 @@
  * OpenAPI spec version: 1.0.0
  */
 
+export * from './articleContent';
 export * from './articleCredit';
 export * from './articleCreditRole';
+export * from './classificationEvidence';
 export * from './contentCapture';
+export * from './contentNormalization';
+export * from './contentSearch';
+export * from './enqueueEnrichment200';
+export * from './enqueueEnrichmentBody';
 export * from './flagRequest';
+export * from './getArticleContentParams';
 export * from './healthStatus';
 export * from './importAnalyzeRequest';
 export * from './importCommitRequest';
@@ -27,6 +34,11 @@ export * from './recordInputSourceType';
 export * from './recordInputWatchType';
 export * from './refreshResult';
 export * from './requestImportUpload200';
+export * from './retrieval';
+export * from './retrievalReport';
+export * from './retrievalReportOutletsItem';
+export * from './retrievalReportStorage';
+export * from './searchArticleContentParams';
 export * from './stats';
 export * from './trackedRecord';
 export * from './workspace';

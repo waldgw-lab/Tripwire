@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useAuth } from '@clerk/react';
-import type { TrackedRecord } from '@workspace/api-client-react';
+import { useWorkspaceAccess } from '@/lib/workspace-access';
+import { useSearchArticleContent, type TrackedRecord } from '@workspace/api-client-react';
 import { ExternalLink, Flag, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -30,11 +30,15 @@ function writeParam(id: string | null) {
 }
 
 export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }) {
-  const { isSignedIn } = useAuth();
+  const { canEdit: isSignedIn } = useWorkspaceAccess();
   const { data, isLoading, isError, refetch } = useWorkspace();
   const flag = useFlag();
   const refresh = useRefresh();
   const [q, setQ] = useState('');
+  const [debouncedQ, setDebouncedQ] = useState('');
+  useEffect(() => { const t = window.setTimeout(() => setDebouncedQ(q.trim()), 250); return () => window.clearTimeout(t); }, [q]);
+  const contentSearch = useSearchArticleContent({ q: debouncedQ }, { query: { enabled: debouncedQ.length > 0, staleTime: 60_000 } });
+  const bodyHits = useMemo(() => new Set(debouncedQ && debouncedQ === q.trim() ? contentSearch.data?.articleIds ?? [] : []), [contentSearch.data, debouncedQ, q]);
   const [filters, setFilters] = useState(emptyFeedFilters);
   const [flaggedOnly, setFlaggedOnlyState] = useState(() => mode === 'saved' || readFlagged());
   const setFlaggedOnly = useCallback((v: boolean) => { setFlaggedOnlyState(v); writeFlagged(v); }, []);
@@ -60,11 +64,12 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
       if (flaggedOnly && !isFlagged(a)) return false;
       if (!matchesFeedFilters(a, impacts.get(a.id)?.value, filters)) return false;
       if (!needle) return true;
-      return [a.title, a.summary, a.fullText, a.outlet, a.topic, a.byline, ...articleCredits(a).map(c => c.name), ...(a.entities ?? [])]
+      if (bodyHits.has(a.id)) return true;
+      return [a.title, a.summary, a.fullText, a.outlet, a.contentType, a.contentFormat, a.topic, a.byline, ...articleCredits(a).map(c => c.name), ...(a.entities ?? [])]
         .some((s) => s?.toLowerCase().includes(needle));
     });
     return flaggedFirst ? out.sort((x, y) => Number(isFlagged(y)) - Number(isFlagged(x))) : out;
-  }, [articles, impacts, q, filters, flaggedOnly, flaggedFirst]);
+  }, [articles, impacts, q, bodyHits, filters, flaggedOnly, flaggedFirst]);
 
   const selected = useMemo(() => (open ? articles.find((a) => a.id === open) ?? null : null), [articles, open]);
   useEffect(() => {
@@ -132,7 +137,7 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
               </button>
             </Empty>
       ) : (
-        <ol className="space-y-2.5 px-3 py-3 md:px-5 md:py-4">
+        <ol className="tw-feed-list space-y-2.5 px-3 py-3 md:px-5 md:py-4">
           {rows.map((a) => {
             const active = open === a.id;
             const imp = impacts.get(a.id) ?? impactRating(a, watches);
