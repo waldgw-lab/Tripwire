@@ -3,6 +3,7 @@ import type { TrackedRecord } from '@workspace/api-client-react';
 export type FeedFilterKey = 'impact' | 'topic' | 'outlet' | 'reporting' | 'sentiment' | 'focus';
 export type FeedFilters = Record<FeedFilterKey, string[]>;
 export const emptyFeedFilters = (): FeedFilters => ({ impact: [], topic: [], outlet: [], reporting: [], sentiment: [], focus: [] });
+export const defaultFeedFilters = (): FeedFilters => ({ ...emptyFeedFilters(), impact: ['critical', 'high'] });
 export const filterSelectionCount = (filters: FeedFilters) => Object.values(filters).reduce((sum, values) => sum + values.length, 0);
 
 /** Alternatives within a category; intersection across categories. No selections means all. */

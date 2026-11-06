@@ -5,7 +5,7 @@ import { ExternalLink, Flag, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { FeedFilterMenu } from '@/components/feed/feed-filters';
-import { emptyFeedFilters, filterSelectionCount, matchesFeedFilters } from '@/lib/feed-filters';
+import { defaultFeedFilters, filterSelectionCount, matchesFeedFilters } from '@/lib/feed-filters';
 import { Empty, ErrorState, PageHead, RowsSkeleton } from '@/components/bits';
 import { impactRating } from '@/lib/article-signals';
 import { FeedMeta } from '@/components/feed/feed-meta';
@@ -39,7 +39,7 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
   useEffect(() => { const t = window.setTimeout(() => setDebouncedQ(q.trim()), 250); return () => window.clearTimeout(t); }, [q]);
   const contentSearch = useSearchArticleContent({ q: debouncedQ }, { query: { enabled: debouncedQ.length > 0, staleTime: 60_000 } });
   const bodyHits = useMemo(() => new Set(debouncedQ && debouncedQ === q.trim() ? contentSearch.data?.articleIds ?? [] : []), [contentSearch.data, debouncedQ, q]);
-  const [filters, setFilters] = useState(emptyFeedFilters);
+  const [filters, setFilters] = useState(defaultFeedFilters);
   const [flaggedOnly, setFlaggedOnlyState] = useState(() => mode === 'saved' || readFlagged());
   const setFlaggedOnly = useCallback((v: boolean) => { setFlaggedOnlyState(v); writeFlagged(v); }, []);
   const [flaggedFirst, setFlaggedFirst] = useState(false);
@@ -105,7 +105,7 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
   }, [selected, narrow]);
 
   const filtered = q || flaggedOnly || filterSelectionCount(filters) > 0;
-  const clear = () => { setQ(''); setFilters(emptyFeedFilters()); setFlaggedOnly(false); };
+  const clear = () => { setQ(''); setFilters(defaultFeedFilters()); setFlaggedOnly(false); };
   const toggleFlag = (a: TrackedRecord) => flag.mutate({ id: a.id, data: { flagged: !isFlagged(a) } });
 
   return (

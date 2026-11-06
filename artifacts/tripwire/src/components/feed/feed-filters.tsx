@@ -1,6 +1,6 @@
 import { SlidersHorizontal } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { emptyFeedFilters, filterSelectionCount, type FeedFilterKey, type FeedFilters } from '@/lib/feed-filters';
+import { defaultFeedFilters, filterSelectionCount, type FeedFilterKey, type FeedFilters } from '@/lib/feed-filters';
 import { cn } from '@/lib/utils';
 
 export function FeedFilterMenu({ value, onChange, topics, outlets, reporting, sentiment, focus, flagged, onFlaggedChange, flaggedFirst, onFlaggedFirstChange }: {
@@ -33,7 +33,7 @@ export function FeedFilterMenu({ value, onChange, topics, outlets, reporting, se
           <label className="flex cursor-pointer items-center gap-1.5"><input type="checkbox" checked={flaggedFirst} onChange={e => onFlaggedFirstChange(e.target.checked)} className="h-3.5 w-3.5 accent-black" data-testid="sort-flagged-first" /> Flagged first</label>
         </div>
         </div>
-        <button onClick={() => { onChange(emptyFeedFilters()); onFlaggedChange(false); }} disabled={!count} className="text-xs underline underline-offset-4 disabled:opacity-40" data-testid="button-reset-feed-filters">Reset</button>
+        <button onClick={() => { onChange(defaultFeedFilters()); onFlaggedChange(false); }} disabled={!count} className="text-xs underline underline-offset-4 disabled:opacity-40" data-testid="button-reset-feed-filters">Reset</button>
       </div>
       <div className="grid max-h-[min(65dvh,520px)] grid-cols-1 gap-3 overflow-y-auto p-4 min-[420px]:grid-cols-2 md:grid-cols-3">
         {categories.map(category => <fieldset key={category.key} className="min-w-0 rounded-lg border border-border p-3" data-testid={`filter-category-${category.key}`}>

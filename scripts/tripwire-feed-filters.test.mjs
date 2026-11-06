@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { emptyFeedFilters, filterSelectionCount, matchesFeedFilters } from '../artifacts/tripwire/src/lib/feed-filters.ts';
+import { defaultFeedFilters, emptyFeedFilters, filterSelectionCount, matchesFeedFilters } from '../artifacts/tripwire/src/lib/feed-filters.ts';
 
 const article = { topic: 'Defense', outlet: 'Axios', reportingType: 'original', sentiment: 'negative', focus: 'performance' };
 test('no checked categories include every item, including missing metadata', () => {
@@ -33,7 +33,7 @@ test('clearing one category preserves other restrictions', () => {
   assert.equal(matchesFeedFilters({ ...article, outlet: 'NBC' }, 'critical', cleared), true);
   assert.equal(matchesFeedFilters(article, 'low', cleared), false);
 });
-test('reset supplies fresh empty arrays and zero active count', () => {
+test('empty filters supply fresh arrays and zero active count', () => {
   const previous = { ...emptyFeedFilters(), topic: ['Defense'], outlet: ['Axios', 'NBC'] };
   assert.equal(filterSelectionCount(previous), 3);
   const reset = emptyFeedFilters();
@@ -41,4 +41,15 @@ test('reset supplies fresh empty arrays and zero active count', () => {
   assert.equal(matchesFeedFilters(article, 'low', reset), true);
   reset.topic.push('Politics');
   assert.deepEqual(emptyFeedFilters().topic, []);
+});
+test('default and reset state select Critical and High, leaving Low unchecked and excluded', () => {
+  const defaults = defaultFeedFilters();
+  assert.deepEqual(defaults.impact, ['critical', 'high']);
+  assert.equal(matchesFeedFilters(article, 'critical', defaults), true);
+  assert.equal(matchesFeedFilters(article, 'high', defaults), true);
+  assert.equal(matchesFeedFilters(article, 'low', defaults), false);
+  assert.deepEqual(defaults.outlet, []);
+  defaults.impact.push('low');
+  assert.equal(matchesFeedFilters(article, 'low', defaults), true);
+  assert.deepEqual(defaultFeedFilters().impact, ['critical', 'high']);
 });

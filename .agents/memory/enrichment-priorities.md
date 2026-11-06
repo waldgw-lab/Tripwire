@@ -9,6 +9,12 @@ Prioritize extra publisher-page retrieval for Critical items before High items. 
 
 **How to apply:** Keep scheduler prominence aligned with the rating shown in the feed, including manual overrides. Preserve RSS text regardless of rating, and retain publisher backoff and access rules.
 
+Default the feed's Impact selections to Critical and High, leaving Low unchecked but manually selectable.
+
+**Why:** The user explicitly asked to filter out Low items by default without removing the ability to show them.
+
+**How to apply:** Reset should restore that default. This is a visibility preference, not permission to delete Low items or stop retaining their available source content.
+
 The recent Critical queue is based on ingestion/discovery within the last 12 hours, not publication time or the time an article's metadata was edited.
 
 **Why:** The user asked for “items ingested in the last 12 hours.” An older story can be newly ingested, while creating an editable copy must not make an older intake appear new.
