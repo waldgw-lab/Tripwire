@@ -15,7 +15,10 @@ export default function WatchlistPage() {
   const { canEdit: isSignedIn } = useWorkspaceAccess();
   const { data, isLoading, isError, refetch } = useWorkspace();
   const [type, setType] = useState('all');
-  const [view, setView] = useState<'registry' | 'organization'>('registry');
+  // Keep the established organization hierarchy as the Coverage landing view;
+  // explicit entity links still open the registry/detail pane.
+  const [view, setView] = useState<'registry' | 'organization'>(() =>
+    new URLSearchParams(window.location.search).has('entity') ? 'registry' : 'organization');
   const [editing, setEditing] = useState<TrackedRecord | null>(null);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<TrackedRecord | null>(null);
@@ -88,7 +91,14 @@ export default function WatchlistPage() {
   return <div className="tw-rise">
     <PageHead title="Coverage" count={view === 'organization' ? items.length : undefined}>
       <div className="flex rounded-md border border-border p-0.5" role="tablist">
-        {(['registry', 'organization'] as const).map(v => <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)} data-testid={`tab-watch-${v}`} className={cn('h-7 rounded px-2.5 font-mono text-[11px] uppercase tracking-wider', view === v ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary')}>{v === 'registry' ? 'Registry' : 'Organizations'}</button>)}
+        {(['organization', 'registry'] as const).map(v => <button key={v} role="tab" aria-selected={view === v} onClick={() => {
+          setView(v);
+          if (v === 'organization') {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('entity');
+            window.history.replaceState(window.history.state, '', url);
+          }
+        }} data-testid={`tab-watch-${v}`} className={cn('h-7 rounded px-2.5 font-mono text-[11px] uppercase tracking-wider', view === v ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary')}>{v === 'registry' ? 'Registry' : 'Organizations'}</button>)}
       </div>
       {view === 'organization' && isSignedIn && <button onClick={() => setCreating(true)} data-testid="button-add-watch" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground"><Plus className="h-3.5 w-3.5" /> Watch</button>}
     </PageHead>

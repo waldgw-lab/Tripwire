@@ -2,6 +2,15 @@
 name: Entity automation safety gates
 description: Durable staging and migration decisions for role-first entity monitoring.
 ---
+
+Keep organization-first Coverage as the main navigation experience; the staged
+entity registry is secondary, not a replacement for the established hierarchy.
+
+**Why:** Switching the landing view to a flat registry made the user think their
+organizations had disappeared, although the records remained intact.
+
+**How to apply:** Preserve organization → position → individual browsing when
+adding monitoring tools, while retaining explicit entity deep links.
 Entity discovery and live decision application are separate stages. Keep an
 unconfigured provider operationally visible rather than provisioning paid usage
 or treating unavailable extraction as declining relevance.
