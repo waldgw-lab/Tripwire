@@ -1,6 +1,4 @@
-import Parser from "rss-parser";
-import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
+import { gunzipSync } from "node:zlib";
 import { db, tripwireRecords } from "@workspace/db";
 import { recordsFor } from "./tripwire-store";
 import { stableId } from "./tripwire-config";
@@ -11,47 +9,34 @@ import { archiveArticle } from "./tripwire-content-storage";
 import { classifyContent, mergeClassification } from "./tripwire-classification";
 import type { RecordData } from "./tripwire-store";
 import { mentionedEntities, inferArticleTopic } from "./tripwire-signals";
-import { rssContent, mergeArticleContent, type Capture } from "./tripwire-content";
+import { rssContent, mergeArticleContent, captureContent, type Capture } from "./tripwire-content";
+import { fetchPublicDocument } from "./tripwire-fetch";
+import { intakeSources, publisherUrl, sitemapItems, feedFreshness, retryAfter, discoveryTitle, titleKey, parseRssItems, type IntakeItem, type IntakeSource, type FeedHealth } from "./tripwire-intake";
+import { checkRobots } from "./tripwire-retrieval";
 
-const parser = new Parser({customFields: {item: [["dc:creator", "creator"]]}});
 const locks = new Set<string>();
 const cooldown = new Map<string, number>();
 const strip = (s: string) => s.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim();
 const relevant = /\b(politic|trump|vance|rubio|hegseth|caine|cooper|pentagon|defen[sc]e|military|intelligence|iran|israel|ukraine|russia|china|foreign policy|state department|white house|congress|senate|war|diploma|nato|munitions|geopolitic)/i;
-function publicAddress(ip: string) {
-  if (isIP(ip) === 4) {
-    const [a, b] = ip.split(".").map(Number);
-    return !(a === 0 || a === 10 || a === 127 || a === 169 && b === 254 || a === 172 && b! >= 16 && b! <= 31 || a === 192 && b === 168 || a === 100 && b! >= 64 && b! <= 127 || a! >= 224);
-  }
-  return !ip.includes(".") && !/^(::|fc|fd|fe[89ab])/i.test(ip);
+export async function fetchFeed(url: string): Promise<string> {
+  const result = await fetchPublicDocument(url, 0, { httpsOnly: true, accept: "application/rss+xml,application/atom+xml,application/xml,text/xml" });
+  const bytes = result.bytes[0] === 0x1f && result.bytes[1] === 0x8b
+    ? gunzipSync(result.bytes, { maxOutputLength: 3_000_000 }) : result.bytes;
+  const xml = bytes.toString("utf8");
+  if (/<!DOCTYPE|<!ENTITY/i.test(xml)) throw new Error("Document type declarations are not accepted");
+  return xml;
 }
-export async function fetchFeed(url: string, depth = 0): Promise<string> {
-  const target = new URL(url);
-  if (!["https:", "http:"].includes(target.protocol) || target.username || target.password || target.port && !["80", "443"].includes(target.port)) throw new Error("Invalid public feed URL");
-  const addresses = await lookup(target.hostname, {all: true});
-  if (!addresses.length || addresses.some(a => !publicAddress(a.address))) throw new Error("Feed must use a public host");
-  const response = await fetch(target, {redirect: "manual", signal: AbortSignal.timeout(12000), headers: {"User-Agent": "Tripwire/1.0 RSS monitoring", Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml"}});
-  if (response.status >= 300 && response.status < 400 && response.headers.get("location")) {
-    if (depth >= 3) throw new Error("Too many redirects");
-    return fetchFeed(new URL(response.headers.get("location")!, target).href, depth + 1);
-  }
-  if (!response.ok) throw new Error(`Feed returned HTTP ${response.status}`);
-  const reader = response.body?.getReader();
-  if (!reader) throw new Error("Empty feed response");
-  let size = 0;
-  const chunks: Uint8Array[] = [];
-  while (true) {
-    const chunk = await reader.read();
-    if (chunk.done) break;
-    size += chunk.value.length;
-    if (size > 3_000_000) { await reader.cancel(); throw new Error("Feed exceeds size limit"); }
-    chunks.push(chunk.value);
-  }
-  return Buffer.concat(chunks).toString("utf8");
+async function sourceItems(source: IntakeSource, outlet: string): Promise<IntakeItem[]> {
+  if (source.kind === "sitemap") await checkRobots(new URL(source.url));
+  const xml = await fetchFeed(source.url);
+  if (source.kind === "sitemap") return sitemapItems(xml, outlet);
+  return parseRssItems(xml);
 }
 
-export async function refreshFeeds(userId?: string | null) {
-  const owner = userId || "public";
+export async function refreshFeeds(_userId?: string | null) {
+  // Manual refresh and background monitoring share one intake and lock. Creating
+  // per-user copies here would duplicate articles and leave stale status shadows.
+  const owner = "public";
   if (locks.has(owner) || Date.now() - (cooldown.get(owner) ?? 0) < 60000) {
     return {added: 0, checked: 0, failures: ["Feed refresh is already running or was checked in the last minute."], refreshedAt: new Date().toISOString()};
   }
@@ -61,35 +46,77 @@ export async function refreshFeeds(userId?: string | null) {
   const failures: string[] = [];
   const refreshedAt = new Date().toISOString();
   try {
-    const records = await recordsFor(userId, false);
-    const outlets = records.filter(r => r.kind === "outlet" && r.enabled !== false && r.feedUrl);
+    const records = await recordsFor("workspace", false);
+    const outlets = records.filter(r => r.kind === "outlet" && r.enabled !== false);
     const watches = records.filter(r => r.kind === "watch" && r.enabled !== false);
     // Limit concurrent external requests to avoid overwhelming feed servers.
     for (let i = 0; i < outlets.length; i += 4) {
       await Promise.all(outlets.slice(i, i + 4).map(async outlet => {
         checked++;
-        let feedStatus = "Connected";
+        const health: FeedHealth[] = [];
+        let primaryConnected = false;
+        const sources = intakeSources(outlet.title, outlet.feedUrl);
         try {
-          const feed = await parser.parseString(await fetchFeed(outlet.feedUrl!));
-          for (const item of feed.items.slice(0, 60)) {
+          for (const source of sources) {
+          const savedHealth = outlet.feedHealth?.find(h => h.url === source.url);
+          const previous = savedHealth ? { ...savedHealth, role: source.role } : undefined;
+          if (source.role === "fallback" && primaryConnected) {
+            health.push({ ...previous, ...source, status: "standby", items: previous?.items ?? 0, message: "Reserved for publisher intake failure" });
+            continue;
+          }
+          if (previous?.nextAttemptAt && Date.parse(previous.nextAttemptAt) > Date.now()) { health.push(previous); continue; }
+          let items: IntakeItem[];
+          try {
+            items = await sourceItems(source, outlet.title);
+            const freshness = feedFreshness(items.map(item => item.isoDate ?? item.pubDate));
+            const status = !items.length ? "empty" : freshness.stale ? "stale" : "connected";
+            const ok = status === "connected";
+            health.push({ ...source, status, checkedAt: refreshedAt, items: items.length, ...freshness,
+              message: ok ? `${source.kind === "google-news" ? "Google News discovery" : source.kind === "sitemap" ? "Publisher news sitemap" : "Publisher RSS/Atom"}: ${items.length} items`
+                : items.length ? "Feed has no verified publication within seven days" : "Feed is empty",
+              ...(!ok ? { nextAttemptAt: retryAfter((previous?.failures ?? 0) + 1), failures: (previous?.failures ?? 0) + 1 } : { failures: 0 }) });
+            if (!ok) continue;
+            if (source.role !== "fallback" || source.kind !== "google-news") primaryConnected = true;
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "Source unavailable";
+            health.push({ ...source, status: "failed", checkedAt: refreshedAt, items: 0, message, failures: (previous?.failures ?? 0) + 1, nextAttemptAt: retryAfter((previous?.failures ?? 0) + 1) });
+            logger.warn({ outlet: outlet.title, url: source.url, error: message }, "Intake source failed");
+            continue;
+          }
+          // Bound ingestion, newest first (some publishers don't order feeds).
+          items.sort((a, b) => Date.parse(b.isoDate ?? b.pubDate ?? "") - Date.parse(a.isoDate ?? a.pubDate ?? ""));
+          for (const item of items.slice(0, 150)) {
             if (!item.title || !item.link || !/^https?:\/\//i.test(item.link)) continue;
-            const title = strip(item.title);
-            const retained = rssContent(item, item.link);
+            const discovery = source.kind === "google-news";
+            const publisher = item.publisherSource?.[0];
+            if (discovery ? !publisher?.$?.url || !publisherUrl(publisher.$.url, outlet.title) || new URL(item.link).hostname !== "news.google.com" || new URL(item.link).protocol !== "https:" : !publisherUrl(item.link, outlet.title)) continue;
+            const title = strip(discovery ? discoveryTitle(item.title, publisher?._ ?? "") : item.title);
+            const retained = source.kind === "rss" ? rssContent(item, item.link) : {
+              retainedContent: [captureContent("", discovery ? "discovery:google-news" : "discovery:publisher-sitemap",
+                { raw: item.raw ?? JSON.stringify(item), sourceUrl: source.url })],
+              fullText: undefined, contentRetained: true, retainedCharacters: 0,
+            };
             const text = `${title} ${retained.fullText ?? ""}`;
             if (!relevant.test(text)) continue;
             const url = new URL(item.link);
             for (const key of [...url.searchParams.keys()]) if (/^(utm_|fbclid|gclid)/.test(key)) url.searchParams.delete(key);
             url.hash = "";
-            const id = stableId(`article:${url.href}`);
+            const discovered = records.filter(r => r.kind === "article" && r.outlet === outlet.title && titleKey(r.title) === titleKey(title));
+            const existingDiscovery = discovered.length === 1 ? discovered[0] : undefined;
+            // Don't create a Google duplicate of an already-known publisher item.
+            if (discovery && existingDiscovery && !existingDiscovery.discoveryOnly) continue;
+            const id = existingDiscovery?.discoveryOnly ? existingDiscovery.id : stableId(discovery ? `discovery:${outlet.title}:${titleKey(title)}` : `article:${url.href}`);
             const entities = mentionedEntities(text, watches);
             const published = item.isoDate ?? item.pubDate;
-            const publishedAt = published && !isNaN(Date.parse(published)) ? new Date(published).toISOString() : undefined;
-            const creator = strip(item.creator ?? "");
+            const publishedAt = !discovery && published && !isNaN(Date.parse(published)) ? new Date(published).toISOString() : undefined;
+            const creator = !discovery ? strip(item.creator ?? "") : "";
             const credits = parseByline(creator);
             const journalists = credits.filter(c => c.role === "author").map(c => c.name);
             const topic = inferArticleTopic(title, retained.fullText ?? "");
             const classification = classifyContent({ url: url.href, title, labels: item.categories ?? [] });
-            const data = await archiveArticle({kind: "article", title, url: url.href, outlet: outlet.title, journalists, ...(creator ? {byline: creator, credits} : {}), publishedAt, summary: strip(item.contentSnippet ?? "").slice(0, 450), entities, topic, sentiment: "unassessed", reportingType: "unassessed", sourceType: "article", saved: false, ...retained, fullTextComplete: false, ...classification} as RecordData);
+            const data = await archiveArticle({kind: "article", title, url: url.href, outlet: outlet.title, journalists, ...(creator ? {byline: creator, credits} : {}), publishedAt, summary: discovery ? undefined : strip(item.contentSnippet ?? "").slice(0, 450), entities, topic, sentiment: "unassessed", reportingType: "unassessed", sourceType: "article", saved: false,
+              intakeMethod: source.kind, intakeUrl: source.url, discoveryOnly: discovery, discoveredAt: refreshedAt,
+              ...retained, fullTextComplete: false, ...classification} as RecordData);
             const result = await db.insert(tripwireRecords).values({id: owner === "public" ? id : `${owner}:${id}`, owner, kind: "article", data: owner === "public" ? data : {...data, baseId: id}}).onConflictDoNothing().returning({id: tripwireRecords.id});
             added += result.length;
             // Existing feed items also receive retained content; no excerpt-only cache remains
@@ -100,7 +127,8 @@ export async function refreshFeeds(userId?: string | null) {
                 const [current] = await tx.select().from(tripwireRecords).where(and(eq(tripwireRecords.id, recordId), eq(tripwireRecords.owner, owner))).for("update");
                 if (!current) return;
                 const merged = mergeArticleContent(current.data as { fullText?: string; fullTextComplete?: boolean; retainedContent?: Capture[] }, retained);
-                const archived = await archiveArticle({ ...current.data, ...merged, ...mergeClassification(current.data, classification) } as RecordData);
+                const promotion = current.data.discoveryOnly && !discovery ? { ...data, saved: current.data.saved, flagged: current.data.flagged } : {};
+                const archived = await archiveArticle({ ...current.data, ...promotion, ...merged, ...mergeClassification(current.data, classification) } as RecordData);
                 await tx.update(tripwireRecords).set({ data: archived, updatedAt: new Date() }).where(and(eq(tripwireRecords.id, recordId), eq(tripwireRecords.owner, owner)));
               });
             }
@@ -111,14 +139,23 @@ export async function refreshFeeds(userId?: string | null) {
               }).where(and(eq(tripwireRecords.id, id), eq(tripwireRecords.owner, "public"), sql`NOT (${tripwireRecords.data} ? 'credits')`));
             }
           }
+          }
         } catch (err) {
-          feedStatus = err instanceof Error ? err.message : "Feed unavailable";
-          failures.push(`${outlet.title}: ${feedStatus}`);
-          logger.warn({outlet: outlet.title, error: feedStatus}, "Feed refresh failed");
+          const error = err instanceof Error ? err.message : "Feed unavailable";
+          failures.push(`${outlet.title}: ${error}`);
+          logger.warn({outlet: outlet.title, error}, "Feed refresh failed");
         }
-        // A user's custom configuration must never change another user's outlets.
+        const connected = health.filter(h => h.status === "connected");
+        const active = connected.filter(h => h.kind !== "google-news");
+        const feedStatus = active.length ? `Connected: ${active.length} publisher source${active.length === 1 ? "" : "s"}`
+          : connected.length ? "Fallback: Google News headline discovery only"
+          : health[0]?.message ?? "Manual intake";
+        if (!connected.length) failures.push(`${outlet.title}: ${feedStatus}`);
+        // Health is shared; configuration overrides remain in the workspace.
         const statusId = owner === "public" ? outlet.id : `${owner}:${outlet.id}`;
-        const data = {...outlet, lastChecked: refreshedAt, feedStatus, ...(owner === "public" ? {} : {baseId: outlet.id})};
+        const prior = outlet.feedHealth?.filter(h => !health.some(next => next.url === h.url)) ?? [];
+        const data = {...outlet, feedUrl: sources.find(s => s.role === "primary")?.url ?? outlet.feedUrl,
+          lastChecked: refreshedAt, feedStatus, feedHealth: [...health, ...prior], ...(owner === "public" ? {} : {baseId: outlet.id})};
         await db.insert(tripwireRecords).values({id: statusId, owner, kind: "outlet", data}).onConflictDoUpdate({target: tripwireRecords.id, set: {data, updatedAt: new Date()}});
       }));
     }

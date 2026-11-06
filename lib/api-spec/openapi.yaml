@@ -265,9 +265,30 @@ components:
         feedUrl: { type: string }
         lastChecked: { type: string }
         feedStatus: { type: string }
+        feedHealth:
+          type: array
+          items: { $ref: "#/components/schemas/FeedHealth" }
+        intakeMethod: { type: string, enum: [rss, sitemap, google-news] }
+        intakeUrl: { type: string }
+        discoveryOnly: { type: boolean }
+        discoveredAt: { type: string }
         observations:
           type: array
           items: { $ref: "#/components/schemas/Observation" }
+    FeedHealth:
+      type: object
+      required: [url, kind, role, status, message, items]
+      properties:
+        url: { type: string }
+        kind: { type: string, enum: [rss, sitemap, google-news] }
+        role: { type: string, enum: [primary, supplement, fallback] }
+        status: { type: string, enum: [connected, failed, stale, empty, standby] }
+        checkedAt: { type: string }
+        message: { type: string }
+        items: { type: integer }
+        latestItemAt: { type: string }
+        nextAttemptAt: { type: string }
+        failures: { type: integer }
     ContentCapture:
       type: object
       required: [id, source, capturedAt]

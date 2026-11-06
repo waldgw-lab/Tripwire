@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { ErrorState, PageHead } from '@/components/bits';
 import { Importer } from '@/components/importer';
 import { useEnrich } from '@/lib/workspace';
+import { IntakeHealth } from '@/components/feed/intake-health';
 
 const n = (v: number) => v.toLocaleString('en-US');
 
@@ -80,6 +81,7 @@ export default function DashboardPage() {
       <PageHead title="Dashboard" />
       <div className="mx-auto w-full max-w-[1000px] px-5 py-6 md:px-8">
         <Importer />
+        <IntakeHealth />
         <RetrievalTable />
       </div>
     </div>

@@ -172,6 +172,13 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
               </div>
             )}
           </Field>
+          {a.intakeMethod && (
+            <Field label="Intake">
+              <span className="text-xs">{a.intakeMethod === 'google-news' ? 'Google News discovery' : a.intakeMethod === 'sitemap' ? 'Publisher news sitemap' : 'Publisher RSS / Atom'}</span>
+              {a.discoveryOnly && <p className="mt-1 text-xs text-muted-foreground">{hasMain ? 'Publisher link not yet verified. Imported content is retained below.' : 'Headline discovery only. Publisher article text, byline and publication time are not yet verified.'}</p>}
+              {a.intakeUrl && <a href={a.intakeUrl} target="_blank" rel="noreferrer" className="mt-1 block break-all font-mono text-[10px] text-muted-foreground underline underline-offset-2">{a.intakeUrl}</a>}
+            </Field>
+          )}
           <Field label="Retrieval">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px]" data-testid="text-reader-retrieval">
               <span className="uppercase tracking-wider">{r?.status ?? 'not attempted'}</span>
@@ -181,7 +188,7 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
               {r?.attempts != null && <span className="text-muted-foreground">{r.attempts} att.</span>}
               {r?.lastAttempt && <span className="text-muted-foreground">{fmtDate(r.lastAttempt, true)}</span>}
               {r?.nextAttemptAt && <span className="text-muted-foreground">next {fmtDate(r.nextAttemptAt, true)}</span>}
-              {a.url && (
+              {a.url && !a.discoveryOnly && (
                 <button type="button" onClick={() => enrich.mutate({ data: { articleId: a.id } })} disabled={enrich.isPending || ACTIVE_RETRIEVAL.has(r?.status ?? '')}
                   className="inline-flex h-6 items-center gap-1 rounded border border-border px-2 font-sans text-[11px] hover:border-foreground disabled:opacity-50" data-testid="button-reader-fetch">
                   <RefreshCw className={cn('h-3 w-3', enrich.isPending && 'animate-spin')} /> Fetch source
@@ -236,7 +243,7 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
 
         {a.url && (
           <a href={a.url} target="_blank" rel="noreferrer" className="mt-6 inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-xs hover:border-foreground" data-testid="link-reader-source">
-            <ExternalLink className="h-3.5 w-3.5" /> Open source
+            <ExternalLink className="h-3.5 w-3.5" /> {a.discoveryOnly ? 'Open discovery link' : 'Open source'}
           </a>
         )}
       </div>

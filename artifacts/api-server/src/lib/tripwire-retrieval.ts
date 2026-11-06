@@ -36,7 +36,7 @@ export function robotsAllows(text: string, path: string) {
   }).sort((a, b) => b.path.length - a.path.length || Number(b.allow) - Number(a.allow));
   return rules[0]?.allow ?? true;
 }
-async function checkRobots(url: URL) {
+export async function checkRobots(url: URL) {
   let entry = robotsCache.get(url.origin);
   if (!entry || entry.until < Date.now()) {
     try {
@@ -129,7 +129,7 @@ export async function runRetrievalTick() {
     const attempts = new Map<string, number>();
     for (const a of records.filter(r => r.kind === "article" && r.retrieval?.lastAttempt)) attempts.set(a.outlet ?? "", (attempts.get(a.outlet ?? "") ?? 0) + 1);
     const due = records.filter(a => {
-      if (a.kind !== "article" || !a.url || a.sourceType === "x" || active.has(a.id)) return false;
+      if (a.kind !== "article" || !a.url || a.discoveryOnly || a.sourceType === "x" || active.has(a.id)) return false;
       const outlet = outlets.find(o => o.title === a.outlet) as (Item & { pageBackoffUntil?: string }) | undefined;
       if (outlet?.enabled === false || Date.parse(outlet?.pageBackoffUntil ?? "") > Date.now()) return false;
       if (Date.parse(a.retrieval?.nextAttemptAt ?? "") > Date.now()) return false;

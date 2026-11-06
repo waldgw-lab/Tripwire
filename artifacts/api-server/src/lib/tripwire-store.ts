@@ -32,7 +32,20 @@ export async function recordsFor(userId?: string | null, includeContent = true) 
   const records = rows.filter(r => ["article", "claim", "watch", "outlet"].includes(r.kind) && (r.owner !== "public" || !privateIds.has(r.id)) && r.data.hidden !== true).map(r => {
     const base = publicRows.get(String(r.data.baseId ?? r.id));
     const data = { ...r.data };
+    if (r.kind === "outlet" && base && r.owner !== "public") {
+      // User configuration is editable, but monitoring health belongs to the
+      // shared collector and must not freeze when an outlet has a shadow copy.
+      for (const key of ["feedStatus", "feedHealth", "lastChecked", "pageBackoffUntil", "pageLastResult"]) {
+        if (base.data[key] !== undefined) data[key] = base.data[key];
+      }
+    }
     if (r.kind === "article") {
+      if (data.discoveryOnly && base?.data.discoveryOnly === false) {
+        Object.assign(data, { discoveryOnly: false, url: base.data.url, intakeMethod: base.data.intakeMethod,
+          intakeUrl: base.data.intakeUrl, publishedAt: data.publishedAt ?? base.data.publishedAt,
+          byline: data.byline ?? base.data.byline, credits: data.credits ?? base.data.credits,
+          journalists: (data.journalists as unknown[] | undefined)?.length ? data.journalists : base.data.journalists });
+      }
       const content = mergeArticleContent((r.owner !== "public" ? data : base?.data ?? {}) as { fullText?: string; retainedContent?: Capture[]; fullTextComplete?: boolean },
         (r.owner !== "public" ? base?.data ?? {} : data) as { fullText?: string; retainedContent?: Capture[]; fullTextComplete?: boolean });
       Object.assign(data, content, { flagged: data.flagged ?? data.saved ?? false });

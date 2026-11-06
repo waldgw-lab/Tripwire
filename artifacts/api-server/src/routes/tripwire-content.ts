@@ -47,7 +47,7 @@ router.get("/tripwire/retrieval", async (_req, res) => {
     const latest = [...items].sort((a, b) => (b.retrieval?.lastAttempt ?? "").localeCompare(a.retrieval?.lastAttempt ?? ""))[0];
     return { outlet: outlet.title, articles: items.length, retrieved: items.filter(a => a.retrieval?.status === "retrieved").length,
       blocked: items.filter(a => a.retrieval?.status === "blocked").length, failed: items.filter(a => a.retrieval?.status === "failed").length,
-      pending: items.filter(a => !a.retrieval || a.retrieval.status === "pending").length,
+      pending: items.filter(a => !a.discoveryOnly && (!a.retrieval || a.retrieval.status === "pending")).length,
       characters: items.reduce((sum, a) => sum + (a.fullTextLength ?? a.retainedCharacters ?? 0), 0),
       lastResult: latest?.retrieval?.message ?? (outlet as typeof outlet & { pageLastResult?: string }).pageLastResult ?? (items.length ? "Awaiting first page retrieval" : outlet.feedStatus ?? "No items yet") };
   });
@@ -57,7 +57,7 @@ router.post("/tripwire/retrieval", async (req, res) => {
   const records = await recordsFor(WORKSPACE_OWNER, false);
   const id = req.body?.articleId;
   if (id !== undefined && typeof id !== "string") { res.status(400).json({ error: "Invalid article identifier" }); return; }
-  const items = records.filter(r => r.kind === "article" && r.url && r.sourceType !== "x" && (!id || r.id === id));
+  const items = records.filter(r => r.kind === "article" && r.url && !r.discoveryOnly && r.sourceType !== "x" && (!id || r.id === id));
   if (id && !items.length) { res.status(404).json({ error: "Article not found or has no fetchable source URL" }); return; }
   let queued = 0;
   for (const item of items) {

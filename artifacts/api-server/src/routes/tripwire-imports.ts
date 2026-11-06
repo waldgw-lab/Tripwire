@@ -7,6 +7,7 @@ import { recordsFor, writeRecord, type RecordData } from "../lib/tripwire-store"
 import { privateFile, uploadUrl } from "../lib/tripwire-files";
 import { fetchPublicDocument } from "../lib/tripwire-fetch";
 import { canonicalUrl, documentText, htmlCandidate, importCapture, matchImport, textCandidate } from "../lib/tripwire-import";
+import { publisherUrl } from "../lib/tripwire-intake";
 import { mergeCaptures, captureContent, prefersIncomingContent, type Capture } from "../lib/tripwire-content";
 import { parseByline } from "../lib/tripwire-bylines";
 import { archiveArticle, hydrateArticles } from "../lib/tripwire-content-storage";
@@ -164,6 +165,7 @@ router.post("/tripwire/imports/commit", async (req, res) => {
         ? [...reviewed, ...(candidate.credits ?? existing?.credits ?? []).filter(c => c.role !== "author" && !reviewed.some(r => r.name === c.name))]
         : existing?.credits ?? candidate.credits;
       const data: RecordData = { ...candidate, ...existing, ...mergeClassification(existing ?? {}, candidate), id: existing?.id ?? String(draft.data.articleId), kind: "article", ...finalMetadata,
+        discoveryOnly: existing?.discoveryOnly ? !url || !publisherUrl(url, finalMetadata.outlet ?? "") : false,
         byline, credits, journalists: credits?.filter(c => c.role === "author").map(c => c.name) ?? [],
         publishedAt: body.publishedAt || undefined, sourceType: body.sourceType ?? candidate.sourceType,
         fullText: keepBody ? existing?.fullText : candidate.fullText, fullTextComplete: keepBody ? existing?.fullTextComplete : body.fullTextComplete ?? false,

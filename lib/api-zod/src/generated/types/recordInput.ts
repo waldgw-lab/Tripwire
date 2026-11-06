@@ -8,9 +8,11 @@ import type { ArticleCredit } from './articleCredit';
 import type { ClassificationEvidence } from './classificationEvidence';
 import type { ContentCapture } from './contentCapture';
 import type { ContentNormalization } from './contentNormalization';
+import type { FeedHealth } from './feedHealth';
 import type { Observation } from './observation';
 import type { RecordInputFocus } from './recordInputFocus';
 import type { RecordInputImpact } from './recordInputImpact';
+import type { RecordInputIntakeMethod } from './recordInputIntakeMethod';
 import type { RecordInputKind } from './recordInputKind';
 import type { RecordInputReportingType } from './recordInputReportingType';
 import type { RecordInputSentiment } from './recordInputSentiment';
@@ -67,5 +69,10 @@ export interface RecordInput {
   feedUrl?: string;
   lastChecked?: string;
   feedStatus?: string;
+  feedHealth?: FeedHealth[];
+  intakeMethod?: RecordInputIntakeMethod;
+  intakeUrl?: string;
+  discoveryOnly?: boolean;
+  discoveredAt?: string;
   observations?: Observation[];
 }

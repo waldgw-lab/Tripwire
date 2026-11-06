@@ -126,6 +126,15 @@ export const RecordInputWatchType = {
   topic: 'topic',
 } as const;
 
+export type RecordInputIntakeMethod = typeof RecordInputIntakeMethod[keyof typeof RecordInputIntakeMethod];
+
+
+export const RecordInputIntakeMethod = {
+  rss: 'rss',
+  sitemap: 'sitemap',
+  'google-news': 'google-news',
+} as const;
+
 export type ArticleCreditRole = typeof ArticleCreditRole[keyof typeof ArticleCreditRole];
 
 
@@ -183,6 +192,48 @@ export interface ContentCapture {
   bodyHash?: string;
   textLength?: number;
   rawLength?: number;
+}
+
+export type FeedHealthKind = typeof FeedHealthKind[keyof typeof FeedHealthKind];
+
+
+export const FeedHealthKind = {
+  rss: 'rss',
+  sitemap: 'sitemap',
+  'google-news': 'google-news',
+} as const;
+
+export type FeedHealthRole = typeof FeedHealthRole[keyof typeof FeedHealthRole];
+
+
+export const FeedHealthRole = {
+  primary: 'primary',
+  supplement: 'supplement',
+  fallback: 'fallback',
+} as const;
+
+export type FeedHealthStatus = typeof FeedHealthStatus[keyof typeof FeedHealthStatus];
+
+
+export const FeedHealthStatus = {
+  connected: 'connected',
+  failed: 'failed',
+  stale: 'stale',
+  empty: 'empty',
+  standby: 'standby',
+} as const;
+
+export interface FeedHealth {
+  url: string;
+  kind: FeedHealthKind;
+  role: FeedHealthRole;
+  status: FeedHealthStatus;
+  checkedAt?: string;
+  message: string;
+  items: number;
+  latestItemAt?: string;
+  nextAttemptAt?: string;
+  failures?: number;
 }
 
 export type ObservationStage = typeof ObservationStage[keyof typeof ObservationStage];
@@ -256,6 +307,11 @@ export interface RecordInput {
   feedUrl?: string;
   lastChecked?: string;
   feedStatus?: string;
+  feedHealth?: FeedHealth[];
+  intakeMethod?: RecordInputIntakeMethod;
+  intakeUrl?: string;
+  discoveryOnly?: boolean;
+  discoveredAt?: string;
   observations?: Observation[];
 }
 

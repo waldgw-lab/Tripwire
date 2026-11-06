@@ -38,3 +38,9 @@ Impact/prominence and content completeness are separate from claim verification.
 **Why:** The user requested impact ratings and enrichment dots alongside an existing provenance workflow. Conflating these would imply evidence or retained content that the app does not have.
 
 **How to apply:** Explain automated prominence through its actual signals, allow analyst overrides, and keep sourcing verification independent. Use publisher publication times, not ingestion times, for displayed feed metadata.
+
+Third-party headline discovery is a provisional intake route, not publisher-verified reporting evidence.
+
+**Why:** An index can remain reachable while the publisher's feeds or pages are unavailable. Treating its metadata as an article body, byline, or verified publication time would undermine the user's origin-tracking requirement.
+
+**How to apply:** Retain the discovery link and raw metadata with their provenance, leave unverified publisher fields unset, and enrich or promote the same record when actual publisher content becomes available. Respect access restrictions; do not substitute syndicated copies as the outlet's original reporting.
