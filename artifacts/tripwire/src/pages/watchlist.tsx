@@ -82,7 +82,7 @@ export default function WatchlistPage() {
   const ungrouped = items.filter(w => w.watchType !== 'organization' && (!w.organization || !orgNames.has(w.organization)) && matches(w)).sort(order);
   const otherTypes = ['position', 'journalist', 'x-account', 'attribution', 'topic'];
   return <div className="tw-rise">
-    <PageHead title="Watchlist" count={items.length}>
+    <PageHead title="Coverage" count={items.length}>
       {isSignedIn && <button onClick={() => setCreating(true)} data-testid="button-add-watch" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground"><Plus className="h-3.5 w-3.5" /> Watch</button>}
     </PageHead>
     <div className="flex flex-wrap gap-1 border-b border-border px-5 py-2.5 md:px-8">
@@ -90,7 +90,7 @@ export default function WatchlistPage() {
         {t} <span className="opacity-60">{t === 'all' ? items.length : items.filter(w => (w.watchType === 'person' ? 'position' : w.watchType) === t).length}</span>
       </button>)}
     </div>
-    {isLoading ? <RowsSkeleton /> : isError ? <ErrorState onRetry={() => refetch()} /> : !items.length ? <Empty title="Watchlist is empty" /> : <div className="space-y-6 px-5 py-5 md:px-8">
+    {isLoading ? <RowsSkeleton /> : isError ? <ErrorState onRetry={() => refetch()} /> : !items.length ? <Empty title="Coverage is empty" /> : <div className="space-y-6 px-5 py-5 md:px-8">
       <div className="grid items-start gap-4 xl:grid-cols-2">{roots.map(w => group(w))}</div>
       {otherTypes.map(t => {
         const records = ungrouped.filter(w => (w.watchType === 'person' ? 'position' : w.watchType) === t);

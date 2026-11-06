@@ -1,13 +1,13 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ChevronLeft, ChevronRight, Crosshair, Flag, GitBranch, LayoutDashboard, Newspaper, RefreshCw, Rss } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Network, Flag, GitBranch, LayoutDashboard, Newspaper, RefreshCw, Rss } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fmtDate, useRefresh, useWorkspace } from '@/lib/workspace';
 
 const NAV = [
   { href: '/feed', label: 'Feed', icon: Newspaper, publicHref: '/' },
   { href: '/claims', label: 'Claims', icon: GitBranch },
-  { href: '/watchlist', label: 'Watchlist', icon: Crosshair },
+  { href: '/watchlist', label: 'Coverage', icon: Network },
   { href: '/outlets', label: 'News Media', icon: Rss },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 ];
