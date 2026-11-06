@@ -324,6 +324,532 @@ export interface QuickEnrichmentQueue {
   jobs: QuickEnrichmentJob[];
 }
 
+export type EntityInputType = typeof EntityInputType[keyof typeof EntityInputType];
+
+
+export const EntityInputType = {
+  person: 'person',
+  position: 'position',
+  organization: 'organization',
+  company: 'company',
+  capability: 'capability',
+  issue: 'issue',
+  event: 'event',
+} as const;
+
+export interface EntityInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  type: EntityInputType;
+  /**
+     * @maxItems 12
+     * @items.maxLength 60
+     */
+  facets?: string[];
+  /**
+     * @minLength 5
+     * @maxLength 2000
+     */
+  rationale: string;
+  organizationId?: string;
+}
+
+export type RegistryEntityClassification = typeof RegistryEntityClassification[keyof typeof RegistryEntityClassification];
+
+
+export const RegistryEntityClassification = {
+  structural: 'structural',
+  strategic: 'strategic',
+  contextual: 'contextual',
+} as const;
+
+export type RegistryEntityState = typeof RegistryEntityState[keyof typeof RegistryEntityState];
+
+
+export const RegistryEntityState = {
+  Discovered: 'Discovered',
+  Active: 'Active',
+  Watch: 'Watch',
+  Archived: 'Archived',
+} as const;
+
+export type RegistryEntity = EntityInput & ({
+  id: string;
+  aliases: string[];
+  classification: RegistryEntityClassification;
+  state: RegistryEntityState;
+  priority: number;
+  pinned: boolean;
+  unresolved: boolean;
+  /** @nullable */
+  redirectId?: string | null;
+  /** @nullable */
+  lastDevelopment?: string | null;
+  /** @nullable */
+  nextReview?: string | null;
+  createdAt: string;
+});
+
+export interface EntityPage {
+  items: RegistryEntity[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface EntityCapture {
+  id: string;
+  articleId: string;
+  captureId: string;
+  hash: string;
+  source: string;
+  /** @nullable */
+  url?: string | null;
+  /** @nullable */
+  publisher?: string | null;
+  /** @nullable */
+  byline?: string | null;
+  /** @nullable */
+  publishedAt?: string | null;
+  capturedAt: string;
+  complete: boolean;
+  authorized: boolean;
+}
+
+export type EntityEvidenceLineage = {
+  /** @nullable */
+  originKey?: string | null;
+  relation: string;
+  independentlyReported: boolean;
+  rationale: string;
+};
+
+export interface EntityEvidence {
+  id: string;
+  captureId: string;
+  excerpt: string;
+  start: number;
+  end: number;
+  attribution: string;
+  certainty: string;
+  scope: string;
+  extractorVersion: string;
+  policyVersion: string;
+  recordedAt: string;
+  capture?: EntityCapture;
+  lineage?: EntityEvidenceLineage;
+}
+
+export type EvidenceInputCertainty = typeof EvidenceInputCertainty[keyof typeof EvidenceInputCertainty];
+
+
+export const EvidenceInputCertainty = {
+  asserted: 'asserted',
+  attributed: 'attributed',
+  alleged: 'alleged',
+  disputed: 'disputed',
+  inferred: 'inferred',
+  confirmed: 'confirmed',
+} as const;
+
+export type EvidenceInputPredicate = typeof EvidenceInputPredicate[keyof typeof EvidenceInputPredicate];
+
+
+export const EvidenceInputPredicate = {
+  occupies: 'occupies',
+  commands: 'commands',
+  advises: 'advises',
+  oversees: 'oversees',
+  appointed: 'appointed',
+  'met-with': 'met-with',
+  'negotiated-with': 'negotiated-with',
+  criticized: 'criticized',
+  investigated: 'investigated',
+  'supplies-capability': 'supplies-capability',
+  'reportedly-discussed': 'reportedly-discussed',
+  'involved-in': 'involved-in',
+  alias: 'alias',
+  identifier: 'identifier',
+} as const;
+
+export type EvidenceInputTenure = typeof EvidenceInputTenure[keyof typeof EvidenceInputTenure];
+
+
+export const EvidenceInputTenure = {
+  current: 'current',
+  acting: 'acting',
+  interim: 'interim',
+  former: 'former',
+  concurrent: 'concurrent',
+  disputed: 'disputed',
+  nominated: 'nominated',
+} as const;
+
+export type EvidenceInputRelation = typeof EvidenceInputRelation[keyof typeof EvidenceInputRelation];
+
+
+export const EvidenceInputRelation = {
+  unknown: 'unknown',
+  original: 'original',
+  citation: 'citation',
+  syndication: 'syndication',
+  addition: 'addition',
+  commentary: 'commentary',
+  'authoritative-appointment': 'authoritative-appointment',
+} as const;
+
+export type EvidenceInputNovelty = typeof EvidenceInputNovelty[keyof typeof EvidenceInputNovelty];
+
+
+export const EvidenceInputNovelty = {
+  unknown: 'unknown',
+  repetition: 'repetition',
+  material: 'material',
+  conflicting: 'conflicting',
+  correction: 'correction',
+} as const;
+
+export interface EvidenceInput {
+  entityId: string;
+  captureId: string;
+  /**
+     * @minLength 20
+     * @maxLength 4000
+     */
+  excerpt: string;
+  /** @minimum 0 */
+  start: number;
+  /** @minimum 1 */
+  end: number;
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  attribution: string;
+  certainty: EvidenceInputCertainty;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  scope: string;
+  predicate: EvidenceInputPredicate;
+  objectId?: string;
+  /** @maxLength 1000 */
+  value?: string;
+  eventId?: string;
+  validFrom?: string;
+  validTo?: string;
+  tenure?: EvidenceInputTenure;
+  supersedesId?: string;
+  disputesId?: string;
+  relation?: EvidenceInputRelation;
+  /** @maxLength 200 */
+  originKey?: string;
+  independentlyReported?: boolean;
+  /** @maxLength 2000 */
+  sourcingRationale?: string;
+  /** @maxLength 200 */
+  eventKey?: string;
+  /** @maxLength 200 */
+  claimKey?: string;
+  novelty?: EvidenceInputNovelty;
+  /**
+     * @minimum 0
+     * @maximum 4
+     */
+  consequence?: number;
+}
+
+export interface EntityAssertion {
+  id: string;
+  subjectId: string;
+  predicate: string;
+  /** @nullable */
+  objectId?: string | null;
+  /** @nullable */
+  objectName?: string | null;
+  /** @nullable */
+  subjectName?: string | null;
+  /** @nullable */
+  value?: string | null;
+  evidenceId: string;
+  /** @nullable */
+  eventId?: string | null;
+  certainty: string;
+  status: string;
+  /** @nullable */
+  validFrom?: string | null;
+  /** @nullable */
+  validTo?: string | null;
+  /** @nullable */
+  tenure?: string | null;
+  /** @nullable */
+  supersedesId?: string | null;
+  /** @nullable */
+  disputesId?: string | null;
+  recordedAt: string;
+}
+
+export type EntityDecisionPrevious = { [key: string]: unknown };
+
+export type EntityDecisionResult = { [key: string]: unknown };
+
+export type EntityDecisionDimensions = {[key: string]: number};
+
+export interface EntityDecision {
+  id: string;
+  origin: string;
+  action: string;
+  rationale: string;
+  previous: EntityDecisionPrevious;
+  result: EntityDecisionResult;
+  dimensions: EntityDecisionDimensions;
+  evidenceIds: string[];
+  policyVersion: string;
+  createdAt: string;
+}
+
+export interface EntityCandidate {
+  id: string;
+  entityId: string;
+  /** @nullable */
+  matchId?: string | null;
+  /** @nullable */
+  evidenceId?: string | null;
+  reason: string;
+  resolution: string;
+  identityConfidence: string;
+}
+
+export interface EntityDetail {
+  entity: RegistryEntity;
+  assertions: EntityAssertion[];
+  evidence: EntityEvidence[];
+  decisions: EntityDecision[];
+  candidates: EntityCandidate[];
+  historyTruncated: boolean;
+}
+
+export type EntityActionAction = typeof EntityActionAction[keyof typeof EntityActionAction];
+
+
+export const EntityActionAction = {
+  monitor: 'monitor',
+  archive: 'archive',
+  reactivate: 'reactivate',
+  pin: 'pin',
+  unpin: 'unpin',
+  resolve: 'resolve',
+  reject: 'reject',
+  merge: 'merge',
+  unmerge: 'unmerge',
+  correct: 'correct',
+  reassess: 'reassess',
+  rename: 'rename',
+} as const;
+
+export type EntityActionState = typeof EntityActionState[keyof typeof EntityActionState];
+
+
+export const EntityActionState = {
+  Active: 'Active',
+  Watch: 'Watch',
+  Archived: 'Archived',
+  Discovered: 'Discovered',
+} as const;
+
+export type EntityActionClassification = typeof EntityActionClassification[keyof typeof EntityActionClassification];
+
+
+export const EntityActionClassification = {
+  structural: 'structural',
+  strategic: 'strategic',
+  contextual: 'contextual',
+} as const;
+
+export type EntityActionDimensions = {[key: string]: number};
+
+export interface EntityAction {
+  action: EntityActionAction;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name?: string;
+  /**
+     * @minLength 5
+     * @maxLength 2000
+     */
+  rationale: string;
+  state?: EntityActionState;
+  classification?: EntityActionClassification;
+  /**
+     * @minimum 1
+     * @maximum 3
+     */
+  priority?: number;
+  unresolved?: boolean;
+  candidateId?: string;
+  targetId?: string;
+  assertionId?: string;
+  /** @maxItems 20 */
+  evidenceIds?: string[];
+  dimensions?: EntityActionDimensions;
+}
+
+export type EntityDevelopmentDisposition = typeof EntityDevelopmentDisposition[keyof typeof EntityDevelopmentDisposition];
+
+
+export const EntityDevelopmentDisposition = {
+  Immediate: 'Immediate',
+  Review: 'Review',
+  Collection: 'Collection',
+} as const;
+
+export type EntityDevelopmentStatus = typeof EntityDevelopmentStatus[keyof typeof EntityDevelopmentStatus];
+
+
+export const EntityDevelopmentStatus = {
+  open: 'open',
+  acknowledged: 'acknowledged',
+  dismissed: 'dismissed',
+} as const;
+
+export interface EntityDevelopment {
+  id: string;
+  eventKey: string;
+  claimKey: string;
+  title: string;
+  explanation: string;
+  disposition: EntityDevelopmentDisposition;
+  status: EntityDevelopmentStatus;
+  entityIds: string[];
+  policyVersion: string;
+  createdAt: string;
+  observations: EntityEvidence[];
+}
+
+export type DevelopmentActionStatus = typeof DevelopmentActionStatus[keyof typeof DevelopmentActionStatus];
+
+
+export const DevelopmentActionStatus = {
+  open: 'open',
+  acknowledged: 'acknowledged',
+  dismissed: 'dismissed',
+} as const;
+
+export type DevelopmentActionDisposition = typeof DevelopmentActionDisposition[keyof typeof DevelopmentActionDisposition];
+
+
+export const DevelopmentActionDisposition = {
+  Immediate: 'Immediate',
+  Review: 'Review',
+  Collection: 'Collection',
+} as const;
+
+export interface DevelopmentAction {
+  status: DevelopmentActionStatus;
+  disposition?: DevelopmentActionDisposition;
+  /**
+     * @minLength 5
+     * @maxLength 2000
+     */
+  rationale: string;
+}
+
+export interface AutomationJob {
+  id: string;
+  captureId: string;
+  status: string;
+  attempts: number;
+  nextRun: string;
+  /** @nullable */
+  checkpoint?: string | null;
+  /** @nullable */
+  error?: string | null;
+  tokens: number;
+  costMicros: number;
+}
+
+export type AutomationHealthMode = typeof AutomationHealthMode[keyof typeof AutomationHealthMode];
+
+
+export const AutomationHealthMode = {
+  paused: 'paused',
+  observe: 'observe',
+  autonomous: 'autonomous',
+} as const;
+
+export type AutomationHealthProvider = typeof AutomationHealthProvider[keyof typeof AutomationHealthProvider];
+
+
+export const AutomationHealthProvider = {
+  configured: 'configured',
+  unconfigured: 'unconfigured',
+} as const;
+
+export type AutomationHealthPolicy = {[key: string]: number};
+
+export type AutomationHealthCounts = {[key: string]: number};
+
+export type AutomationHealthCaptureCounts = {[key: string]: number};
+
+export interface AutomationHealth {
+  mode: AutomationHealthMode;
+  provider: AutomationHealthProvider;
+  authorized: boolean;
+  privateMaterial: boolean;
+  policyVersion: string;
+  policy: AutomationHealthPolicy;
+  dailyTokens: number;
+  dailyMicros: number;
+  usedTokens: number;
+  usedMicros: number;
+  /** @nullable */
+  lastSuccess?: string | null;
+  jobs: AutomationJob[];
+  counts: AutomationHealthCounts;
+  captureCounts: AutomationHealthCaptureCounts;
+  activationBlockers: string[];
+  scheduling: string;
+}
+
+export type AutomationActionAction = typeof AutomationActionAction[keyof typeof AutomationActionAction];
+
+
+export const AutomationActionAction = {
+  pause: 'pause',
+  observe: 'observe',
+  activate: 'activate',
+  authorize: 'authorize',
+  revoke: 'revoke',
+  configure: 'configure',
+  backfill: 'backfill',
+  retry: 'retry',
+} as const;
+
+export type AutomationActionPolicy = {[key: string]: number};
+
+export interface AutomationAction {
+  action: AutomationActionAction;
+  privateMaterial?: boolean;
+  /**
+     * @minimum 0
+     * @maximum 1000000
+     */
+  dailyTokens?: number;
+  /**
+     * @minimum 0
+     * @maximum 100000000
+     */
+  dailyMicros?: number;
+  policy?: AutomationActionPolicy;
+  jobId?: string;
+}
+
 export interface FlagRequest {
   flagged: boolean;
 }
@@ -444,6 +970,107 @@ export interface RefreshResult {
   failures: string[];
   refreshedAt: string;
 }
+
+export type ListEntitiesParams = {
+/**
+ * @maxLength 200
+ */
+q?: string;
+state?: ListEntitiesState;
+type?: ListEntitiesType;
+classification?: ListEntitiesClassification;
+/**
+ * @minimum 0
+ */
+offset?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
+
+export type ListEntitiesState = typeof ListEntitiesState[keyof typeof ListEntitiesState];
+
+
+export const ListEntitiesState = {
+  Discovered: 'Discovered',
+  Active: 'Active',
+  Watch: 'Watch',
+  Archived: 'Archived',
+} as const;
+
+export type ListEntitiesType = typeof ListEntitiesType[keyof typeof ListEntitiesType];
+
+
+export const ListEntitiesType = {
+  person: 'person',
+  position: 'position',
+  organization: 'organization',
+  company: 'company',
+  capability: 'capability',
+  issue: 'issue',
+  event: 'event',
+} as const;
+
+export type ListEntitiesClassification = typeof ListEntitiesClassification[keyof typeof ListEntitiesClassification];
+
+
+export const ListEntitiesClassification = {
+  structural: 'structural',
+  strategic: 'strategic',
+  contextual: 'contextual',
+} as const;
+
+export type GetEntityParams = {
+/**
+ * @minimum 0
+ */
+offset?: number;
+};
+
+export type ListEntityCapturesParams = {
+articleId?: string;
+/**
+ * @minimum 0
+ */
+offset?: number;
+};
+
+export type ListEntityCaptures200 = {
+  items: EntityCapture[];
+  total: number;
+};
+
+export type ListDevelopmentsParams = {
+articleId?: string;
+disposition?: ListDevelopmentsDisposition;
+/**
+ * @minimum 0
+ */
+offset?: number;
+};
+
+export type ListDevelopmentsDisposition = typeof ListDevelopmentsDisposition[keyof typeof ListDevelopmentsDisposition];
+
+
+export const ListDevelopmentsDisposition = {
+  Immediate: 'Immediate',
+  Review: 'Review',
+  Collection: 'Collection',
+} as const;
+
+export type ListDevelopments200 = {
+  items: EntityDevelopment[];
+  total: number;
+};
+
+export type GetEntityAutomationParams = {
+/**
+ * @minimum 0
+ */
+offset?: number;
+};
 
 export type GetQuickEnrichmentText200 = {
   text: string;

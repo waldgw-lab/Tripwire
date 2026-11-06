@@ -25,22 +25,40 @@ import type {
 
 import type {
   ArticleContent,
+  AutomationAction,
+  AutomationHealth,
   ContentSearch,
+  DevelopmentAction,
   EnqueueEnrichment200,
   EnqueueEnrichmentBody,
+  EntityAction,
+  EntityDetail,
+  EntityDevelopment,
+  EntityEvidence,
+  EntityInput,
+  EntityPage,
+  EvidenceInput,
   FlagRequest,
   GetArticleContentParams,
+  GetEntityAutomationParams,
+  GetEntityParams,
   GetQuickEnrichmentText200,
   HealthStatus,
   ImportAnalyzeRequest,
   ImportCommitRequest,
   ImportDraft,
   ImportUploadRequest,
+  ListDevelopments200,
+  ListDevelopmentsParams,
+  ListEntitiesParams,
+  ListEntityCaptures200,
+  ListEntityCapturesParams,
   QuickEnrichmentInput,
   QuickEnrichmentJob,
   QuickEnrichmentQueue,
   RecordInput,
   RefreshResult,
+  RegistryEntity,
   RequestImportUpload200,
   RetrievalReport,
   SearchArticleContentParams,
@@ -74,6 +92,936 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListEntitiesUrl = (params?: ListEntitiesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/tripwire/entities?${stringifiedParams}` : `/api/tripwire/entities`
+}
+
+export const listEntities = async (params?: ListEntitiesParams, options?: Parameters<typeof customFetch>[1]): Promise<EntityPage> => {
+
+  return customFetch<EntityPage>(getListEntitiesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEntitiesQueryKey = (params?: ListEntitiesParams,) => {
+    return [
+    `/api/tripwire/entities`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListEntitiesQueryOptions = <TData = Awaited<ReturnType<typeof listEntities>>, TError = ErrorType<unknown>>(params?: ListEntitiesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEntities>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEntitiesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEntities>>> = ({ signal }) => listEntities(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEntities>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListEntitiesQueryResult = NonNullable<Awaited<ReturnType<typeof listEntities>>>
+export type ListEntitiesQueryError = ErrorType<unknown>
+
+
+export function useListEntities<TData = Awaited<ReturnType<typeof listEntities>>, TError = ErrorType<unknown>>(
+ params: undefined |  ListEntitiesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEntities>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEntities>>,
+          TError,
+          Awaited<ReturnType<typeof listEntities>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListEntities<TData = Awaited<ReturnType<typeof listEntities>>, TError = ErrorType<unknown>>(
+ params?: ListEntitiesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEntities>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEntities>>,
+          TError,
+          Awaited<ReturnType<typeof listEntities>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListEntities<TData = Awaited<ReturnType<typeof listEntities>>, TError = ErrorType<unknown>>(
+ params?: ListEntitiesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEntities>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListEntities<TData = Awaited<ReturnType<typeof listEntities>>, TError = ErrorType<unknown>>(
+ params?: ListEntitiesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEntities>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListEntitiesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateEntityUrl = () => {
+
+
+
+
+  return `/api/tripwire/entities`
+}
+
+export const createEntity = async (entityInput: EntityInput, options?: Parameters<typeof customFetch>[1]): Promise<RegistryEntity> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<RegistryEntity>(getCreateEntityUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(entityInput)
+  }
+);}
+
+
+
+
+
+export const getCreateEntityMutationKey = () => ['createEntity'] as const;
+
+export const getCreateEntityMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEntity>>, TError,CreateEntityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createEntity>>, TError,CreateEntityMutationVariables, TContext> => {
+
+const mutationKey = getCreateEntityMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createEntity>>, CreateEntityMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createEntity(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateEntityMutationResult = NonNullable<Awaited<ReturnType<typeof createEntity>>>
+    export type CreateEntityMutationBody = BodyType<EntityInput>
+    export type CreateEntityMutationError = ErrorType<unknown>
+    export type CreateEntityMutationVariables = {data: BodyType<EntityInput>}
+
+    export const useCreateEntity = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEntity>>, TError,CreateEntityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createEntity>>,
+        TError,
+        CreateEntityMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateEntityMutationOptions(options), queryClient);
+    }
+
+export const getGetEntityUrl = (id: string,
+    params?: GetEntityParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/tripwire/entities/${id}?${stringifiedParams}` : `/api/tripwire/entities/${id}`
+}
+
+export const getEntity = async (id: string,
+    params?: GetEntityParams, options?: Parameters<typeof customFetch>[1]): Promise<EntityDetail> => {
+
+  return customFetch<EntityDetail>(getGetEntityUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEntityQueryKey = (id: string,
+    params?: GetEntityParams,) => {
+    return [
+    `/api/tripwire/entities/${id}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetEntityQueryOptions = <TData = Awaited<ReturnType<typeof getEntity>>, TError = ErrorType<unknown>>(id: string,
+    params?: GetEntityParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEntity>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEntityQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEntity>>> = ({ signal }) => getEntity(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEntity>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetEntityQueryResult = NonNullable<Awaited<ReturnType<typeof getEntity>>>
+export type GetEntityQueryError = ErrorType<unknown>
+
+
+export function useGetEntity<TData = Awaited<ReturnType<typeof getEntity>>, TError = ErrorType<unknown>>(
+ id: string,
+    params: undefined |  GetEntityParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEntity>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEntity>>,
+          TError,
+          Awaited<ReturnType<typeof getEntity>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetEntity<TData = Awaited<ReturnType<typeof getEntity>>, TError = ErrorType<unknown>>(
+ id: string,
+    params?: GetEntityParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEntity>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEntity>>,
+          TError,
+          Awaited<ReturnType<typeof getEntity>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetEntity<TData = Awaited<ReturnType<typeof getEntity>>, TError = ErrorType<unknown>>(
+ id: string,
+    params?: GetEntityParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEntity>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetEntity<TData = Awaited<ReturnType<typeof getEntity>>, TError = ErrorType<unknown>>(
+ id: string,
+    params?: GetEntityParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEntity>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetEntityQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDecideEntityUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/entities/${id}`
+}
+
+export const decideEntity = async (id: string,
+    entityAction: EntityAction, options?: Parameters<typeof customFetch>[1]): Promise<RegistryEntity> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<RegistryEntity>(getDecideEntityUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(entityAction)
+  }
+);}
+
+
+
+
+
+export const getDecideEntityMutationKey = () => ['decideEntity'] as const;
+
+export const getDecideEntityMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideEntity>>, TError,DecideEntityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof decideEntity>>, TError,DecideEntityMutationVariables, TContext> => {
+
+const mutationKey = getDecideEntityMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof decideEntity>>, DecideEntityMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  decideEntity(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DecideEntityMutationResult = NonNullable<Awaited<ReturnType<typeof decideEntity>>>
+    export type DecideEntityMutationBody = BodyType<EntityAction>
+    export type DecideEntityMutationError = ErrorType<unknown>
+    export type DecideEntityMutationVariables = {id: string;data: BodyType<EntityAction>}
+
+    export const useDecideEntity = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideEntity>>, TError,DecideEntityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof decideEntity>>,
+        TError,
+        DecideEntityMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDecideEntityMutationOptions(options), queryClient);
+    }
+
+export const getAddEntityEvidenceUrl = () => {
+
+
+
+
+  return `/api/tripwire/entity-evidence`
+}
+
+export const addEntityEvidence = async (evidenceInput: EvidenceInput, options?: Parameters<typeof customFetch>[1]): Promise<EntityEvidence> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EntityEvidence>(getAddEntityEvidenceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(evidenceInput)
+  }
+);}
+
+
+
+
+
+export const getAddEntityEvidenceMutationKey = () => ['addEntityEvidence'] as const;
+
+export const getAddEntityEvidenceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addEntityEvidence>>, TError,AddEntityEvidenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addEntityEvidence>>, TError,AddEntityEvidenceMutationVariables, TContext> => {
+
+const mutationKey = getAddEntityEvidenceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addEntityEvidence>>, AddEntityEvidenceMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  addEntityEvidence(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddEntityEvidenceMutationResult = NonNullable<Awaited<ReturnType<typeof addEntityEvidence>>>
+    export type AddEntityEvidenceMutationBody = BodyType<EvidenceInput>
+    export type AddEntityEvidenceMutationError = ErrorType<unknown>
+    export type AddEntityEvidenceMutationVariables = {data: BodyType<EvidenceInput>}
+
+    export const useAddEntityEvidence = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addEntityEvidence>>, TError,AddEntityEvidenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof addEntityEvidence>>,
+        TError,
+        AddEntityEvidenceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAddEntityEvidenceMutationOptions(options), queryClient);
+    }
+
+export const getListEntityCapturesUrl = (params?: ListEntityCapturesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/tripwire/entity-captures?${stringifiedParams}` : `/api/tripwire/entity-captures`
+}
+
+export const listEntityCaptures = async (params?: ListEntityCapturesParams, options?: Parameters<typeof customFetch>[1]): Promise<ListEntityCaptures200> => {
+
+  return customFetch<ListEntityCaptures200>(getListEntityCapturesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEntityCapturesQueryKey = (params?: ListEntityCapturesParams,) => {
+    return [
+    `/api/tripwire/entity-captures`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListEntityCapturesQueryOptions = <TData = Awaited<ReturnType<typeof listEntityCaptures>>, TError = ErrorType<unknown>>(params?: ListEntityCapturesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEntityCaptures>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEntityCapturesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEntityCaptures>>> = ({ signal }) => listEntityCaptures(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEntityCaptures>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListEntityCapturesQueryResult = NonNullable<Awaited<ReturnType<typeof listEntityCaptures>>>
+export type ListEntityCapturesQueryError = ErrorType<unknown>
+
+
+export function useListEntityCaptures<TData = Awaited<ReturnType<typeof listEntityCaptures>>, TError = ErrorType<unknown>>(
+ params: undefined |  ListEntityCapturesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEntityCaptures>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEntityCaptures>>,
+          TError,
+          Awaited<ReturnType<typeof listEntityCaptures>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListEntityCaptures<TData = Awaited<ReturnType<typeof listEntityCaptures>>, TError = ErrorType<unknown>>(
+ params?: ListEntityCapturesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEntityCaptures>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEntityCaptures>>,
+          TError,
+          Awaited<ReturnType<typeof listEntityCaptures>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListEntityCaptures<TData = Awaited<ReturnType<typeof listEntityCaptures>>, TError = ErrorType<unknown>>(
+ params?: ListEntityCapturesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEntityCaptures>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListEntityCaptures<TData = Awaited<ReturnType<typeof listEntityCaptures>>, TError = ErrorType<unknown>>(
+ params?: ListEntityCapturesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEntityCaptures>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListEntityCapturesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListDevelopmentsUrl = (params?: ListDevelopmentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/tripwire/developments?${stringifiedParams}` : `/api/tripwire/developments`
+}
+
+export const listDevelopments = async (params?: ListDevelopmentsParams, options?: Parameters<typeof customFetch>[1]): Promise<ListDevelopments200> => {
+
+  return customFetch<ListDevelopments200>(getListDevelopmentsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDevelopmentsQueryKey = (params?: ListDevelopmentsParams,) => {
+    return [
+    `/api/tripwire/developments`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListDevelopmentsQueryOptions = <TData = Awaited<ReturnType<typeof listDevelopments>>, TError = ErrorType<unknown>>(params?: ListDevelopmentsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDevelopments>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDevelopmentsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDevelopments>>> = ({ signal }) => listDevelopments(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDevelopments>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListDevelopmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listDevelopments>>>
+export type ListDevelopmentsQueryError = ErrorType<unknown>
+
+
+export function useListDevelopments<TData = Awaited<ReturnType<typeof listDevelopments>>, TError = ErrorType<unknown>>(
+ params: undefined |  ListDevelopmentsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDevelopments>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDevelopments>>,
+          TError,
+          Awaited<ReturnType<typeof listDevelopments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListDevelopments<TData = Awaited<ReturnType<typeof listDevelopments>>, TError = ErrorType<unknown>>(
+ params?: ListDevelopmentsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDevelopments>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDevelopments>>,
+          TError,
+          Awaited<ReturnType<typeof listDevelopments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListDevelopments<TData = Awaited<ReturnType<typeof listDevelopments>>, TError = ErrorType<unknown>>(
+ params?: ListDevelopmentsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDevelopments>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListDevelopments<TData = Awaited<ReturnType<typeof listDevelopments>>, TError = ErrorType<unknown>>(
+ params?: ListDevelopmentsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDevelopments>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListDevelopmentsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDecideDevelopmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/developments/${id}`
+}
+
+export const decideDevelopment = async (id: string,
+    developmentAction: DevelopmentAction, options?: Parameters<typeof customFetch>[1]): Promise<EntityDevelopment> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EntityDevelopment>(getDecideDevelopmentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(developmentAction)
+  }
+);}
+
+
+
+
+
+export const getDecideDevelopmentMutationKey = () => ['decideDevelopment'] as const;
+
+export const getDecideDevelopmentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideDevelopment>>, TError,DecideDevelopmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof decideDevelopment>>, TError,DecideDevelopmentMutationVariables, TContext> => {
+
+const mutationKey = getDecideDevelopmentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof decideDevelopment>>, DecideDevelopmentMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  decideDevelopment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DecideDevelopmentMutationResult = NonNullable<Awaited<ReturnType<typeof decideDevelopment>>>
+    export type DecideDevelopmentMutationBody = BodyType<DevelopmentAction>
+    export type DecideDevelopmentMutationError = ErrorType<unknown>
+    export type DecideDevelopmentMutationVariables = {id: string;data: BodyType<DevelopmentAction>}
+
+    export const useDecideDevelopment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideDevelopment>>, TError,DecideDevelopmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof decideDevelopment>>,
+        TError,
+        DecideDevelopmentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDecideDevelopmentMutationOptions(options), queryClient);
+    }
+
+export const getGetEntityAutomationUrl = (params?: GetEntityAutomationParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/tripwire/entity-automation?${stringifiedParams}` : `/api/tripwire/entity-automation`
+}
+
+export const getEntityAutomation = async (params?: GetEntityAutomationParams, options?: Parameters<typeof customFetch>[1]): Promise<AutomationHealth> => {
+
+  return customFetch<AutomationHealth>(getGetEntityAutomationUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEntityAutomationQueryKey = (params?: GetEntityAutomationParams,) => {
+    return [
+    `/api/tripwire/entity-automation`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetEntityAutomationQueryOptions = <TData = Awaited<ReturnType<typeof getEntityAutomation>>, TError = ErrorType<unknown>>(params?: GetEntityAutomationParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEntityAutomation>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEntityAutomationQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEntityAutomation>>> = ({ signal }) => getEntityAutomation(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEntityAutomation>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetEntityAutomationQueryResult = NonNullable<Awaited<ReturnType<typeof getEntityAutomation>>>
+export type GetEntityAutomationQueryError = ErrorType<unknown>
+
+
+export function useGetEntityAutomation<TData = Awaited<ReturnType<typeof getEntityAutomation>>, TError = ErrorType<unknown>>(
+ params: undefined |  GetEntityAutomationParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEntityAutomation>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEntityAutomation>>,
+          TError,
+          Awaited<ReturnType<typeof getEntityAutomation>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetEntityAutomation<TData = Awaited<ReturnType<typeof getEntityAutomation>>, TError = ErrorType<unknown>>(
+ params?: GetEntityAutomationParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEntityAutomation>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEntityAutomation>>,
+          TError,
+          Awaited<ReturnType<typeof getEntityAutomation>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetEntityAutomation<TData = Awaited<ReturnType<typeof getEntityAutomation>>, TError = ErrorType<unknown>>(
+ params?: GetEntityAutomationParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEntityAutomation>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetEntityAutomation<TData = Awaited<ReturnType<typeof getEntityAutomation>>, TError = ErrorType<unknown>>(
+ params?: GetEntityAutomationParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEntityAutomation>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetEntityAutomationQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getControlEntityAutomationUrl = () => {
+
+
+
+
+  return `/api/tripwire/entity-automation`
+}
+
+export const controlEntityAutomation = async (automationAction: AutomationAction, options?: Parameters<typeof customFetch>[1]): Promise<AutomationHealth> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AutomationHealth>(getControlEntityAutomationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(automationAction)
+  }
+);}
+
+
+
+
+
+export const getControlEntityAutomationMutationKey = () => ['controlEntityAutomation'] as const;
+
+export const getControlEntityAutomationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof controlEntityAutomation>>, TError,ControlEntityAutomationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof controlEntityAutomation>>, TError,ControlEntityAutomationMutationVariables, TContext> => {
+
+const mutationKey = getControlEntityAutomationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof controlEntityAutomation>>, ControlEntityAutomationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  controlEntityAutomation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ControlEntityAutomationMutationResult = NonNullable<Awaited<ReturnType<typeof controlEntityAutomation>>>
+    export type ControlEntityAutomationMutationBody = BodyType<AutomationAction>
+    export type ControlEntityAutomationMutationError = ErrorType<unknown>
+    export type ControlEntityAutomationMutationVariables = {data: BodyType<AutomationAction>}
+
+    export const useControlEntityAutomation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof controlEntityAutomation>>, TError,ControlEntityAutomationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof controlEntityAutomation>>,
+        TError,
+        ControlEntityAutomationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getControlEntityAutomationMutationOptions(options), queryClient);
+    }
 
 export const getHealthCheckUrl = () => {
 

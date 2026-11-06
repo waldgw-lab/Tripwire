@@ -6,15 +6,20 @@ import { cn } from '@/lib/utils';
 import { Empty, ErrorState, PageHead, RowsSkeleton } from '@/components/bits';
 import { ConfirmDelete, WatchEditor } from '@/components/editors';
 import { WATCH_TYPES, byKind, useWorkspace } from '@/lib/workspace';
+import { EntityRegistry } from '@/components/entities/entity-registry';
+
+const WATCHLIST_EXCLUDED = ['journalist'];
+const SUBJECT_TYPES = WATCH_TYPES.filter(t => t !== 'journalist');
 
 export default function WatchlistPage() {
   const { canEdit: isSignedIn } = useWorkspaceAccess();
   const { data, isLoading, isError, refetch } = useWorkspace();
   const [type, setType] = useState('all');
+  const [view, setView] = useState<'registry' | 'organization'>('registry');
   const [editing, setEditing] = useState<TrackedRecord | null>(null);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<TrackedRecord | null>(null);
-  const items = useMemo(() => byKind(data?.records, 'watch'), [data]);
+  const items = useMemo(() => byKind(data?.records, 'watch').filter(w => w.watchType !== 'journalist'), [data]);
   const matches = (w: TrackedRecord) => type === 'all' || (w.watchType === 'person' ? 'position' : w.watchType) === type;
   const organizations = items.filter(w => w.watchType === 'organization');
   const orgNames = new Set(organizations.map(w => w.title));
@@ -34,8 +39,7 @@ export default function WatchlistPage() {
         <div>
           <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{position ? 'Position' : w.watchType} · Tier {w.tier ?? 3}</p>
           <h3 className="mt-1 text-sm font-semibold">{position ? w.position || 'Position not specified' : w.title}</h3>
-          {w.watchType === 'journalist' && w.outlet && <p className="mt-1 text-xs text-muted-foreground">{w.outlet}</p>}
-          {position && <p className="mt-1 text-sm">{w.individual || (w.watchType === 'person' ? w.title : 'Individual not specified')}</p>}
+                    {position && <p className="mt-1 text-sm">{w.individual || (w.watchType === 'person' ? w.title : 'Individual not specified')}</p>}
         </div>
         {actions(w)}
       </div>
@@ -80,13 +84,17 @@ export default function WatchlistPage() {
     return !w.organization || !orgNames.has(w.organization);
   }).sort(order);
   const ungrouped = items.filter(w => w.watchType !== 'organization' && (!w.organization || !orgNames.has(w.organization)) && matches(w)).sort(order);
-  const otherTypes = ['position', 'journalist', 'x-account', 'attribution', 'topic'];
+  const otherTypes = ['position', 'x-account', 'attribution', 'topic'];
   return <div className="tw-rise">
-    <PageHead title="Coverage" count={items.length}>
-      {isSignedIn && <button onClick={() => setCreating(true)} data-testid="button-add-watch" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground"><Plus className="h-3.5 w-3.5" /> Watch</button>}
+    <PageHead title="Coverage" count={view === 'organization' ? items.length : undefined}>
+      <div className="flex rounded-md border border-border p-0.5" role="tablist">
+        {(['registry', 'organization'] as const).map(v => <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)} data-testid={`tab-watch-${v}`} className={cn('h-7 rounded px-2.5 font-mono text-[11px] uppercase tracking-wider', view === v ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary')}>{v === 'registry' ? 'Registry' : 'Organizations'}</button>)}
+      </div>
+      {view === 'organization' && isSignedIn && <button onClick={() => setCreating(true)} data-testid="button-add-watch" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground"><Plus className="h-3.5 w-3.5" /> Watch</button>}
     </PageHead>
+    {view === 'registry' ? <EntityRegistry /> : <>
     <div className="flex flex-wrap gap-1 border-b border-border px-5 py-2.5 md:px-8">
-      {['all', ...WATCH_TYPES].map(t => <button key={t} onClick={() => setType(t)} data-testid={`filter-watch-${t}`} className={cn('h-7 rounded-md px-2.5 font-mono text-[11px] uppercase tracking-wider', type === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary')}>
+      {['all', ...SUBJECT_TYPES].map(t => <button key={t} onClick={() => setType(t)} data-testid={`filter-watch-${t}`} className={cn('h-7 rounded-md px-2.5 font-mono text-[11px] uppercase tracking-wider', type === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary')}>
         {t} <span className="opacity-60">{t === 'all' ? items.length : items.filter(w => (w.watchType === 'person' ? 'position' : w.watchType) === t).length}</span>
       </button>)}
     </div>
@@ -95,13 +103,14 @@ export default function WatchlistPage() {
       {otherTypes.map(t => {
         const records = ungrouped.filter(w => (w.watchType === 'person' ? 'position' : w.watchType) === t);
         return records.length ? <section key={t}>
-          <h2 className="mb-3 font-display text-2xl font-semibold">{t === 'position' ? 'Other positions' : t === 'journalist' ? 'Journalists' : t === 'x-account' ? 'X accounts' : t === 'attribution' ? 'Source attributions' : 'Topics'}</h2>
+          <h2 className="mb-3 font-display text-2xl font-semibold">{t === 'position' ? 'Other positions' : t === 'x-account' ? 'X accounts' : t === 'attribution' ? 'Source attributions' : 'Topics'}</h2>
           <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{records.map(card)}</ul>
         </section> : null;
       })}
       {!items.some(matches) && <Empty title="No matching watches" />}
     </div>}
-    <WatchEditor open={creating || !!editing} onOpenChange={o => { if (!o) { setCreating(false); setEditing(null); } }} record={editing} />
+    </>}
+    <WatchEditor open={creating || !!editing} onOpenChange={o => { if (!o) { setCreating(false); setEditing(null); } }} record={editing} excludeTypes={WATCHLIST_EXCLUDED} />
     <ConfirmDelete target={deleting} onClose={() => setDeleting(null)} />
   </div>;
 }

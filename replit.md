@@ -29,7 +29,7 @@ Reporting intelligence workspace tracking relevant outlet releases, journalists,
 
 ## Architecture decisions
 
-- Public RSS metadata is shared; user-entered text, claims, and edits require Clerk and remain isolated by user.
+- Public RSS metadata is separate from private analysis. Everyone admitted through private publishing shares one workspace; there is no in-app login or user-specific ownership.
 - Feed discovery never establishes independent sourcing, verified origin, or sentiment. These require analyst assessment.
 - No paywall bypass or externally shared full-text archive.
 
@@ -66,6 +66,7 @@ Tracks the requested twelve outlets (including NBC), an entity/account watchlist
 - X automation requires an authorized workspace X integration; X intake and account tracking are currently manual.
 - Reuters has no default feed; use manual intake or configure a licensed feed. Other feed failures are reported per outlet.
 - Public feeds refresh every ten minutes while the API process runs.
+- Entity automation starts observe-only and without a configured provider. See `docs/entity-automation-security.md` for trust boundaries, activation gates and rollback; live decisions remain blocked until actual private-access verification and reviewed quality calibration are recorded.
 
 ## Pointers
 

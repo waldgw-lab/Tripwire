@@ -197,7 +197,7 @@ export function ClaimEditor({ open, onOpenChange, record, articles }: EditorProp
   );
 }
 
-export function WatchEditor({ open, onOpenChange, record, initialWatchType = 'position' }: EditorProps & { initialWatchType?: string }) {
+export function WatchEditor({ open, onOpenChange, record, initialWatchType = 'position', excludeTypes = [] }: EditorProps & { initialWatchType?: string; excludeTypes?: string[] }) {
   const save = useSave();
   const { data: workspace } = useWorkspace();
   const organizations = byKind(workspace?.records, 'watch').filter(w => w.watchType === 'organization' && w.id !== record?.id);
@@ -220,7 +220,7 @@ export function WatchEditor({ open, onOpenChange, record, initialWatchType = 'po
     <Shell open={open} onOpenChange={onOpenChange} title={record ? 'Edit watch' : 'Add watch'} onSubmit={submit} pending={save.isPending} canSubmit={!!f.title.trim()}>
       <F label={f.watchType === 'position' ? 'Position' : f.watchType === 'x-account' ? 'Handle' : 'Name'} className="block"><Input data-testid="input-watch-title" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></F>
       <div className="grid grid-cols-2 gap-3">
-        <F label="Type"><Pick testId="select-watch-type" value={f.watchType} onChange={(v) => setF({ ...f, watchType: v })} options={WATCH_TYPES} /></F>
+        <F label="Type"><Pick testId="select-watch-type" value={f.watchType} onChange={(v) => setF({ ...f, watchType: v })} options={WATCH_TYPES.filter(t => !excludeTypes.includes(t) || t === f.watchType)} /></F>
         <F label="Tier"><Pick testId="select-watch-tier" value={f.tier} onChange={(v) => setF({ ...f, tier: v })} options={['1', '2', '3']} /></F>
       </div>
       {f.watchType === 'journalist' ? <F label="Outlet" className="block">

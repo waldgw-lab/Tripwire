@@ -1,8 +1,8 @@
 import express, { type Express } from "express";
-import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { browserBoundary, intensiveLimit } from "./lib/tripwire-browser-boundary";
 
 const app: Express = express();
 
@@ -25,10 +25,13 @@ app.use(
     },
   }),
 );
-app.use(cors({ credentials: true, origin: true }));
+app.use("/api/tripwire", browserBoundary, intensiveLimit);
 app.use(express.json({ limit: "5mb" }));
-app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  req.log.error({ status: 500 }, "API request failed");
+  if (!res.headersSent) res.status(500).json({ error: "The request could not be completed. Retained evidence is unchanged." });
+});
 
 export default app;

@@ -40,7 +40,7 @@ catalogs:
       specifier: ^2.1.1
       version: 2.1.1
     drizzle-orm:
-      specifier: ^0.45.2
+      specifier: 0.45.4
       version: 0.45.4
     framer-motion:
       specifier: ^12.23.24
@@ -67,7 +67,7 @@ catalogs:
       specifier: ^7.3.2
       version: 7.3.7
     zod:
-      specifier: ^3.25.76
+      specifier: 3.25.76
       version: 3.25.76
 
 overrides:
@@ -217,6 +217,9 @@ importers:
       mammoth:
         specifier: ^1.13.0
         version: 1.13.0
+      openai:
+        specifier: ^7.51.0
+        version: 7.51.0(google-auth-library@11.3.3)(undici@7.29.1)(zod@3.25.76)
       pino:
         specifier: ^9.14.0
         version: 9.14.0
@@ -232,6 +235,9 @@ importers:
       word-extractor:
         specifier: ^1.0.4
         version: 1.0.4
+      zod:
+        specifier: 'catalog:'
+        version: 3.25.76
     devDependencies:
       '@types/cookie-parser':
         specifier: ^1.4.10
@@ -687,6 +693,15 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.9.9
+      '@workspace/api-zod':
+        specifier: workspace:*
+        version: link:../lib/api-zod
+      '@workspace/db':
+        specifier: workspace:*
+        version: link:../lib/db
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.4(@types/pg@8.23.1)(pg@8.23.1)
       tsx:
         specifier: 'catalog:'
         version: 4.23.15
@@ -2851,6 +2866,33 @@ packages:
 
   once@1.4.0:
     resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}
+
+  openai@7.51.0:
+    resolution: {integrity: sha512-Ibu1d3ilmMbXRS8Y3WUPNTKk96p0rg1/BSlqASnvKy6i8efKjliUZGSfUTTCRcZJNGQ3xXMdita2REQOlH68JA==}
+    engines: {node: '>=22.0.0'}
+    peerDependencies:
+      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
+      '@smithy/hash-node': '>=4.3.0 <5'
+      '@smithy/signature-v4': '>=5.4.0 <6'
+      google-auth-library: '>=9.15.1 <12'
+      undici: '>=5 <9'
+      ws: ^8.21.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      '@aws-sdk/credential-provider-node':
+        optional: true
+      '@smithy/hash-node':
+        optional: true
+      '@smithy/signature-v4':
+        optional: true
+      google-auth-library:
+        optional: true
+      undici:
+        optional: true
+      ws:
+        optional: true
+      zod:
+        optional: true
 
   option@0.2.4:
     resolution: {integrity: sha512-pkEqbDyl8ou5cpq+VsnQbe/WlEy5qS7xPzMS1U55OCG9KPvwFD46zDbxQIj3egJSFc3D+XhYOPUzz49zQAVy7A==}
@@ -5751,6 +5793,12 @@ snapshots:
   once@1.4.0:
     dependencies:
       wrappy: 1.0.2
+
+  openai@7.51.0(google-auth-library@11.3.3)(undici@7.29.1)(zod@3.25.76):
+    optionalDependencies:
+      google-auth-library: 11.3.3
+      undici: 7.29.1
+      zod: 3.25.76
 
   option@0.2.4: {}
 

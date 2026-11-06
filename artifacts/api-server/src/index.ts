@@ -6,6 +6,8 @@ import { migrateRetainedContent } from "./lib/tripwire-content-storage";
 import { backfillDiscoveryDates } from "./lib/tripwire-publication-backfill";
 import { classifyExistingArticles, reprocessSavedPages, startRetrieval } from "./lib/tripwire-retrieval";
 import { startPasteJobs } from "./lib/tripwire-enrichment-jobs";
+import { migrateWatches } from "./lib/entity-db";
+import { startEntityWorker } from "./lib/entity-worker";
 
 const rawPort = process.env["PORT"];
 
@@ -27,6 +29,7 @@ async function start() {
   await backfillDiscoveryDates();
   await classifyExistingArticles();
   await reprocessSavedPages();
+  await migrateWatches();
   app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
@@ -37,6 +40,7 @@ async function start() {
     startMonitoring();
     startRetrieval();
     startPasteJobs();
+    startEntityWorker();
   });
 }
 void start().catch(err => { logger.error({ err }, "Tripwire initialization failed"); process.exit(1); });

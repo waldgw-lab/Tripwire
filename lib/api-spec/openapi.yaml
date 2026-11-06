@@ -5,6 +5,151 @@ info:
 servers:
   - url: /api
 paths:
+  /tripwire/entities:
+    get:
+      operationId: listEntities
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 200 } }
+        - { name: state, in: query, schema: { type: string, enum: [Discovered, Active, Watch, Archived] } }
+        - { name: type, in: query, schema: { type: string, enum: [person, position, organization, company, capability, issue, event] } }
+        - { name: classification, in: query, schema: { type: string, enum: [structural, strategic, contextual] } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 30 } }
+      responses:
+        "200":
+          description: Paginated private registry
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EntityPage" }
+    post:
+      operationId: createEntity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EntityInput" }
+      responses:
+        "200":
+          description: Analyst discovery candidate
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegistryEntity" }
+  /tripwire/entities/{id}:
+    get:
+      operationId: getEntity
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        "200":
+          description: Bounded profile with evidence and history
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EntityDetail" }
+    post:
+      operationId: decideEntity
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EntityAction" }
+      responses:
+        "200":
+          description: Updated entity
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegistryEntity" }
+  /tripwire/entity-evidence:
+    post:
+      operationId: addEntityEvidence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EvidenceInput" }
+      responses:
+        "200":
+          description: Validated retained passage
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EntityEvidence" }
+  /tripwire/entity-captures:
+    get:
+      operationId: listEntityCaptures
+      parameters:
+        - { name: articleId, in: query, schema: { type: string } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        "200":
+          description: Immutable capture references without bodies
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/EntityCapture" } }
+                  total: { type: integer }
+  /tripwire/developments:
+    get:
+      operationId: listDevelopments
+      parameters:
+        - { name: articleId, in: query, schema: { type: string } }
+        - { name: disposition, in: query, schema: { type: string, enum: [Immediate, Review, Collection] } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        "200":
+          description: Grouped material developments
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/EntityDevelopment" } }
+                  total: { type: integer }
+  /tripwire/developments/{id}:
+    post:
+      operationId: decideDevelopment
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DevelopmentAction" }
+      responses:
+        "200":
+          description: Updated development
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EntityDevelopment" }
+  /tripwire/entity-automation:
+    get:
+      operationId: getEntityAutomation
+      parameters:
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        "200":
+          description: Processing health and release gates
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AutomationHealth" }
+    post:
+      operationId: controlEntityAutomation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AutomationAction" }
+      responses:
+        "200":
+          description: Processing health after control action
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AutomationHealth" }
   /healthz:
     get:
       operationId: healthCheck
@@ -253,6 +398,246 @@ components:
       properties:
         items: { type: array, items: { $ref: "#/components/schemas/TrackedRecord" } }
         jobs: { type: array, items: { $ref: "#/components/schemas/QuickEnrichmentJob" } }
+    EntityInput:
+      type: object
+      required: [name, type, rationale]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        type: { type: string, enum: [person, position, organization, company, capability, issue, event] }
+        facets: { type: array, maxItems: 12, items: { type: string, maxLength: 60 } }
+        rationale: { type: string, minLength: 5, maxLength: 2000 }
+        organizationId: { type: string }
+    RegistryEntity:
+      allOf:
+        - { $ref: "#/components/schemas/EntityInput" }
+        - type: object
+          required: [id, aliases, classification, state, priority, pinned, unresolved, createdAt]
+          properties:
+            id: { type: string }
+            aliases: { type: array, items: { type: string } }
+            classification: { type: string, enum: [structural, strategic, contextual] }
+            state: { type: string, enum: [Discovered, Active, Watch, Archived] }
+            priority: { type: integer }
+            pinned: { type: boolean }
+            unresolved: { type: boolean }
+            redirectId: { type: ["string", "null"] }
+            lastDevelopment: { type: ["string", "null"] }
+            nextReview: { type: ["string", "null"] }
+            createdAt: { type: string }
+    EntityPage:
+      type: object
+      required: [items, total, offset, limit]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/RegistryEntity" } }
+        total: { type: integer }
+        offset: { type: integer }
+        limit: { type: integer }
+    EntityCapture:
+      type: object
+      required: [id, articleId, captureId, hash, source, capturedAt, complete, authorized]
+      properties:
+        id: { type: string }
+        articleId: { type: string }
+        captureId: { type: string }
+        hash: { type: string }
+        source: { type: string }
+        url: { type: ["string", "null"] }
+        publisher: { type: ["string", "null"] }
+        byline: { type: ["string", "null"] }
+        publishedAt: { type: ["string", "null"] }
+        capturedAt: { type: string }
+        complete: { type: boolean }
+        authorized: { type: boolean }
+    EntityEvidence:
+      type: object
+      required: [id, captureId, excerpt, start, end, attribution, certainty, scope, extractorVersion, policyVersion, recordedAt]
+      properties:
+        id: { type: string }
+        captureId: { type: string }
+        excerpt: { type: string }
+        start: { type: integer }
+        end: { type: integer }
+        attribution: { type: string }
+        certainty: { type: string }
+        scope: { type: string }
+        extractorVersion: { type: string }
+        policyVersion: { type: string }
+        recordedAt: { type: string }
+        capture: { $ref: "#/components/schemas/EntityCapture" }
+        lineage:
+          type: object
+          required: [relation, independentlyReported, rationale]
+          properties:
+            originKey: { type: ["string", "null"] }
+            relation: { type: string }
+            independentlyReported: { type: boolean }
+            rationale: { type: string }
+    EvidenceInput:
+      type: object
+      required: [entityId, captureId, excerpt, start, end, attribution, certainty, predicate, scope]
+      properties:
+        entityId: { type: string }
+        captureId: { type: string }
+        excerpt: { type: string, minLength: 20, maxLength: 4000 }
+        start: { type: integer, minimum: 0 }
+        end: { type: integer, minimum: 1 }
+        attribution: { type: string, minLength: 1, maxLength: 1000 }
+        certainty: { type: string, enum: [asserted, attributed, alleged, disputed, inferred, confirmed] }
+        scope: { type: string, minLength: 1, maxLength: 500 }
+        predicate: { type: string, enum: [occupies, commands, advises, oversees, appointed, met-with, negotiated-with, criticized, investigated, supplies-capability, reportedly-discussed, involved-in, alias, identifier] }
+        objectId: { type: string }
+        value: { type: string, maxLength: 1000 }
+        eventId: { type: string }
+        validFrom: { type: string, format: date-time }
+        validTo: { type: string, format: date-time }
+        tenure: { type: string, enum: [current, acting, interim, former, concurrent, disputed, nominated] }
+        supersedesId: { type: string }
+        disputesId: { type: string }
+        relation: { type: string, enum: [unknown, original, citation, syndication, addition, commentary, authoritative-appointment] }
+        originKey: { type: string, maxLength: 200 }
+        independentlyReported: { type: boolean }
+        sourcingRationale: { type: string, maxLength: 2000 }
+        eventKey: { type: string, maxLength: 200 }
+        claimKey: { type: string, maxLength: 200 }
+        novelty: { type: string, enum: [unknown, repetition, material, conflicting, correction] }
+        consequence: { type: integer, minimum: 0, maximum: 4 }
+    EntityAssertion:
+      type: object
+      required: [id, subjectId, predicate, evidenceId, certainty, status, recordedAt]
+      properties:
+        id: { type: string }
+        subjectId: { type: string }
+        predicate: { type: string }
+        objectId: { type: ["string", "null"] }
+        objectName: { type: ["string", "null"] }
+        subjectName: { type: ["string", "null"] }
+        value: { type: ["string", "null"] }
+        evidenceId: { type: string }
+        eventId: { type: ["string", "null"] }
+        certainty: { type: string }
+        status: { type: string }
+        validFrom: { type: ["string", "null"] }
+        validTo: { type: ["string", "null"] }
+        tenure: { type: ["string", "null"] }
+        supersedesId: { type: ["string", "null"] }
+        disputesId: { type: ["string", "null"] }
+        recordedAt: { type: string }
+    EntityDecision:
+      type: object
+      required: [id, origin, action, rationale, previous, result, dimensions, evidenceIds, policyVersion, createdAt]
+      properties:
+        id: { type: string }
+        origin: { type: string }
+        action: { type: string }
+        rationale: { type: string }
+        previous: { type: object, additionalProperties: true }
+        result: { type: object, additionalProperties: true }
+        dimensions: { type: object, additionalProperties: { type: number } }
+        evidenceIds: { type: array, items: { type: string } }
+        policyVersion: { type: string }
+        createdAt: { type: string }
+    EntityCandidate:
+      type: object
+      required: [id, entityId, reason, resolution, identityConfidence]
+      properties:
+        id: { type: string }
+        entityId: { type: string }
+        matchId: { type: ["string", "null"] }
+        evidenceId: { type: ["string", "null"] }
+        reason: { type: string }
+        resolution: { type: string }
+        identityConfidence: { type: string }
+    EntityDetail:
+      type: object
+      required: [entity, assertions, evidence, decisions, candidates, historyTruncated]
+      properties:
+        entity: { $ref: "#/components/schemas/RegistryEntity" }
+        assertions: { type: array, items: { $ref: "#/components/schemas/EntityAssertion" } }
+        evidence: { type: array, items: { $ref: "#/components/schemas/EntityEvidence" } }
+        decisions: { type: array, items: { $ref: "#/components/schemas/EntityDecision" } }
+        candidates: { type: array, items: { $ref: "#/components/schemas/EntityCandidate" } }
+        historyTruncated: { type: boolean }
+    EntityAction:
+      type: object
+      required: [action, rationale]
+      properties:
+        action: { type: string, enum: [monitor, archive, reactivate, pin, unpin, resolve, reject, merge, unmerge, correct, reassess, rename] }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        rationale: { type: string, minLength: 5, maxLength: 2000 }
+        state: { type: string, enum: [Active, Watch, Archived, Discovered] }
+        classification: { type: string, enum: [structural, strategic, contextual] }
+        priority: { type: integer, minimum: 1, maximum: 3 }
+        unresolved: { type: boolean }
+        candidateId: { type: string }
+        targetId: { type: string }
+        assertionId: { type: string }
+        evidenceIds: { type: array, maxItems: 20, items: { type: string } }
+        dimensions: { type: object, additionalProperties: { type: integer, minimum: 0, maximum: 4 } }
+    EntityDevelopment:
+      type: object
+      required: [id, eventKey, claimKey, title, explanation, disposition, status, entityIds, policyVersion, createdAt, observations]
+      properties:
+        id: { type: string }
+        eventKey: { type: string }
+        claimKey: { type: string }
+        title: { type: string }
+        explanation: { type: string }
+        disposition: { type: string, enum: [Immediate, Review, Collection] }
+        status: { type: string, enum: [open, acknowledged, dismissed] }
+        entityIds: { type: array, items: { type: string } }
+        policyVersion: { type: string }
+        createdAt: { type: string }
+        observations: { type: array, items: { $ref: "#/components/schemas/EntityEvidence" } }
+    DevelopmentAction:
+      type: object
+      required: [status, rationale]
+      properties:
+        status: { type: string, enum: [open, acknowledged, dismissed] }
+        disposition: { type: string, enum: [Immediate, Review, Collection] }
+        rationale: { type: string, minLength: 5, maxLength: 2000 }
+    AutomationJob:
+      type: object
+      required: [id, captureId, status, attempts, nextRun, tokens, costMicros]
+      properties:
+        id: { type: string }
+        captureId: { type: string }
+        status: { type: string }
+        attempts: { type: integer }
+        nextRun: { type: string }
+        checkpoint: { type: ["string", "null"] }
+        error: { type: ["string", "null"] }
+        tokens: { type: integer }
+        costMicros: { type: integer }
+    AutomationHealth:
+      type: object
+      required: [mode, provider, authorized, privateMaterial, policyVersion, policy, dailyTokens, dailyMicros, usedTokens, usedMicros, jobs, counts, captureCounts, activationBlockers, scheduling]
+      properties:
+        mode: { type: string, enum: [paused, observe, autonomous] }
+        provider: { type: string, enum: [configured, unconfigured] }
+        authorized: { type: boolean }
+        privateMaterial: { type: boolean }
+        policyVersion: { type: string }
+        policy: { type: object, additionalProperties: { type: number } }
+        dailyTokens: { type: integer }
+        dailyMicros: { type: integer }
+        usedTokens: { type: integer }
+        usedMicros: { type: integer }
+        lastSuccess: { type: ["string", "null"] }
+        jobs: { type: array, items: { $ref: "#/components/schemas/AutomationJob" } }
+        counts: { type: object, additionalProperties: { type: integer } }
+        captureCounts: { type: object, additionalProperties: { type: integer } }
+        activationBlockers: { type: array, items: { type: string } }
+        scheduling: { type: string }
+    AutomationAction:
+      type: object
+      required: [action]
+      properties:
+        action: { type: string, enum: [pause, observe, activate, authorize, revoke, configure, backfill, retry] }
+        privateMaterial: { type: boolean }
+        dailyTokens: { type: integer, minimum: 0, maximum: 1000000 }
+        dailyMicros: { type: integer, minimum: 0, maximum: 100000000 }
+        policy: { type: object, additionalProperties: { type: number, minimum: 0, maximum: 100 } }
+        jobId: { type: string }
     FlagRequest:
       type: object
       required: [flagged]

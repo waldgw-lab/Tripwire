@@ -21,3 +21,10 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+TRIPWIRE_EXTRACTION_MAX_CALL_MICROS = "100000"
+TRIPWIRE_EXTRACTION_MODEL = "openai/gpt-5.4-mini"
+TRIPWIRE_EXTRACTION_PROVIDER = "openrouter"

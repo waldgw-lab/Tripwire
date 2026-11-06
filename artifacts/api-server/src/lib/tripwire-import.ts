@@ -1,8 +1,7 @@
 import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
 import { pdfDocument } from "./tripwire-pdf";
-import mammoth from "mammoth";
-import WordExtractor from "word-extractor";
+import { boundedDocumentText } from "./tripwire-document-parser";
 import { parseByline } from "./tripwire-bylines";
 import { captureContent, plainText, type Capture } from "./tripwire-content";
 import type { RecordData } from "./tripwire-store";
@@ -55,26 +54,7 @@ export function resolveImportMatch<T extends RecordData & { id: string }>(candid
 }
 
 export async function documentText(bytes: Buffer, filename: string) {
-  if (bytes.length > 10485760) throw new Error("Files must be 10 MB or smaller");
-  let text: string;
-  if (bytes.subarray(0, 5).toString() === "%PDF-") {
-    const result = await pdfDocument(bytes);
-    text = result.text;
-  } else if (bytes.subarray(0, 8).toString("hex") === "d0cf11e0a1b11ae1") {
-    const document = await new WordExtractor().extract(bytes);
-    text = [document.getHeaders(), document.getBody(), document.getTextboxes(), document.getFootnotes(), document.getEndnotes()].filter(Boolean).join("\n\n");
-  } else if (bytes.subarray(0, 2).toString() === "PK" && /\.docx$/i.test(filename)) {
-    let total = 0, entries = 0;
-    for (let offset = 0; offset < bytes.length - 46; offset++) if (bytes.readUInt32LE(offset) === 0x02014b50) {
-      total += bytes.readUInt32LE(offset + 24); entries++;
-      if (total > 25_000_000 || entries > 3000) throw new Error("Document expands beyond the safe parsing limit");
-    }
-    text = (await mammoth.extractRawText({ buffer: bytes })).value;
-  } else throw new Error("The file is not a supported PDF, DOC or DOCX document");
-  text = text.trim();
-  if (!text) throw new Error("No readable text was found. Scanned or encrypted documents need text extraction before import.");
-  if (text.length > 1_000_000) throw new Error("Extracted text exceeds the 1,000,000-character intake limit; no content was saved or truncated.");
-  return text;
+  return boundedDocumentText(bytes, filename);
 }
 
 export async function documentCandidate(bytes: Buffer, filename: string, url?: string, outletHint?: string) {

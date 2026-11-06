@@ -33,11 +33,11 @@ Publisher recommendations may occur inside an article, not just after it.
 
 **How to apply:** Remove only structurally bounded recommendation cards and resume the article afterward; preserve ambiguous blocks. Validate cleanup against the supplied print view, keep contributor statements as article-specific credits, and retain raw originals even when a previously confirmed-complete copy needs cleanup.
 
-Treat PDF text extraction as layout-sensitive and its input buffers as transferable.
+Treat PDF text extraction as layout-sensitive.
 
-**Why:** The print view split contributor names across lines, and line height differed from baseline spacing. Reusing transferred bytes caused cloning errors; assuming a conventional PDF.js proxy destroy method also failed with the installed unpdf runtime.
+**Why:** Print views can split contributor names across lines, and measured baseline spacing can differ from glyph height. Flattening those differences can destroy paragraph and attribution boundaries.
 
-**How to apply:** Use a fresh byte copy, release the loading task, and distinguish soft wraps from paragraph gaps using measured spacing. Preserve the source PDF and avoid applying a single-column publisher layout rule to unrelated PDFs.
+**How to apply:** Distinguish soft wraps from paragraph gaps using measured layout. Preserve the source PDF and avoid applying a single-column publisher layout rule to unrelated PDFs.
 
 Video descriptions are retained content even when there is no article body or transcript.
 

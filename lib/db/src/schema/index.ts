@@ -19,3 +19,4 @@
 
 export * from "./tripwire";
 export * from "./tripwire-content";
+export * from "./tripwire-entities";

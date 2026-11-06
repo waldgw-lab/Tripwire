@@ -7,6 +7,628 @@
 import * as zod from 'zod';
 
 
+export const listEntitiesQueryQMax = 200;
+
+export const listEntitiesQueryOffsetDefault = 0;
+export const listEntitiesQueryOffsetMin = 0;
+
+export const listEntitiesQueryLimitDefault = 30;
+export const listEntitiesQueryLimitMax = 100;
+
+
+
+export const ListEntitiesQueryParams = zod.object({
+  "q": zod.coerce.string().max(listEntitiesQueryQMax).optional(),
+  "state": zod.enum(['Discovered', 'Active', 'Watch', 'Archived']).optional(),
+  "type": zod.enum(['person', 'position', 'organization', 'company', 'capability', 'issue', 'event']).optional(),
+  "classification": zod.enum(['structural', 'strategic', 'contextual']).optional(),
+  "offset": zod.coerce.number().int().min(listEntitiesQueryOffsetMin).default(listEntitiesQueryOffsetDefault),
+  "limit": zod.coerce.number().int().min(1).max(listEntitiesQueryLimitMax).default(listEntitiesQueryLimitDefault)
+})
+
+export const listEntitiesResponseItemsItemOneNameMax = 200;
+
+export const listEntitiesResponseItemsItemOneFacetsItemMax = 60;
+
+export const listEntitiesResponseItemsItemOneFacetsMax = 12;
+
+export const listEntitiesResponseItemsItemOneRationaleMin = 5;
+export const listEntitiesResponseItemsItemOneRationaleMax = 2000;
+
+
+
+export const ListEntitiesResponse = zod.object({
+  "items": zod.array(zod.object({
+  "name": zod.string().min(1).max(listEntitiesResponseItemsItemOneNameMax),
+  "type": zod.enum(['person', 'position', 'organization', 'company', 'capability', 'issue', 'event']),
+  "facets": zod.array(zod.string().max(listEntitiesResponseItemsItemOneFacetsItemMax)).max(listEntitiesResponseItemsItemOneFacetsMax).optional(),
+  "rationale": zod.string().min(listEntitiesResponseItemsItemOneRationaleMin).max(listEntitiesResponseItemsItemOneRationaleMax),
+  "organizationId": zod.string().optional()
+}).and(zod.object({
+  "id": zod.string(),
+  "aliases": zod.array(zod.string()),
+  "classification": zod.enum(['structural', 'strategic', 'contextual']),
+  "state": zod.enum(['Discovered', 'Active', 'Watch', 'Archived']),
+  "priority": zod.number().int(),
+  "pinned": zod.boolean(),
+  "unresolved": zod.boolean(),
+  "redirectId": zod.string().nullish(),
+  "lastDevelopment": zod.string().nullish(),
+  "nextReview": zod.string().nullish(),
+  "createdAt": zod.string()
+}))),
+  "total": zod.number().int(),
+  "offset": zod.number().int(),
+  "limit": zod.number().int()
+})
+
+
+export const createEntityBodyNameMax = 200;
+
+export const createEntityBodyFacetsItemMax = 60;
+
+export const createEntityBodyFacetsMax = 12;
+
+export const createEntityBodyRationaleMin = 5;
+export const createEntityBodyRationaleMax = 2000;
+
+
+
+export const CreateEntityBody = zod.object({
+  "name": zod.string().min(1).max(createEntityBodyNameMax),
+  "type": zod.enum(['person', 'position', 'organization', 'company', 'capability', 'issue', 'event']),
+  "facets": zod.array(zod.string().max(createEntityBodyFacetsItemMax)).max(createEntityBodyFacetsMax).optional(),
+  "rationale": zod.string().min(createEntityBodyRationaleMin).max(createEntityBodyRationaleMax),
+  "organizationId": zod.string().optional()
+})
+
+export const createEntityResponseOneNameMax = 200;
+
+export const createEntityResponseOneFacetsItemMax = 60;
+
+export const createEntityResponseOneFacetsMax = 12;
+
+export const createEntityResponseOneRationaleMin = 5;
+export const createEntityResponseOneRationaleMax = 2000;
+
+
+
+export const CreateEntityResponse = zod.object({
+  "name": zod.string().min(1).max(createEntityResponseOneNameMax),
+  "type": zod.enum(['person', 'position', 'organization', 'company', 'capability', 'issue', 'event']),
+  "facets": zod.array(zod.string().max(createEntityResponseOneFacetsItemMax)).max(createEntityResponseOneFacetsMax).optional(),
+  "rationale": zod.string().min(createEntityResponseOneRationaleMin).max(createEntityResponseOneRationaleMax),
+  "organizationId": zod.string().optional()
+}).and(zod.object({
+  "id": zod.string(),
+  "aliases": zod.array(zod.string()),
+  "classification": zod.enum(['structural', 'strategic', 'contextual']),
+  "state": zod.enum(['Discovered', 'Active', 'Watch', 'Archived']),
+  "priority": zod.number().int(),
+  "pinned": zod.boolean(),
+  "unresolved": zod.boolean(),
+  "redirectId": zod.string().nullish(),
+  "lastDevelopment": zod.string().nullish(),
+  "nextReview": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+
+
+export const GetEntityParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const getEntityQueryOffsetDefault = 0;
+export const getEntityQueryOffsetMin = 0;
+
+
+
+export const GetEntityQueryParams = zod.object({
+  "offset": zod.coerce.number().int().min(getEntityQueryOffsetMin).default(getEntityQueryOffsetDefault)
+})
+
+export const getEntityResponseEntityOneNameMax = 200;
+
+export const getEntityResponseEntityOneFacetsItemMax = 60;
+
+export const getEntityResponseEntityOneFacetsMax = 12;
+
+export const getEntityResponseEntityOneRationaleMin = 5;
+export const getEntityResponseEntityOneRationaleMax = 2000;
+
+
+
+export const GetEntityResponse = zod.object({
+  "entity": zod.object({
+  "name": zod.string().min(1).max(getEntityResponseEntityOneNameMax),
+  "type": zod.enum(['person', 'position', 'organization', 'company', 'capability', 'issue', 'event']),
+  "facets": zod.array(zod.string().max(getEntityResponseEntityOneFacetsItemMax)).max(getEntityResponseEntityOneFacetsMax).optional(),
+  "rationale": zod.string().min(getEntityResponseEntityOneRationaleMin).max(getEntityResponseEntityOneRationaleMax),
+  "organizationId": zod.string().optional()
+}).and(zod.object({
+  "id": zod.string(),
+  "aliases": zod.array(zod.string()),
+  "classification": zod.enum(['structural', 'strategic', 'contextual']),
+  "state": zod.enum(['Discovered', 'Active', 'Watch', 'Archived']),
+  "priority": zod.number().int(),
+  "pinned": zod.boolean(),
+  "unresolved": zod.boolean(),
+  "redirectId": zod.string().nullish(),
+  "lastDevelopment": zod.string().nullish(),
+  "nextReview": zod.string().nullish(),
+  "createdAt": zod.string()
+})),
+  "assertions": zod.array(zod.object({
+  "id": zod.string(),
+  "subjectId": zod.string(),
+  "predicate": zod.string(),
+  "objectId": zod.string().nullish(),
+  "objectName": zod.string().nullish(),
+  "subjectName": zod.string().nullish(),
+  "value": zod.string().nullish(),
+  "evidenceId": zod.string(),
+  "eventId": zod.string().nullish(),
+  "certainty": zod.string(),
+  "status": zod.string(),
+  "validFrom": zod.string().nullish(),
+  "validTo": zod.string().nullish(),
+  "tenure": zod.string().nullish(),
+  "supersedesId": zod.string().nullish(),
+  "disputesId": zod.string().nullish(),
+  "recordedAt": zod.string()
+})),
+  "evidence": zod.array(zod.object({
+  "id": zod.string(),
+  "captureId": zod.string(),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "attribution": zod.string(),
+  "certainty": zod.string(),
+  "scope": zod.string(),
+  "extractorVersion": zod.string(),
+  "policyVersion": zod.string(),
+  "recordedAt": zod.string(),
+  "capture": zod.object({
+  "id": zod.string(),
+  "articleId": zod.string(),
+  "captureId": zod.string(),
+  "hash": zod.string(),
+  "source": zod.string(),
+  "url": zod.string().nullish(),
+  "publisher": zod.string().nullish(),
+  "byline": zod.string().nullish(),
+  "publishedAt": zod.string().nullish(),
+  "capturedAt": zod.string(),
+  "complete": zod.boolean(),
+  "authorized": zod.boolean()
+}).optional(),
+  "lineage": zod.object({
+  "originKey": zod.string().nullish(),
+  "relation": zod.string(),
+  "independentlyReported": zod.boolean(),
+  "rationale": zod.string()
+}).optional()
+})),
+  "decisions": zod.array(zod.object({
+  "id": zod.string(),
+  "origin": zod.string(),
+  "action": zod.string(),
+  "rationale": zod.string(),
+  "previous": zod.record(zod.string(), zod.unknown()),
+  "result": zod.record(zod.string(), zod.unknown()),
+  "dimensions": zod.record(zod.string(), zod.number()),
+  "evidenceIds": zod.array(zod.string()),
+  "policyVersion": zod.string(),
+  "createdAt": zod.string()
+})),
+  "candidates": zod.array(zod.object({
+  "id": zod.string(),
+  "entityId": zod.string(),
+  "matchId": zod.string().nullish(),
+  "evidenceId": zod.string().nullish(),
+  "reason": zod.string(),
+  "resolution": zod.string(),
+  "identityConfidence": zod.string()
+})),
+  "historyTruncated": zod.boolean()
+})
+
+
+export const DecideEntityParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const decideEntityBodyNameMax = 200;
+
+export const decideEntityBodyRationaleMin = 5;
+export const decideEntityBodyRationaleMax = 2000;
+
+export const decideEntityBodyPriorityMax = 3;
+
+export const decideEntityBodyEvidenceIdsMax = 20;
+
+export const decideEntityBodyDimensionsMinOne = 0;
+export const decideEntityBodyDimensionsMaxOne = 4;
+
+
+
+export const DecideEntityBody = zod.object({
+  "action": zod.enum(['monitor', 'archive', 'reactivate', 'pin', 'unpin', 'resolve', 'reject', 'merge', 'unmerge', 'correct', 'reassess', 'rename']),
+  "name": zod.string().min(1).max(decideEntityBodyNameMax).optional(),
+  "rationale": zod.string().min(decideEntityBodyRationaleMin).max(decideEntityBodyRationaleMax),
+  "state": zod.enum(['Active', 'Watch', 'Archived', 'Discovered']).optional(),
+  "classification": zod.enum(['structural', 'strategic', 'contextual']).optional(),
+  "priority": zod.number().int().min(1).max(decideEntityBodyPriorityMax).optional(),
+  "unresolved": zod.boolean().optional(),
+  "candidateId": zod.string().optional(),
+  "targetId": zod.string().optional(),
+  "assertionId": zod.string().optional(),
+  "evidenceIds": zod.array(zod.string()).max(decideEntityBodyEvidenceIdsMax).optional(),
+  "dimensions": zod.record(zod.string(), zod.number().int().min(decideEntityBodyDimensionsMinOne).max(decideEntityBodyDimensionsMaxOne)).optional()
+})
+
+export const decideEntityResponseOneNameMax = 200;
+
+export const decideEntityResponseOneFacetsItemMax = 60;
+
+export const decideEntityResponseOneFacetsMax = 12;
+
+export const decideEntityResponseOneRationaleMin = 5;
+export const decideEntityResponseOneRationaleMax = 2000;
+
+
+
+export const DecideEntityResponse = zod.object({
+  "name": zod.string().min(1).max(decideEntityResponseOneNameMax),
+  "type": zod.enum(['person', 'position', 'organization', 'company', 'capability', 'issue', 'event']),
+  "facets": zod.array(zod.string().max(decideEntityResponseOneFacetsItemMax)).max(decideEntityResponseOneFacetsMax).optional(),
+  "rationale": zod.string().min(decideEntityResponseOneRationaleMin).max(decideEntityResponseOneRationaleMax),
+  "organizationId": zod.string().optional()
+}).and(zod.object({
+  "id": zod.string(),
+  "aliases": zod.array(zod.string()),
+  "classification": zod.enum(['structural', 'strategic', 'contextual']),
+  "state": zod.enum(['Discovered', 'Active', 'Watch', 'Archived']),
+  "priority": zod.number().int(),
+  "pinned": zod.boolean(),
+  "unresolved": zod.boolean(),
+  "redirectId": zod.string().nullish(),
+  "lastDevelopment": zod.string().nullish(),
+  "nextReview": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+
+
+export const addEntityEvidenceBodyExcerptMin = 20;
+export const addEntityEvidenceBodyExcerptMax = 4000;
+
+export const addEntityEvidenceBodyStartMin = 0;
+
+
+export const addEntityEvidenceBodyAttributionMax = 1000;
+
+export const addEntityEvidenceBodyScopeMax = 500;
+
+export const addEntityEvidenceBodyValueMax = 1000;
+
+export const addEntityEvidenceBodyOriginKeyMax = 200;
+
+export const addEntityEvidenceBodySourcingRationaleMax = 2000;
+
+export const addEntityEvidenceBodyEventKeyMax = 200;
+
+export const addEntityEvidenceBodyClaimKeyMax = 200;
+
+export const addEntityEvidenceBodyConsequenceMin = 0;
+export const addEntityEvidenceBodyConsequenceMax = 4;
+
+
+
+export const AddEntityEvidenceBody = zod.object({
+  "entityId": zod.string(),
+  "captureId": zod.string(),
+  "excerpt": zod.string().min(addEntityEvidenceBodyExcerptMin).max(addEntityEvidenceBodyExcerptMax),
+  "start": zod.number().int().min(addEntityEvidenceBodyStartMin),
+  "end": zod.number().int().min(1),
+  "attribution": zod.string().min(1).max(addEntityEvidenceBodyAttributionMax),
+  "certainty": zod.enum(['asserted', 'attributed', 'alleged', 'disputed', 'inferred', 'confirmed']),
+  "scope": zod.string().min(1).max(addEntityEvidenceBodyScopeMax),
+  "predicate": zod.enum(['occupies', 'commands', 'advises', 'oversees', 'appointed', 'met-with', 'negotiated-with', 'criticized', 'investigated', 'supplies-capability', 'reportedly-discussed', 'involved-in', 'alias', 'identifier']),
+  "objectId": zod.string().optional(),
+  "value": zod.string().max(addEntityEvidenceBodyValueMax).optional(),
+  "eventId": zod.string().optional(),
+  "validFrom": zod.coerce.date().optional(),
+  "validTo": zod.coerce.date().optional(),
+  "tenure": zod.enum(['current', 'acting', 'interim', 'former', 'concurrent', 'disputed', 'nominated']).optional(),
+  "supersedesId": zod.string().optional(),
+  "disputesId": zod.string().optional(),
+  "relation": zod.enum(['unknown', 'original', 'citation', 'syndication', 'addition', 'commentary', 'authoritative-appointment']).optional(),
+  "originKey": zod.string().max(addEntityEvidenceBodyOriginKeyMax).optional(),
+  "independentlyReported": zod.boolean().optional(),
+  "sourcingRationale": zod.string().max(addEntityEvidenceBodySourcingRationaleMax).optional(),
+  "eventKey": zod.string().max(addEntityEvidenceBodyEventKeyMax).optional(),
+  "claimKey": zod.string().max(addEntityEvidenceBodyClaimKeyMax).optional(),
+  "novelty": zod.enum(['unknown', 'repetition', 'material', 'conflicting', 'correction']).optional(),
+  "consequence": zod.number().int().min(addEntityEvidenceBodyConsequenceMin).max(addEntityEvidenceBodyConsequenceMax).optional()
+})
+
+export const AddEntityEvidenceResponse = zod.object({
+  "id": zod.string(),
+  "captureId": zod.string(),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "attribution": zod.string(),
+  "certainty": zod.string(),
+  "scope": zod.string(),
+  "extractorVersion": zod.string(),
+  "policyVersion": zod.string(),
+  "recordedAt": zod.string(),
+  "capture": zod.object({
+  "id": zod.string(),
+  "articleId": zod.string(),
+  "captureId": zod.string(),
+  "hash": zod.string(),
+  "source": zod.string(),
+  "url": zod.string().nullish(),
+  "publisher": zod.string().nullish(),
+  "byline": zod.string().nullish(),
+  "publishedAt": zod.string().nullish(),
+  "capturedAt": zod.string(),
+  "complete": zod.boolean(),
+  "authorized": zod.boolean()
+}).optional(),
+  "lineage": zod.object({
+  "originKey": zod.string().nullish(),
+  "relation": zod.string(),
+  "independentlyReported": zod.boolean(),
+  "rationale": zod.string()
+}).optional()
+})
+
+
+export const listEntityCapturesQueryOffsetDefault = 0;
+export const listEntityCapturesQueryOffsetMin = 0;
+
+
+
+export const ListEntityCapturesQueryParams = zod.object({
+  "articleId": zod.coerce.string().optional(),
+  "offset": zod.coerce.number().int().min(listEntityCapturesQueryOffsetMin).default(listEntityCapturesQueryOffsetDefault)
+})
+
+export const ListEntityCapturesResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "articleId": zod.string(),
+  "captureId": zod.string(),
+  "hash": zod.string(),
+  "source": zod.string(),
+  "url": zod.string().nullish(),
+  "publisher": zod.string().nullish(),
+  "byline": zod.string().nullish(),
+  "publishedAt": zod.string().nullish(),
+  "capturedAt": zod.string(),
+  "complete": zod.boolean(),
+  "authorized": zod.boolean()
+})),
+  "total": zod.number().int()
+})
+
+
+export const listDevelopmentsQueryOffsetDefault = 0;
+export const listDevelopmentsQueryOffsetMin = 0;
+
+
+
+export const ListDevelopmentsQueryParams = zod.object({
+  "articleId": zod.coerce.string().optional(),
+  "disposition": zod.enum(['Immediate', 'Review', 'Collection']).optional(),
+  "offset": zod.coerce.number().int().min(listDevelopmentsQueryOffsetMin).default(listDevelopmentsQueryOffsetDefault)
+})
+
+export const ListDevelopmentsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "eventKey": zod.string(),
+  "claimKey": zod.string(),
+  "title": zod.string(),
+  "explanation": zod.string(),
+  "disposition": zod.enum(['Immediate', 'Review', 'Collection']),
+  "status": zod.enum(['open', 'acknowledged', 'dismissed']),
+  "entityIds": zod.array(zod.string()),
+  "policyVersion": zod.string(),
+  "createdAt": zod.string(),
+  "observations": zod.array(zod.object({
+  "id": zod.string(),
+  "captureId": zod.string(),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "attribution": zod.string(),
+  "certainty": zod.string(),
+  "scope": zod.string(),
+  "extractorVersion": zod.string(),
+  "policyVersion": zod.string(),
+  "recordedAt": zod.string(),
+  "capture": zod.object({
+  "id": zod.string(),
+  "articleId": zod.string(),
+  "captureId": zod.string(),
+  "hash": zod.string(),
+  "source": zod.string(),
+  "url": zod.string().nullish(),
+  "publisher": zod.string().nullish(),
+  "byline": zod.string().nullish(),
+  "publishedAt": zod.string().nullish(),
+  "capturedAt": zod.string(),
+  "complete": zod.boolean(),
+  "authorized": zod.boolean()
+}).optional(),
+  "lineage": zod.object({
+  "originKey": zod.string().nullish(),
+  "relation": zod.string(),
+  "independentlyReported": zod.boolean(),
+  "rationale": zod.string()
+}).optional()
+}))
+})),
+  "total": zod.number().int()
+})
+
+
+export const DecideDevelopmentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const decideDevelopmentBodyRationaleMin = 5;
+export const decideDevelopmentBodyRationaleMax = 2000;
+
+
+
+export const DecideDevelopmentBody = zod.object({
+  "status": zod.enum(['open', 'acknowledged', 'dismissed']),
+  "disposition": zod.enum(['Immediate', 'Review', 'Collection']).optional(),
+  "rationale": zod.string().min(decideDevelopmentBodyRationaleMin).max(decideDevelopmentBodyRationaleMax)
+})
+
+export const DecideDevelopmentResponse = zod.object({
+  "id": zod.string(),
+  "eventKey": zod.string(),
+  "claimKey": zod.string(),
+  "title": zod.string(),
+  "explanation": zod.string(),
+  "disposition": zod.enum(['Immediate', 'Review', 'Collection']),
+  "status": zod.enum(['open', 'acknowledged', 'dismissed']),
+  "entityIds": zod.array(zod.string()),
+  "policyVersion": zod.string(),
+  "createdAt": zod.string(),
+  "observations": zod.array(zod.object({
+  "id": zod.string(),
+  "captureId": zod.string(),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "attribution": zod.string(),
+  "certainty": zod.string(),
+  "scope": zod.string(),
+  "extractorVersion": zod.string(),
+  "policyVersion": zod.string(),
+  "recordedAt": zod.string(),
+  "capture": zod.object({
+  "id": zod.string(),
+  "articleId": zod.string(),
+  "captureId": zod.string(),
+  "hash": zod.string(),
+  "source": zod.string(),
+  "url": zod.string().nullish(),
+  "publisher": zod.string().nullish(),
+  "byline": zod.string().nullish(),
+  "publishedAt": zod.string().nullish(),
+  "capturedAt": zod.string(),
+  "complete": zod.boolean(),
+  "authorized": zod.boolean()
+}).optional(),
+  "lineage": zod.object({
+  "originKey": zod.string().nullish(),
+  "relation": zod.string(),
+  "independentlyReported": zod.boolean(),
+  "rationale": zod.string()
+}).optional()
+}))
+})
+
+
+export const getEntityAutomationQueryOffsetDefault = 0;
+export const getEntityAutomationQueryOffsetMin = 0;
+
+
+
+export const GetEntityAutomationQueryParams = zod.object({
+  "offset": zod.coerce.number().int().min(getEntityAutomationQueryOffsetMin).default(getEntityAutomationQueryOffsetDefault)
+})
+
+export const GetEntityAutomationResponse = zod.object({
+  "mode": zod.enum(['paused', 'observe', 'autonomous']),
+  "provider": zod.enum(['configured', 'unconfigured']),
+  "authorized": zod.boolean(),
+  "privateMaterial": zod.boolean(),
+  "policyVersion": zod.string(),
+  "policy": zod.record(zod.string(), zod.number()),
+  "dailyTokens": zod.number().int(),
+  "dailyMicros": zod.number().int(),
+  "usedTokens": zod.number().int(),
+  "usedMicros": zod.number().int(),
+  "lastSuccess": zod.string().nullish(),
+  "jobs": zod.array(zod.object({
+  "id": zod.string(),
+  "captureId": zod.string(),
+  "status": zod.string(),
+  "attempts": zod.number().int(),
+  "nextRun": zod.string(),
+  "checkpoint": zod.string().nullish(),
+  "error": zod.string().nullish(),
+  "tokens": zod.number().int(),
+  "costMicros": zod.number().int()
+})),
+  "counts": zod.record(zod.string(), zod.number().int()),
+  "captureCounts": zod.record(zod.string(), zod.number().int()),
+  "activationBlockers": zod.array(zod.string()),
+  "scheduling": zod.string()
+})
+
+
+export const controlEntityAutomationBodyDailyTokensMin = 0;
+export const controlEntityAutomationBodyDailyTokensMax = 1000000;
+
+export const controlEntityAutomationBodyDailyMicrosMin = 0;
+export const controlEntityAutomationBodyDailyMicrosMax = 100000000;
+
+export const controlEntityAutomationBodyPolicyMinOne = 0;
+export const controlEntityAutomationBodyPolicyMaxOne = 100;
+
+
+
+export const ControlEntityAutomationBody = zod.object({
+  "action": zod.enum(['pause', 'observe', 'activate', 'authorize', 'revoke', 'configure', 'backfill', 'retry']),
+  "privateMaterial": zod.boolean().optional(),
+  "dailyTokens": zod.number().int().min(controlEntityAutomationBodyDailyTokensMin).max(controlEntityAutomationBodyDailyTokensMax).optional(),
+  "dailyMicros": zod.number().int().min(controlEntityAutomationBodyDailyMicrosMin).max(controlEntityAutomationBodyDailyMicrosMax).optional(),
+  "policy": zod.record(zod.string(), zod.number().min(controlEntityAutomationBodyPolicyMinOne).max(controlEntityAutomationBodyPolicyMaxOne)).optional(),
+  "jobId": zod.string().optional()
+})
+
+export const ControlEntityAutomationResponse = zod.object({
+  "mode": zod.enum(['paused', 'observe', 'autonomous']),
+  "provider": zod.enum(['configured', 'unconfigured']),
+  "authorized": zod.boolean(),
+  "privateMaterial": zod.boolean(),
+  "policyVersion": zod.string(),
+  "policy": zod.record(zod.string(), zod.number()),
+  "dailyTokens": zod.number().int(),
+  "dailyMicros": zod.number().int(),
+  "usedTokens": zod.number().int(),
+  "usedMicros": zod.number().int(),
+  "lastSuccess": zod.string().nullish(),
+  "jobs": zod.array(zod.object({
+  "id": zod.string(),
+  "captureId": zod.string(),
+  "status": zod.string(),
+  "attempts": zod.number().int(),
+  "nextRun": zod.string(),
+  "checkpoint": zod.string().nullish(),
+  "error": zod.string().nullish(),
+  "tokens": zod.number().int(),
+  "costMicros": zod.number().int()
+})),
+  "counts": zod.record(zod.string(), zod.number().int()),
+  "captureCounts": zod.record(zod.string(), zod.number().int()),
+  "activationBlockers": zod.array(zod.string()),
+  "scheduling": zod.string()
+})
+
+
 export const HealthCheckResponse = zod.object({
   "status": zod.string()
 })

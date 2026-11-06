@@ -10,6 +10,7 @@ import { Empty, ErrorState, PageHead, RowsSkeleton } from '@/components/bits';
 import { impactRating } from '@/lib/article-signals';
 import { FeedMeta } from '@/components/feed/feed-meta';
 import { FittedHeadline } from '@/components/feed/fitted-headline';
+import { DevelopmentsPanel } from '@/components/feed/developments';
 import { ArticleReader } from '@/components/feed/article-reader';
 import { ArticleEditor, ConfirmDelete } from '@/components/editors';
 import { OutletBrand } from '@/components/outlet-brand';
@@ -129,6 +130,7 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
 
       <div className={cn(selected && 'lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(380px,46%)]')}>
       <div className="min-w-0">
+      <DevelopmentsPanel />
       {isLoading ? <RowsSkeleton /> : isError ? <ErrorState onRetry={() => refetch()} /> : rows.length === 0 ? (
         filtered ? <Empty title="No matches"><button onClick={clear} className="text-xs text-accent underline" data-testid="button-empty-clear">Clear filters</button></Empty>
           : <Empty title="No articles yet">

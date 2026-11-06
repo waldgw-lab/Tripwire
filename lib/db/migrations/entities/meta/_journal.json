@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1793977814618,
+      "tag": "0000_evidence_entities",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793980589364,
+      "tag": "0001_pilot_token_allowance",
+      "breakpoints": true
+    }
+  ]
+}

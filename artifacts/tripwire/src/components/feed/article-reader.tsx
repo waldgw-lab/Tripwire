@@ -7,6 +7,7 @@ import { Importer } from '@/components/importer';
 import { contentStatus, hasMainText, publicationET, type Impact } from '@/lib/article-signals';
 import { articleCredits } from '@/lib/media-coverage';
 import { OutletBrand } from '@/components/outlet-brand';
+import { DevelopmentsPanel } from './developments';
 import { ContentDot, ImpactWord, articleTags } from './feed-meta';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -222,6 +223,8 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
             <p className="text-sm leading-relaxed" data-testid="text-reader-summary">{a.summary}</p>
           </section>
         )}
+
+        <DevelopmentsPanel key={a.id} articleId={a.id} compact />
 
         {captures.length > 0 && (
           <div className="mt-6 flex flex-wrap items-center gap-2" data-testid="select-reader-capture">

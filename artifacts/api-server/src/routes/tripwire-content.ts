@@ -13,7 +13,8 @@ router.get("/tripwire/records/:id/content", async (req, res) => {
     const article = (await recordsFor(WORKSPACE_OWNER, false)).find(r => r.id === req.params.id && r.kind === "article");
     if (!article) { res.status(404).json({ error: "Article not found" }); return; }
     const captureId = typeof req.query.capture === "string" ? req.query.capture : undefined;
-    const capture = captureId ? article.retainedContent?.find(c => c.id === captureId) : undefined;
+    const capture = captureId?.startsWith("canonical:") && captureId === `canonical:${article.fullTextHash}`
+      ? { bodyHash: article.fullTextHash } : captureId ? article.retainedContent?.find(c => c.id === captureId) : undefined;
     if (captureId && !capture) { res.status(404).json({ error: "Source capture not found on this article" }); return; }
     const hash = captureId ? capture?.bodyHash : article.fullTextHash ?? article.retainedContent?.[0]?.bodyHash;
     if (!hash) { res.status(404).json({ error: "No text has been retained for this selection" }); return; }
