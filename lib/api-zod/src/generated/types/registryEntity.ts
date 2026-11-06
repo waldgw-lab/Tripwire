@@ -4,6 +4,8 @@
  * Api
  * OpenAPI spec version: 1.0.0
  */
+import type { CoverageContext } from './coverageContext';
+import type { CoverageRoleLink } from './coverageRoleLink';
 import type { EntityInput } from './entityInput';
 import type { RegistryEntityClassification } from './registryEntityClassification';
 import type { RegistryEntityState } from './registryEntityState';
@@ -23,4 +25,6 @@ export type RegistryEntity = EntityInput & ({
   /** @nullable */
   nextReview?: string | null;
   createdAt: string;
+  coverageContext?: CoverageContext;
+  roleLinks?: CoverageRoleLink[];
 });

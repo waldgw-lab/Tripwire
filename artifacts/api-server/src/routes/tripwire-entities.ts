@@ -5,6 +5,7 @@ import * as api from "@workspace/api-zod";
 import { entities, captures, developments, observations, W, uid, scoped, profile, settings, logDecision, evidenceRows } from "../lib/entity-db";
 import { addEvidence, decide } from "../lib/entity-actions";
 import { health, control } from "../lib/entity-operations";
+import { coverageEntities } from "../lib/entity-coverage";
 
 const router = Router();
 // Serialize timestamps before generated response validation.
@@ -19,7 +20,7 @@ router.get("/tripwire/entities", async (req, res): Promise<void> => {
   if (q.classification) filters.push(eq(entities.classification, q.classification));
   const [count] = await db.select({ total: sql<number>`count(*)::int` }).from(entities).where(and(...filters));
   const items = await db.select().from(entities).where(and(...filters)).orderBy(entities.name, entities.id).limit(q.limit).offset(q.offset);
-  res.json(api.ListEntitiesResponse.parse(json({ items, total: count?.total ?? 0, offset: q.offset, limit: q.limit })));
+  res.json(api.ListEntitiesResponse.parse(json({ items: await coverageEntities(items), total: count?.total ?? 0, offset: q.offset, limit: q.limit })));
 });
 router.post("/tripwire/entities", async (req, res): Promise<void> => {
   const body = api.CreateEntityBody.parse(req.body);
@@ -38,7 +39,9 @@ router.post("/tripwire/entities", async (req, res): Promise<void> => {
 router.get("/tripwire/entities/:id", async (req, res): Promise<void> => {
   const { id } = api.GetEntityParams.parse(req.params);
   const q = api.GetEntityQueryParams.parse(req.query);
-  res.json(api.GetEntityResponse.parse(json(await profile(id, q.offset))));
+  const detail = await profile(id, q.offset);
+  const [entity] = await coverageEntities([detail.entity]);
+  res.json(api.GetEntityResponse.parse(json({ ...detail, entity })));
 });
 router.post("/tripwire/entities/:id", async (req, res): Promise<void> => {
   const { id } = api.DecideEntityParams.parse(req.params);

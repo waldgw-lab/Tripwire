@@ -55,7 +55,26 @@ export const ListEntitiesResponse = zod.object({
   "redirectId": zod.string().nullish(),
   "lastDevelopment": zod.string().nullish(),
   "nextReview": zod.string().nullish(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "coverageContext": zod.object({
+  "watchId": zod.string(),
+  "title": zod.string(),
+  "summary": zod.string().optional(),
+  "position": zod.string().optional(),
+  "individual": zod.string().optional(),
+  "tier": zod.number().int().optional(),
+  "organization": zod.string().optional()
+}).optional(),
+  "roleLinks": zod.array(zod.object({
+  "positionId": zod.string(),
+  "source": zod.enum(['legacy-context', 'sourced-assertion']),
+  "assertionId": zod.string().optional(),
+  "certainty": zod.string().optional(),
+  "status": zod.string().optional(),
+  "tenure": zod.string().nullish(),
+  "validFrom": zod.string().nullish(),
+  "validTo": zod.string().nullish()
+})).optional()
 }))),
   "total": zod.number().int(),
   "offset": zod.number().int(),
@@ -110,7 +129,26 @@ export const CreateEntityResponse = zod.object({
   "redirectId": zod.string().nullish(),
   "lastDevelopment": zod.string().nullish(),
   "nextReview": zod.string().nullish(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "coverageContext": zod.object({
+  "watchId": zod.string(),
+  "title": zod.string(),
+  "summary": zod.string().optional(),
+  "position": zod.string().optional(),
+  "individual": zod.string().optional(),
+  "tier": zod.number().int().optional(),
+  "organization": zod.string().optional()
+}).optional(),
+  "roleLinks": zod.array(zod.object({
+  "positionId": zod.string(),
+  "source": zod.enum(['legacy-context', 'sourced-assertion']),
+  "assertionId": zod.string().optional(),
+  "certainty": zod.string().optional(),
+  "status": zod.string().optional(),
+  "tenure": zod.string().nullish(),
+  "validFrom": zod.string().nullish(),
+  "validTo": zod.string().nullish()
+})).optional()
 }))
 
 
@@ -156,7 +194,26 @@ export const GetEntityResponse = zod.object({
   "redirectId": zod.string().nullish(),
   "lastDevelopment": zod.string().nullish(),
   "nextReview": zod.string().nullish(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "coverageContext": zod.object({
+  "watchId": zod.string(),
+  "title": zod.string(),
+  "summary": zod.string().optional(),
+  "position": zod.string().optional(),
+  "individual": zod.string().optional(),
+  "tier": zod.number().int().optional(),
+  "organization": zod.string().optional()
+}).optional(),
+  "roleLinks": zod.array(zod.object({
+  "positionId": zod.string(),
+  "source": zod.enum(['legacy-context', 'sourced-assertion']),
+  "assertionId": zod.string().optional(),
+  "certainty": zod.string().optional(),
+  "status": zod.string().optional(),
+  "tenure": zod.string().nullish(),
+  "validFrom": zod.string().nullish(),
+  "validTo": zod.string().nullish()
+})).optional()
 })),
   "assertions": zod.array(zod.object({
   "id": zod.string(),
@@ -296,7 +353,26 @@ export const DecideEntityResponse = zod.object({
   "redirectId": zod.string().nullish(),
   "lastDevelopment": zod.string().nullish(),
   "nextReview": zod.string().nullish(),
-  "createdAt": zod.string()
+  "createdAt": zod.string(),
+  "coverageContext": zod.object({
+  "watchId": zod.string(),
+  "title": zod.string(),
+  "summary": zod.string().optional(),
+  "position": zod.string().optional(),
+  "individual": zod.string().optional(),
+  "tier": zod.number().int().optional(),
+  "organization": zod.string().optional()
+}).optional(),
+  "roleLinks": zod.array(zod.object({
+  "positionId": zod.string(),
+  "source": zod.enum(['legacy-context', 'sourced-assertion']),
+  "assertionId": zod.string().optional(),
+  "certainty": zod.string().optional(),
+  "status": zod.string().optional(),
+  "tenure": zod.string().nullish(),
+  "validFrom": zod.string().nullish(),
+  "validTo": zod.string().nullish()
+})).optional()
 }))
 
 

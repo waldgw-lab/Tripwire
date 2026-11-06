@@ -482,6 +482,31 @@ components:
             lastDevelopment: { type: ["string", "null"] }
             nextReview: { type: ["string", "null"] }
             createdAt: { type: string }
+            coverageContext: { $ref: "#/components/schemas/CoverageContext" }
+            roleLinks: { type: array, items: { $ref: "#/components/schemas/CoverageRoleLink" } }
+    CoverageContext:
+      type: object
+      required: [watchId, title]
+      properties:
+        watchId: { type: string }
+        title: { type: string }
+        summary: { type: string }
+        position: { type: string }
+        individual: { type: string }
+        tier: { type: integer }
+        organization: { type: string }
+    CoverageRoleLink:
+      type: object
+      required: [positionId, source]
+      properties:
+        positionId: { type: string }
+        source: { type: string, enum: [legacy-context, sourced-assertion] }
+        assertionId: { type: string }
+        certainty: { type: string }
+        status: { type: string }
+        tenure: { type: ["string", "null"] }
+        validFrom: { type: ["string", "null"] }
+        validTo: { type: ["string", "null"] }
     EntityPage:
       type: object
       required: [items, total, offset, limit]

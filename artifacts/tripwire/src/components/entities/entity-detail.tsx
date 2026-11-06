@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Pin, PinOff, Plus } from 'lucide-react';
 import { POLL_MS, fmtWhen, shortHash } from '@/lib/entities';
 import { EntityActionDialog, EvidenceDialog, type ActionPreset } from './dialogs';
 import { Mono, Section, Tag, btnCls } from './ui';
+import { CoverageContextSection } from './coverage-context';
 
 function EvidenceCard({ v }: { v: EntityEvidence }) {
   const c = v.capture;
@@ -66,6 +67,8 @@ export function EntityDetailPane({ id, onClose }: { id: string; onClose: () => v
         <button className={btnCls} onClick={act({ action: 'merge' })} data-testid="button-entity-merge">Merge</button>
         {e.redirectId && <button className={btnCls} onClick={act({ action: 'unmerge', targetId: e.redirectId })} data-testid="button-entity-unmerge">Unmerge</button>}
       </div>
+
+      <CoverageContextSection e={e} />
 
       <Section title="Roles and assertions" count={d.assertions.length}>
         {d.assertions.length ? <ol className="space-y-2">{d.assertions.map(a => {

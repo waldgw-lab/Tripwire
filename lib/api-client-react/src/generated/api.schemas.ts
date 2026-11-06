@@ -472,6 +472,38 @@ export const RegistryEntityState = {
   Archived: 'Archived',
 } as const;
 
+export interface CoverageContext {
+  watchId: string;
+  title: string;
+  summary?: string;
+  position?: string;
+  individual?: string;
+  tier?: number;
+  organization?: string;
+}
+
+export type CoverageRoleLinkSource = typeof CoverageRoleLinkSource[keyof typeof CoverageRoleLinkSource];
+
+
+export const CoverageRoleLinkSource = {
+  'legacy-context': 'legacy-context',
+  'sourced-assertion': 'sourced-assertion',
+} as const;
+
+export interface CoverageRoleLink {
+  positionId: string;
+  source: CoverageRoleLinkSource;
+  assertionId?: string;
+  certainty?: string;
+  status?: string;
+  /** @nullable */
+  tenure?: string | null;
+  /** @nullable */
+  validFrom?: string | null;
+  /** @nullable */
+  validTo?: string | null;
+}
+
 export type RegistryEntity = EntityInput & ({
   id: string;
   aliases: string[];
@@ -487,6 +519,8 @@ export type RegistryEntity = EntityInput & ({
   /** @nullable */
   nextReview?: string | null;
   createdAt: string;
+  coverageContext?: CoverageContext;
+  roleLinks?: CoverageRoleLink[];
 });
 
 export interface EntityPage {
