@@ -33,6 +33,7 @@ export * from './recordInputFocus';
 export * from './recordInputImpact';
 export * from './recordInputIntakeMethod';
 export * from './recordInputKind';
+export * from './recordInputPublicationSource';
 export * from './recordInputReportingType';
 export * from './recordInputSentiment';
 export * from './recordInputSourceType';

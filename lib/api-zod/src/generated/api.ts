@@ -33,6 +33,8 @@ export const GetWorkspaceResponse = zod.object({
   "attribution": zod.string().optional()
 })).optional(),
   "publishedAt": zod.string().optional(),
+  "publicationSource": zod.enum(['publisher', 'google-news', 'manual']).optional(),
+  "publicationSourceUrl": zod.string().optional(),
   "fullText": zod.string().optional(),
   "fullTextHash": zod.string().optional(),
   "fullTextLength": zod.number().int().optional(),
@@ -224,6 +226,8 @@ export const SaveRecordBody = zod.object({
   "attribution": zod.string().optional()
 })).optional(),
   "publishedAt": zod.string().optional(),
+  "publicationSource": zod.enum(['publisher', 'google-news', 'manual']).optional(),
+  "publicationSourceUrl": zod.string().optional(),
   "fullText": zod.string().optional(),
   "fullTextHash": zod.string().optional(),
   "fullTextLength": zod.number().int().optional(),
@@ -338,6 +342,8 @@ export const SaveRecordResponse = zod.object({
   "attribution": zod.string().optional()
 })).optional(),
   "publishedAt": zod.string().optional(),
+  "publicationSource": zod.enum(['publisher', 'google-news', 'manual']).optional(),
+  "publicationSourceUrl": zod.string().optional(),
   "fullText": zod.string().optional(),
   "fullTextHash": zod.string().optional(),
   "fullTextLength": zod.number().int().optional(),
@@ -480,6 +486,8 @@ export const FlagArticleResponse = zod.object({
   "attribution": zod.string().optional()
 })).optional(),
   "publishedAt": zod.string().optional(),
+  "publicationSource": zod.enum(['publisher', 'google-news', 'manual']).optional(),
+  "publicationSourceUrl": zod.string().optional(),
   "fullText": zod.string().optional(),
   "fullTextHash": zod.string().optional(),
   "fullTextLength": zod.number().int().optional(),
@@ -628,6 +636,8 @@ export const AnalyzeImportResponse = zod.object({
   "attribution": zod.string().optional()
 })).optional(),
   "publishedAt": zod.string().optional(),
+  "publicationSource": zod.enum(['publisher', 'google-news', 'manual']).optional(),
+  "publicationSourceUrl": zod.string().optional(),
   "fullText": zod.string().optional(),
   "fullTextHash": zod.string().optional(),
   "fullTextLength": zod.number().int().optional(),
@@ -763,6 +773,8 @@ export const CommitImportResponse = zod.object({
   "attribution": zod.string().optional()
 })).optional(),
   "publishedAt": zod.string().optional(),
+  "publicationSource": zod.enum(['publisher', 'google-news', 'manual']).optional(),
+  "publicationSourceUrl": zod.string().optional(),
   "fullText": zod.string().optional(),
   "fullTextHash": zod.string().optional(),
   "fullTextLength": zod.number().int().optional(),

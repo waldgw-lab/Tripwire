@@ -231,6 +231,8 @@ components:
           type: array
           items: { $ref: "#/components/schemas/ArticleCredit" }
         publishedAt: { type: string }
+        publicationSource: { type: string, enum: [publisher, google-news, manual] }
+        publicationSourceUrl: { type: string }
         fullText: { type: string }
         fullTextHash: { type: string }
         fullTextLength: { type: integer }

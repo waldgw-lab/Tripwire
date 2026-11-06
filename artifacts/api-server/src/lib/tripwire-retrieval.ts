@@ -8,6 +8,7 @@ import { captureContent, mergeArticleContent } from "./tripwire-content";
 import { classifyContent, mergeClassification } from "./tripwire-classification";
 import { logger } from "./logger";
 import { readContent } from "./tripwire-content-storage";
+import { publicationUpdate } from "./tripwire-publication";
 
 const active = new Set<string>();
 const hostNext = new Map<string, number>();
@@ -92,7 +93,7 @@ export async function retrieveItem(article: Item, cachedPage?: { raw: string; ur
     await writeRecord(WORKSPACE_OWNER, {
       ...existing, ...content, ...mergedClassification,
       ...(existing.byline || !candidate.byline ? {} : { byline: candidate.byline, credits: candidate.credits, journalists: candidate.journalists }),
-      ...(existing.publishedAt || !candidate.publishedAt ? {} : { publishedAt: candidate.publishedAt }),
+      ...publicationUpdate(existing, { publishedAt: candidate.publishedAt, publicationSource: "publisher", publicationSourceUrl: fetched.url }),
       retrieval: { status: "retrieved", method, lastAttempt: now, nextAttemptAt: next, characters: candidate.fullText?.length ?? 0, rawCharacters: raw.length,
         attempts, message: `${cachedPage ? "Re-extracted" : "Retained"} ${(candidate.fullText?.length ?? 0).toLocaleString()} text characters and ${raw.length.toLocaleString()} source characters` },
     }, true);

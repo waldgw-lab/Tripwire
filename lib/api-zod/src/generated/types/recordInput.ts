@@ -14,6 +14,7 @@ import type { RecordInputFocus } from './recordInputFocus';
 import type { RecordInputImpact } from './recordInputImpact';
 import type { RecordInputIntakeMethod } from './recordInputIntakeMethod';
 import type { RecordInputKind } from './recordInputKind';
+import type { RecordInputPublicationSource } from './recordInputPublicationSource';
 import type { RecordInputReportingType } from './recordInputReportingType';
 import type { RecordInputSentiment } from './recordInputSentiment';
 import type { RecordInputSourceType } from './recordInputSourceType';
@@ -31,6 +32,8 @@ export interface RecordInput {
   byline?: string;
   credits?: ArticleCredit[];
   publishedAt?: string;
+  publicationSource?: RecordInputPublicationSource;
+  publicationSourceUrl?: string;
   fullText?: string;
   fullTextHash?: string;
   fullTextLength?: number;

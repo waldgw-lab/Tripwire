@@ -60,6 +60,15 @@ export const RecordInputKind = {
   outlet: 'outlet',
 } as const;
 
+export type RecordInputPublicationSource = typeof RecordInputPublicationSource[keyof typeof RecordInputPublicationSource];
+
+
+export const RecordInputPublicationSource = {
+  publisher: 'publisher',
+  'google-news': 'google-news',
+  manual: 'manual',
+} as const;
+
 export type RecordInputImpact = typeof RecordInputImpact[keyof typeof RecordInputImpact];
 
 
@@ -269,6 +278,8 @@ export interface RecordInput {
   byline?: string;
   credits?: ArticleCredit[];
   publishedAt?: string;
+  publicationSource?: RecordInputPublicationSource;
+  publicationSourceUrl?: string;
   fullText?: string;
   fullTextHash?: string;
   fullTextLength?: number;

@@ -6,6 +6,7 @@ import { scopeDefaults, unassignedPositions } from "./tripwire-scope";
 import { mergeArticleContent, type Capture } from "./tripwire-content";
 import { archiveArticle, hydrateArticles } from "./tripwire-content-storage";
 import { mergeClassification } from "./tripwire-classification";
+import { publicationUpdate } from "./tripwire-publication";
 
 export type RecordData = typeof SaveRecordBody._output;
 export async function seedConfig() {
@@ -40,9 +41,10 @@ export async function recordsFor(userId?: string | null, includeContent = true) 
       }
     }
     if (r.kind === "article") {
+      if (base && r.owner !== "public") Object.assign(data, publicationUpdate(data, base.data));
       if (data.discoveryOnly && base?.data.discoveryOnly === false) {
         Object.assign(data, { discoveryOnly: false, url: base.data.url, intakeMethod: base.data.intakeMethod,
-          intakeUrl: base.data.intakeUrl, publishedAt: data.publishedAt ?? base.data.publishedAt,
+          intakeUrl: base.data.intakeUrl,
           byline: data.byline ?? base.data.byline, credits: data.credits ?? base.data.credits,
           journalists: (data.journalists as unknown[] | undefined)?.length ? data.journalists : base.data.journalists });
       }
@@ -76,7 +78,7 @@ export async function writeRecord(userId: string, data: RecordData, protectMetad
         const incoming = data;
         data = { ...incoming, ...current, ...mergeArticleContent(current, incoming), ...mergeClassification(current, incoming), retrieval: incoming.retrieval,
           ...(current.byline || !incoming.byline ? {} : { byline: incoming.byline, credits: incoming.credits, journalists: incoming.journalists }),
-          ...(current.publishedAt || !incoming.publishedAt ? {} : { publishedAt: incoming.publishedAt }) };
+          ...publicationUpdate(current, incoming) };
       }
       const preserved = mergeArticleContent(existing.data as { fullText?: string; fullTextComplete?: boolean; retainedContent?: Capture[] }, data);
       // Editing metadata or flagging must not erase already retained source captures.

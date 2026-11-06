@@ -13,6 +13,7 @@ import { rssContent, mergeArticleContent, captureContent, type Capture } from ".
 import { fetchPublicDocument } from "./tripwire-fetch";
 import { intakeSources, publisherUrl, sitemapItems, feedFreshness, retryAfter, discoveryTitle, titleKey, parseRssItems, type IntakeItem, type IntakeSource, type FeedHealth } from "./tripwire-intake";
 import { checkRobots } from "./tripwire-retrieval";
+import { publicationUpdate } from "./tripwire-publication";
 
 const locks = new Set<string>();
 const cooldown = new Map<string, number>();
@@ -108,13 +109,13 @@ export async function refreshFeeds(_userId?: string | null) {
             const id = existingDiscovery?.discoveryOnly ? existingDiscovery.id : stableId(discovery ? `discovery:${outlet.title}:${titleKey(title)}` : `article:${url.href}`);
             const entities = mentionedEntities(text, watches);
             const published = item.isoDate ?? item.pubDate;
-            const publishedAt = !discovery && published && !isNaN(Date.parse(published)) ? new Date(published).toISOString() : undefined;
+            const publication = publicationUpdate({}, { publishedAt: published, publicationSource: discovery ? "google-news" : "publisher", publicationSourceUrl: source.url });
             const creator = !discovery ? strip(item.creator ?? "") : "";
             const credits = parseByline(creator);
             const journalists = credits.filter(c => c.role === "author").map(c => c.name);
             const topic = inferArticleTopic(title, retained.fullText ?? "");
             const classification = classifyContent({ url: url.href, title, labels: item.categories ?? [] });
-            const data = await archiveArticle({kind: "article", title, url: url.href, outlet: outlet.title, journalists, ...(creator ? {byline: creator, credits} : {}), publishedAt, summary: discovery ? undefined : strip(item.contentSnippet ?? "").slice(0, 450), entities, topic, sentiment: "unassessed", reportingType: "unassessed", sourceType: "article", saved: false,
+            const data = await archiveArticle({kind: "article", title, url: url.href, outlet: outlet.title, journalists, ...(creator ? {byline: creator, credits} : {}), ...publication, summary: discovery ? undefined : strip(item.contentSnippet ?? "").slice(0, 450), entities, topic, sentiment: "unassessed", reportingType: "unassessed", sourceType: "article", saved: false,
               intakeMethod: source.kind, intakeUrl: source.url, discoveryOnly: discovery, discoveredAt: refreshedAt,
               ...retained, fullTextComplete: false, ...classification} as RecordData);
             const result = await db.insert(tripwireRecords).values({id: owner === "public" ? id : `${owner}:${id}`, owner, kind: "article", data: owner === "public" ? data : {...data, baseId: id}}).onConflictDoNothing().returning({id: tripwireRecords.id});
@@ -126,9 +127,12 @@ export async function refreshFeeds(_userId?: string | null) {
               await db.transaction(async tx => {
                 const [current] = await tx.select().from(tripwireRecords).where(and(eq(tripwireRecords.id, recordId), eq(tripwireRecords.owner, owner))).for("update");
                 if (!current) return;
+                const currentData = current.data as RecordData;
                 const merged = mergeArticleContent(current.data as { fullText?: string; fullTextComplete?: boolean; retainedContent?: Capture[] }, retained);
                 const promotion = current.data.discoveryOnly && !discovery ? { ...data, saved: current.data.saved, flagged: current.data.flagged } : {};
-                const archived = await archiveArticle({ ...current.data, ...promotion, ...merged, ...mergeClassification(current.data, classification) } as RecordData);
+                const archived = await archiveArticle({ ...currentData, ...promotion, ...merged,
+                  publishedAt: currentData.publishedAt, publicationSource: currentData.publicationSource, publicationSourceUrl: currentData.publicationSourceUrl,
+                  ...publicationUpdate(currentData, data), ...mergeClassification(currentData, classification) } as RecordData);
                 await tx.update(tripwireRecords).set({ data: archived, updatedAt: new Date() }).where(and(eq(tripwireRecords.id, recordId), eq(tripwireRecords.owner, owner)));
               });
             }

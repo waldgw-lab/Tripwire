@@ -155,6 +155,12 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
               <div className="flex flex-wrap gap-1">{a.entities!.map((e) => <span key={e} className="rounded-sm bg-secondary px-1.5 py-0.5 text-[11px]">{e}</span>)}</div>
             </Field>
           )}
+          {a.publishedAt && a.publicationSource && (
+            <Field label="Publication time source">
+              <span className="text-xs" data-testid="text-publication-source">{a.publicationSource === 'google-news' ? 'Google News feed timestamp' : a.publicationSource === 'publisher' ? 'Publisher metadata' : 'Imported / edited date'}</span>
+              {a.publicationSourceUrl && <a href={a.publicationSourceUrl} target="_blank" rel="noreferrer" className="ml-2 text-xs text-muted-foreground underline underline-offset-2">Source</a>}
+            </Field>
+          )}
           <Field label="Type">
             <span className="font-mono text-xs uppercase tracking-wider" data-testid="text-reader-type">{label(a.contentType)} · {label(a.contentFormat ?? 'text')}</span>
             {evidence.length > 0 && (
@@ -175,7 +181,7 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
           {a.intakeMethod && (
             <Field label="Intake">
               <span className="text-xs">{a.intakeMethod === 'google-news' ? 'Google News discovery' : a.intakeMethod === 'sitemap' ? 'Publisher news sitemap' : 'Publisher RSS / Atom'}</span>
-              {a.discoveryOnly && <p className="mt-1 text-xs text-muted-foreground">{hasMain ? 'Publisher link not yet verified. Imported content is retained below.' : 'Headline discovery only. Publisher article text, byline and publication time are not yet verified.'}</p>}
+              {a.discoveryOnly && <p className="mt-1 text-xs text-muted-foreground">{hasMain ? 'Publisher link not yet verified. Imported content is retained below.' : 'Headline discovery only; article text and byline not retrieved.'}</p>}
               {a.intakeUrl && <a href={a.intakeUrl} target="_blank" rel="noreferrer" className="mt-1 block break-all font-mono text-[10px] text-muted-foreground underline underline-offset-2">{a.intakeUrl}</a>}
             </Field>
           )}

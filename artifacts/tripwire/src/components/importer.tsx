@@ -76,7 +76,11 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
     commit.mutate({
       data: {
         draftId: draft.draftId, title: meta.title.trim(), outlet: meta.outlet || undefined, url: meta.url || undefined,
-        byline: meta.byline || undefined, publishedAt: fromLocalInput(meta.publishedAt), sourceType: meta.sourceType,
+        byline: meta.byline || undefined,
+        // The minute-precision form must not truncate seconds or relabel an
+        // unchanged feed timestamp as a manually edited date.
+        publishedAt: meta.publishedAt === toLocalInput(draft.candidate.publishedAt) ? draft.candidate.publishedAt : fromLocalInput(meta.publishedAt),
+        sourceType: meta.sourceType,
         fullTextComplete: meta.fullTextComplete,
       },
     }, {

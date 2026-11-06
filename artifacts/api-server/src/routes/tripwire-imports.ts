@@ -8,6 +8,7 @@ import { privateFile, uploadUrl } from "../lib/tripwire-files";
 import { fetchPublicDocument } from "../lib/tripwire-fetch";
 import { canonicalUrl, documentText, htmlCandidate, importCapture, matchImport, textCandidate } from "../lib/tripwire-import";
 import { publisherUrl } from "../lib/tripwire-intake";
+import { publicationUpdate } from "../lib/tripwire-publication";
 import { mergeCaptures, captureContent, prefersIncomingContent, type Capture } from "../lib/tripwire-content";
 import { parseByline } from "../lib/tripwire-bylines";
 import { archiveArticle, hydrateArticles } from "../lib/tripwire-content-storage";
@@ -103,6 +104,7 @@ router.post("/tripwire/imports/analyze", async (req, res) => {
       candidate = textCandidate(body.text ?? text);
       capture = importCapture(candidate, source, { raw: body.text ?? text });
     }
+    if (candidate.publishedAt) candidate = { ...candidate, publicationSource: source === "url" ? "publisher" : "manual", publicationSourceUrl: candidate.url };
     const matched = matchImport(candidate, records);
     if (matched.ambiguous && !target) throw new IntakeError("More than one existing item matches. Open the intended article and enrich it there.");
     if (target && matched.record && matched.record.id !== target.id) throw new IntakeError("This content matches a different article. Import it from the Dashboard rather than overwriting this item.");
@@ -111,7 +113,8 @@ router.post("/tripwire/imports/analyze", async (req, res) => {
       // Keep curated metadata and article-specific credit roles unless a source supplies
       // missing information. Content imports must not silently rewrite attribution.
       candidate = { ...candidate, ...reconcileCredits(existing, candidate), title: existing.title, url: candidate.url ?? existing.url, outlet: existing.outlet ?? candidate.outlet,
-        publishedAt: existing.publishedAt ?? candidate.publishedAt, sourceType: existing.sourceType ?? candidate.sourceType };
+        publishedAt: existing.publishedAt, publicationSource: existing.publicationSource, publicationSourceUrl: existing.publicationSourceUrl,
+        ...publicationUpdate(existing, candidate), sourceType: existing.sourceType ?? candidate.sourceType };
     }
     candidate.entities = mentionedEntities(`${candidate.title}\n${candidate.fullText ?? ""}`, records.filter(r => r.kind === "watch"));
     if (!candidate.outlet) warnings.push("Publisher was not identified; set it before saving.");
@@ -167,7 +170,10 @@ router.post("/tripwire/imports/commit", async (req, res) => {
       const data: RecordData = { ...candidate, ...existing, ...mergeClassification(existing ?? {}, candidate), id: existing?.id ?? String(draft.data.articleId), kind: "article", ...finalMetadata,
         discoveryOnly: existing?.discoveryOnly ? !url || !publisherUrl(url, finalMetadata.outlet ?? "") : false,
         byline, credits, journalists: credits?.filter(c => c.role === "author").map(c => c.name) ?? [],
-        publishedAt: body.publishedAt || undefined, sourceType: body.sourceType ?? candidate.sourceType,
+        publishedAt: body.publishedAt || undefined,
+        publicationSource: body.publishedAt ? (Date.parse(body.publishedAt) === Date.parse(candidate.publishedAt ?? "") ? candidate.publicationSource ?? "manual" : "manual") : undefined,
+        publicationSourceUrl: body.publishedAt && Date.parse(body.publishedAt) === Date.parse(candidate.publishedAt ?? "") ? candidate.publicationSourceUrl : undefined,
+        sourceType: body.sourceType ?? candidate.sourceType,
         fullText: keepBody ? existing?.fullText : candidate.fullText, fullTextComplete: keepBody ? existing?.fullTextComplete : body.fullTextComplete ?? false,
         contentNormalization: keepBody ? existing?.contentNormalization : candidate.contentNormalization,
         summary: keepBody ? existing?.summary : candidate.summary ?? existing?.summary,
