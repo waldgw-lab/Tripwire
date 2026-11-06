@@ -1,8 +1,12 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type ErrorRequestHandler } from "express";
 import { workspaceIdentity } from "../lib/tripwire-access";
 import { SaveRecordBody, SaveRecordResponse, GetWorkspaceResponse, DeleteRecordParams, RefreshFeedsResponse, FlagArticleBody } from "@workspace/api-zod";
 import { recordsFor, writeRecord, removeRecord } from "../lib/tripwire-store";
 import { refreshFeeds } from "../lib/tripwire-feeds";
+import { CorrectArticleClassificationBody, DeleteRecordBody, GetArticleFeedbackQueryParams, GetArticleFeedbackResponse, GetFeedbackArticleResponse } from "@workspace/api-zod";
+import { correctArticle, dismissArticle, restoreArticleState, currentArticle, FeedbackError } from "../lib/tripwire-feedback";
+import { db, tripwireRecords } from "@workspace/db";
+import { and, eq, sql, desc } from "drizzle-orm";
 
 const router: IRouter = Router();
 router.get("/tripwire/workspace", async (req, res): Promise<void> => {
@@ -46,17 +50,62 @@ router.post("/tripwire/records", async (req, res): Promise<void> => {
   if (data.observations?.some(o => o.articleId && !records.some(r => r.id === o.articleId && r.kind === "article"))) {
     res.status(400).json({error: "Observation references an article outside this workspace"}); return;
   }
-  res.json(SaveRecordResponse.parse(await writeRecord(userId, data)));
+  res.json(SaveRecordResponse.parse(await writeRecord(userId, data, false, true)));
 });
 router.delete("/tripwire/records/:id", async (req, res): Promise<void> => {
   const userId = workspaceIdentity(req).userId;
   if (!userId) { res.status(401).json({error: "Sign in to delete records"}); return; }
   const params = DeleteRecordParams.parse(req.params);
+  const article = await db.select({ kind: tripwireRecords.kind }).from(tripwireRecords).where(and(
+    sql`${tripwireRecords.id} in (${params.id}, ${`${userId}:${params.id}`})`, eq(tripwireRecords.kind, "article")));
+  if (article.length) {
+    const body = DeleteRecordBody.safeParse(req.body);
+    if (!body.success || !body.data) { res.status(400).json({ error: "Choose a deletion reason." }); return; }
+    await dismissArticle(userId, params.id, body.data);
+    res.status(204).end(); return;
+  }
   const removed = await removeRecord(userId, params.id);
   if (!removed) { res.status(404).json({error: "Record not found"}); return; }
   res.status(204).end();
 });
+router.patch("/tripwire/records/:id/classification", async (req, res): Promise<void> => {
+  const input = CorrectArticleClassificationBody.safeParse(req.body);
+  if (!input.success) { res.status(400).json({ error: input.error.message }); return; }
+  const id = String(req.params.id);
+  res.json(SaveRecordResponse.parse(await correctArticle(workspaceIdentity(req).userId, id, input.data)));
+});
+router.post("/tripwire/records/:id/restore", async (req, res): Promise<void> => {
+  res.json(SaveRecordResponse.parse(await restoreArticleState(workspaceIdentity(req).userId, String(req.params.id))));
+});
+router.get("/tripwire/feedback", async (req, res): Promise<void> => {
+  const input = GetArticleFeedbackQueryParams.safeParse(req.query);
+  if (!input.success) { res.status(400).json({ error: input.error.message }); return; }
+  const { q, action, reason, page = 1 } = input.data;
+  const where = and(eq(tripwireRecords.owner, workspaceIdentity(req).userId), eq(tripwireRecords.kind, "feedback"),
+    action ? sql`${tripwireRecords.data}->>'action' = ${action}` : undefined,
+    reason ? sql`${tripwireRecords.data}->>'reason' = ${reason}` : undefined,
+    q?.trim() ? sql`strpos(lower(concat_ws(' ', ${tripwireRecords.data}->>'headline', ${tripwireRecords.data}->>'outlet', ${tripwireRecords.data}->>'notes', ${tripwireRecords.data}->>'reason')), lower(${q.trim()})) > 0` : undefined);
+  const [count] = await db.select({ total: sql<number>`count(*)::integer` }).from(tripwireRecords).where(where);
+  const rows = await db.select({ data: tripwireRecords.data }).from(tripwireRecords).where(where).orderBy(desc(tripwireRecords.createdAt), desc(tripwireRecords.id)).limit(25).offset((page - 1) * 25);
+  const reasons = await db.selectDistinct({ reason: sql<string>`${tripwireRecords.data}->>'reason'` }).from(tripwireRecords)
+    .where(and(eq(tripwireRecords.owner, workspaceIdentity(req).userId), eq(tripwireRecords.kind, "feedback")));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(GetArticleFeedbackResponse.parse({ events: rows.map(r => r.data), total: count?.total ?? 0, page, pageSize: 25, reasons: reasons.map(r => r.reason).filter(Boolean).sort() }));
+});
+router.get("/tripwire/feedback/:id/article", async (req, res): Promise<void> => {
+  const owner = workspaceIdentity(req).userId;
+  const [event] = await db.select().from(tripwireRecords).where(and(eq(tripwireRecords.id, String(req.params.id)), eq(tripwireRecords.owner, owner), eq(tripwireRecords.kind, "feedback")));
+  if (!event) { res.status(404).json({ error: "Feedback not found" }); return; }
+  const article = await db.transaction(tx => currentArticle(tx, owner, String(event.data.articleId)));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(GetFeedbackArticleResponse.parse({ ...article.data, createdAt: article.createdAt, updatedAt: article.updatedAt }));
+});
 router.post("/tripwire/refresh", async (req, res): Promise<void> => {
   res.json(RefreshFeedsResponse.parse(await refreshFeeds(workspaceIdentity(req).userId)));
 });
+const feedbackErrors: ErrorRequestHandler = (err, _req, res, next) => {
+  if (err instanceof FeedbackError) { res.status(err.status).json({ error: err.message }); return; }
+  next(err);
+};
+router.use(feedbackErrors);
 export default router;

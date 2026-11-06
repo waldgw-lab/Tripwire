@@ -1,20 +1,14 @@
 import type { RecordData } from "./tripwire-store";
+import { assessArticle } from "./tripwire-impact-policy";
 
 const words = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 const mentions = (text: string, term: string) => words(term).length > 2 && ` ${words(text)} `.includes(` ${words(term)} `);
 
 /** Mirrors the feed's prominence policy; parity is covered by regression tests. */
 export function recordImpact(article: RecordData, watches: RecordData[]): "critical" | "high" | "low" {
-  if (article.impact) return article.impact;
-  if (article.reportingType === "original") return "critical";
-  const relevant = watches.filter(w => w.enabled !== false && ["position", "person", "organization"].includes(w.watchType ?? ""));
-  const names = (w: RecordData) => [w.title, w.individual ?? "", w.position ?? "", ...(w.aliases ?? [])];
-  if (relevant.some(w => w.tier === 1 && names(w).some(n => mentions(article.title, n)))) return "critical";
-  if (article.reportingType === "independent") return "high";
-  const text = `${article.title} ${article.summary ?? ""} ${article.fullText ?? ""}`;
-  if (relevant.some(w => names(w).some(n => mentions(text, n) || article.entities?.some(e => words(e) === words(n)))) ||
-    ["blame", "performance", "replacement", "decision-making", "institutional"].includes(article.focus ?? "")) return "high";
-  return "low";
+  void watches;
+  if (article.impactMode === "manual" || !article.impactMode && article.impact) return article.impact!;
+  return article.automaticAssessment?.impact ?? assessArticle(article).impact;
 }
 
 export function needsArticleText(article: RecordData) {

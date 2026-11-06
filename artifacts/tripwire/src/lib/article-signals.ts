@@ -1,7 +1,7 @@
 import type { TrackedRecord } from '@workspace/api-client-react';
 
 export type Impact = 'critical' | 'high' | 'low';
-type Article = Pick<TrackedRecord, 'title' | 'summary' | 'fullText' | 'fullTextComplete' | 'impact' | 'entities' | 'reportingType' | 'focus'>;
+type Article = Pick<TrackedRecord, 'title' | 'summary' | 'fullText' | 'fullTextComplete' | 'impact' | 'entities' | 'reportingType' | 'focus' | 'impactMode' | 'impactOverrideOrigin' | 'automaticAssessment'>;
 
 const words = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 function mentions(text: string, term: string) {
@@ -11,19 +11,10 @@ function mentions(text: string, term: string) {
 
 /** Prominence heuristic, not a judgment about truth or independently verified sourcing. */
 export function impactRating(article: Article, watches: TrackedRecord[]): { value: Impact; reason: string; manual: boolean } {
-  if (article.impact) return { value: article.impact, reason: 'Analyst-selected impact', manual: true };
-  if (article.reportingType === 'original') return { value: 'critical', reason: 'Assessed as original reporting', manual: false };
-  const relevantWatches = watches.filter(w => w.enabled !== false && (w.watchType === 'position' || w.watchType === 'person' || w.watchType === 'organization'));
-  const names = (w: TrackedRecord) => [w.title, w.individual ?? '', w.position ?? '', ...(w.aliases ?? [])];
-  if (relevantWatches.some(w => w.tier === 1 && names(w).some(name => mentions(article.title, name)))) {
-    return { value: 'critical', reason: 'Primary watchlist subject mentioned in headline', manual: false };
-  }
-  if (article.reportingType === 'independent') return { value: 'high', reason: 'Assessed as independently reported', manual: false };
-  const text = `${article.title} ${article.summary ?? ''} ${article.fullText ?? ''}`;
-  if (relevantWatches.some(w => names(w).some(name => mentions(text, name) || article.entities?.some(entity => words(entity) === words(name)))) || ['blame', 'performance', 'replacement', 'decision-making', 'institutional'].includes(article.focus ?? '')) {
-    return { value: 'high', reason: 'Watchlist subject or substantive accountability focus', manual: false };
-  }
-  return { value: 'low', reason: 'Broader relevant coverage; no higher-prominence signal recorded', manual: false };
+  void watches;
+  if (article.impactMode === 'manual' || !article.impactMode && article.impact) return { value: article.impact ?? 'low',
+    reason: article.impactOverrideOrigin === 'legacy-unknown' ? 'Retained impact override; legacy origin unknown' : 'Analyst-selected impact', manual: true };
+  return { value: article.automaticAssessment?.impact ?? 'low', reason: article.automaticAssessment?.explanation ?? 'Automatic assessment pending; relevance needs review.', manual: false };
 }
 
 export function hasMainText(article: Pick<TrackedRecord, 'fullText' | 'fullTextHash' | 'fullTextLength'>) {

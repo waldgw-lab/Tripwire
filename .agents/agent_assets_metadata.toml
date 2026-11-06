@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "8l4lR2KjGjpp6J36mlb27"
+uri = "file://generated-artifacts/calibration/sample-review.csv"
+type = "table"
+title = "Feed sample review — 582 rows"
+description = "Complete LOW/HIGH/CRITICAL inventory with PDF pages, matched identities, retained-text proposals, and explicit unresolved/review cases."
+logical_id = "cd135116-96e5-4b1b-aead-5d2cb34f8baf"
+content_hash = "sha256:06f38ca9c96ca8d560a509105084c3536cb3f99c4d4ea6ba6512e2ee0fbb4091"
+size = 346939
+mtime_ms = 1793983489572
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:dae58884-dd5a-454f-8d38-e08fbf5c372a/cd135116-96e5-4b1b-aead-5d2cb34f8baf/203eb42f-70d3-4902-96e5-98d429d70ce3"
+storage_version_token = "1793983678384345"
+content_type = "text/csv"

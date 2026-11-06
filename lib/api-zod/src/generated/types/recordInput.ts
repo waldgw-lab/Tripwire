@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { ArticleCredit } from './articleCredit';
+import type { AutomaticAssessment } from './automaticAssessment';
 import type { ClassificationEvidence } from './classificationEvidence';
 import type { ContentCapture } from './contentCapture';
 import type { ContentNormalization } from './contentNormalization';
@@ -12,12 +13,16 @@ import type { FeedHealth } from './feedHealth';
 import type { Observation } from './observation';
 import type { RecordInputFocus } from './recordInputFocus';
 import type { RecordInputImpact } from './recordInputImpact';
+import type { RecordInputImpactMode } from './recordInputImpactMode';
+import type { RecordInputImpactOverrideOrigin } from './recordInputImpactOverrideOrigin';
 import type { RecordInputIntakeMethod } from './recordInputIntakeMethod';
 import type { RecordInputKind } from './recordInputKind';
 import type { RecordInputPublicationSource } from './recordInputPublicationSource';
 import type { RecordInputReportingType } from './recordInputReportingType';
 import type { RecordInputSentiment } from './recordInputSentiment';
 import type { RecordInputSourceType } from './recordInputSourceType';
+import type { RecordInputTopicMode } from './recordInputTopicMode';
+import type { RecordInputTopicOverrideOrigin } from './recordInputTopicOverrideOrigin';
 import type { RecordInputWatchType } from './recordInputWatchType';
 import type { Retrieval } from './retrieval';
 
@@ -47,6 +52,15 @@ export interface RecordInput {
   contentRetained?: boolean;
   retainedCharacters?: number;
   impact?: RecordInputImpact;
+  automaticAssessment?: AutomaticAssessment;
+  impactMode?: RecordInputImpactMode;
+  topicMode?: RecordInputTopicMode;
+  impactOverrideOrigin?: RecordInputImpactOverrideOrigin;
+  topicOverrideOrigin?: RecordInputTopicOverrideOrigin;
+  classificationRevision?: number;
+  classificationReason?: string;
+  classificationNotes?: string;
+  expectedClassificationRevision?: number;
   summary?: string;
   topic?: string;
   entities?: string[];

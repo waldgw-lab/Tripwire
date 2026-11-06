@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { QuickCorrection } from './quick-correction';
 import { getGetArticleContentQueryKey, useGetArticleContent, type TrackedRecord } from '@workspace/api-client-react';
 import { ChevronLeft, ChevronDown, ChevronRight, Download, ExternalLink, Flag, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -22,10 +23,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 const n = (v?: number) => (v ?? 0).toLocaleString('en-US');
 const label = (v?: string) => (v ? v.replace(/-/g, ' ') : 'unclassified');
 
-function ContentBody({ articleId, captureId, revision, complete, showComplete, onRawToggle, rawOpen }: {
-  articleId: string; captureId: string | null; revision: string; complete?: boolean; showComplete: boolean; rawOpen: boolean; onRawToggle: () => void;
+function ContentBody({ articleId, captureId, revision, complete, showComplete, onRawToggle, rawOpen, feedbackId }: {
+  feedbackId?: string; articleId: string; captureId: string | null; revision: string; complete?: boolean; showComplete: boolean; rawOpen: boolean; onRawToggle: () => void;
 }) {
-  const params = captureId ? { capture: captureId } : undefined;
+  const params = captureId || feedbackId ? { ...(captureId ? { capture: captureId } : {}), ...(feedbackId ? { feedback: feedbackId } : {}) } : undefined;
   const q = useGetArticleContent(articleId, params, { query: { queryKey: [...getGetArticleContentQueryKey(articleId, params), { revision }], staleTime: 5 * 60_000, gcTime: 10 * 60_000, retry: 1 } });
   if (q.isLoading) return (
     <div className="space-y-2 py-1" aria-busy data-testid="content-loading">
@@ -58,8 +59,10 @@ function ContentBody({ articleId, captureId, revision, complete, showComplete, o
   );
 }
 
-export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleFlag, flagPending, onOpenArticle }: {
+export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleFlag, flagPending, onOpenArticle, feedbackId }: {
   article: TrackedRecord; impact: { value: Impact; reason: string }; onClose: () => void;
+  /** Retained (dismissed/historical) view: read-only, content served via feedback event. */
+  feedbackId?: string;
   signedIn: boolean; onToggleFlag: () => void; flagPending: boolean;
   onOpenArticle?: (id: string) => void;
 }) {
@@ -103,7 +106,7 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
           <ContentDot article={a} />
         </div>
         <div className="flex items-center gap-1">
-        {signedIn && (
+        {signedIn && !feedbackId && (
           <button onClick={onToggleFlag} disabled={flagPending} aria-pressed={flagged} aria-label={flagged ? 'Unflag article' : 'Flag article'} title={flagged ? 'Unflag' : 'Flag'}
             className={cn('flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted', flagged ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')} data-testid="button-reader-flag">
             <Flag className={cn('h-4 w-4', flagged && 'fill-current')} />
@@ -125,13 +128,14 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
         </div>
         <h2 id={`reader-title-${a.id}`} className="tw-reader-headline font-serif font-semibold" data-testid="text-reader-title">{a.title}</h2>
 
-        <div className="mt-4">
+        {feedbackId && <p className="mt-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground" data-testid="text-reader-retained">Retained record · read-only</p>}
+        {!feedbackId && <div className="mt-4">
           <button type="button" onClick={() => setImportOpen(v => !v)} aria-expanded={importOpen} aria-controls={`article-importer-${a.id}`}
             className="mb-2 inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-xs hover:border-foreground" data-testid="button-toggle-importer">
             {importOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />} Add / update content
           </button>
           {importOpen && <div id={`article-importer-${a.id}`}><Importer key={a.id} targetId={a.id} targetTitle={a.title} compact onCommitted={record => { if (record.id !== a.id) onOpenArticle?.(record.id); }} /></div>}
-        </div>
+        </div>}
 
         <dl className="mt-5 grid gap-4 rounded-md border border-border/70 bg-background/70 p-4">
           <Field label="Byline">
@@ -157,7 +161,9 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
           <Field label="Impact">
             <ImpactWord value={impact.value} reason={impact.reason} id={`reader-field-${a.id}`} />
             <span className="ml-2 text-muted-foreground" data-testid="text-reader-impact-reason">{impact.reason}</span>
+            {!feedbackId && a.kind === 'article' && <QuickCorrection article={a} />}
           </Field>
+          {a.topic && <Field label="Topic"><span className="text-xs" data-testid="text-reader-topic">{a.topic}{a.topicMode === 'manual' ? <span className="ml-2 font-mono text-[10px] uppercase text-muted-foreground">manual</span> : null}</span></Field>}
           {tags.length > 0 && <Field label="Tags"><span className="font-mono text-xs">{tags.join(' · ')}</span></Field>}
           {(a.entities ?? []).length > 0 && (
             <Field label="Entities">
@@ -203,7 +209,7 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
               {r?.attempts != null && <span className="text-muted-foreground">{r.attempts} att.</span>}
               {r?.lastAttempt && <span className="text-muted-foreground">{fmtDate(r.lastAttempt, true)}</span>}
               {r?.nextAttemptAt && <span className="text-muted-foreground">next {fmtDate(r.nextAttemptAt, true)}</span>}
-              {a.url && !a.discoveryOnly && (
+              {a.url && !a.discoveryOnly && !feedbackId && (
                 <button type="button" onClick={() => enrich.mutate({ data: { articleId: a.id } })} disabled={enrich.isPending || ACTIVE_RETRIEVAL.has(r?.status ?? '')}
                   className="inline-flex h-6 items-center gap-1 rounded border border-border px-2 font-sans text-[11px] hover:border-foreground disabled:opacity-50" data-testid="button-reader-fetch">
                   <RefreshCw className={cn('h-3 w-3', enrich.isPending && 'animate-spin')} /> Fetch source
@@ -239,7 +245,7 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
         {capture && (
           <section className="mt-3" data-testid={`capture-${capture.id}`}>
             <h3 className="mb-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Retained capture · {capture.source}</h3>
-            <ContentBody key={`${a.id}:${capture.id}`} articleId={a.id} captureId={capture.id} revision={capture.bodyHash ?? a.updatedAt ?? ''} showComplete={false} rawOpen={rawOpen} onRawToggle={() => setRawOpen(v => !v)} />
+            <ContentBody key={`${a.id}:${capture.id}`} articleId={a.id} captureId={capture.id} revision={capture.bodyHash ?? a.updatedAt ?? ''} feedbackId={feedbackId} showComplete={false} rawOpen={rawOpen} onRawToggle={() => setRawOpen(v => !v)} />
             {(capture.sourceUrl || (capture.uploadId && signedIn)) && (
               <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-2 text-xs">
                 {capture.sourceUrl && <a href={capture.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline underline-offset-4"><ExternalLink className="h-3 w-3" /> Capture source</a>}
@@ -254,7 +260,7 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
             <h3 className="mb-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
               {a.fullTextComplete ? 'Full text' : 'Partial text'}
             </h3>
-            <ContentBody key={`${a.id}:main`} articleId={a.id} captureId={null} revision={a.fullTextHash ?? a.updatedAt ?? ''} complete={a.fullTextComplete} showComplete rawOpen={rawOpen} onRawToggle={() => setRawOpen(v => !v)} />
+            <ContentBody key={`${a.id}:main`} articleId={a.id} captureId={null} revision={a.fullTextHash ?? a.updatedAt ?? ''} complete={a.fullTextComplete} feedbackId={feedbackId} showComplete rawOpen={rawOpen} onRawToggle={() => setRawOpen(v => !v)} />
           </section>
         )}
 

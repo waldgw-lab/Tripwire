@@ -702,6 +702,31 @@ export const GetWorkspaceResponse = zod.object({
   "contentRetained": zod.boolean().optional(),
   "retainedCharacters": zod.number().int().optional(),
   "impact": zod.enum(['critical', 'high', 'low']).optional(),
+  "automaticAssessment": zod.object({
+  "policyVersion": zod.string(),
+  "impact": zod.enum(['critical', 'high', 'low']),
+  "topic": zod.string(),
+  "relevance": zod.enum(['relevant', 'unrelated', 'review']),
+  "confidence": zod.enum(['high', 'limited']),
+  "explanation": zod.string(),
+  "evidence": zod.array(zod.string()),
+  "evidenceRefs": zod.array(zod.object({
+  "source": zod.enum(['headline', 'summary', 'body']),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "contentHash": zod.string().optional()
+})).optional(),
+  "contentHash": zod.string().optional()
+}).optional(),
+  "impactMode": zod.enum(['auto', 'manual']).optional(),
+  "topicMode": zod.enum(['auto', 'manual']).optional(),
+  "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "classificationRevision": zod.number().int().optional(),
+  "classificationReason": zod.string().optional(),
+  "classificationNotes": zod.string().optional(),
+  "expectedClassificationRevision": zod.number().int().optional(),
   "summary": zod.string().optional(),
   "topic": zod.string().optional(),
   "entities": zod.array(zod.string()).optional(),
@@ -841,6 +866,31 @@ export const GetQuickEnrichmentResponse = zod.object({
   "contentRetained": zod.boolean().optional(),
   "retainedCharacters": zod.number().int().optional(),
   "impact": zod.enum(['critical', 'high', 'low']).optional(),
+  "automaticAssessment": zod.object({
+  "policyVersion": zod.string(),
+  "impact": zod.enum(['critical', 'high', 'low']),
+  "topic": zod.string(),
+  "relevance": zod.enum(['relevant', 'unrelated', 'review']),
+  "confidence": zod.enum(['high', 'limited']),
+  "explanation": zod.string(),
+  "evidence": zod.array(zod.string()),
+  "evidenceRefs": zod.array(zod.object({
+  "source": zod.enum(['headline', 'summary', 'body']),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "contentHash": zod.string().optional()
+})).optional(),
+  "contentHash": zod.string().optional()
+}).optional(),
+  "impactMode": zod.enum(['auto', 'manual']).optional(),
+  "topicMode": zod.enum(['auto', 'manual']).optional(),
+  "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "classificationRevision": zod.number().int().optional(),
+  "classificationReason": zod.string().optional(),
+  "classificationNotes": zod.string().optional(),
+  "expectedClassificationRevision": zod.number().int().optional(),
   "summary": zod.string().optional(),
   "topic": zod.string().optional(),
   "entities": zod.array(zod.string()).optional(),
@@ -960,8 +1010,13 @@ export const GetArticleContentParams = zod.object({
   "id": zod.coerce.string()
 })
 
+export const getArticleContentQueryFeedbackMax = 1000;
+
+
+
 export const GetArticleContentQueryParams = zod.object({
-  "capture": zod.coerce.string().optional()
+  "capture": zod.coerce.string().optional(),
+  "feedback": zod.coerce.string().max(getArticleContentQueryFeedbackMax).optional()
 })
 
 export const GetArticleContentResponse = zod.object({
@@ -1079,6 +1134,31 @@ export const SaveRecordBody = zod.object({
   "contentRetained": zod.boolean().optional(),
   "retainedCharacters": zod.number().int().optional(),
   "impact": zod.enum(['critical', 'high', 'low']).optional(),
+  "automaticAssessment": zod.object({
+  "policyVersion": zod.string(),
+  "impact": zod.enum(['critical', 'high', 'low']),
+  "topic": zod.string(),
+  "relevance": zod.enum(['relevant', 'unrelated', 'review']),
+  "confidence": zod.enum(['high', 'limited']),
+  "explanation": zod.string(),
+  "evidence": zod.array(zod.string()),
+  "evidenceRefs": zod.array(zod.object({
+  "source": zod.enum(['headline', 'summary', 'body']),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "contentHash": zod.string().optional()
+})).optional(),
+  "contentHash": zod.string().optional()
+}).optional(),
+  "impactMode": zod.enum(['auto', 'manual']).optional(),
+  "topicMode": zod.enum(['auto', 'manual']).optional(),
+  "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "classificationRevision": zod.number().int().optional(),
+  "classificationReason": zod.string().optional(),
+  "classificationNotes": zod.string().optional(),
+  "expectedClassificationRevision": zod.number().int().optional(),
   "summary": zod.string().optional(),
   "topic": zod.string().optional(),
   "entities": zod.array(zod.string()).optional(),
@@ -1196,6 +1276,31 @@ export const SaveRecordResponse = zod.object({
   "contentRetained": zod.boolean().optional(),
   "retainedCharacters": zod.number().int().optional(),
   "impact": zod.enum(['critical', 'high', 'low']).optional(),
+  "automaticAssessment": zod.object({
+  "policyVersion": zod.string(),
+  "impact": zod.enum(['critical', 'high', 'low']),
+  "topic": zod.string(),
+  "relevance": zod.enum(['relevant', 'unrelated', 'review']),
+  "confidence": zod.enum(['high', 'limited']),
+  "explanation": zod.string(),
+  "evidence": zod.array(zod.string()),
+  "evidenceRefs": zod.array(zod.object({
+  "source": zod.enum(['headline', 'summary', 'body']),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "contentHash": zod.string().optional()
+})).optional(),
+  "contentHash": zod.string().optional()
+}).optional(),
+  "impactMode": zod.enum(['auto', 'manual']).optional(),
+  "topicMode": zod.enum(['auto', 'manual']).optional(),
+  "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "classificationRevision": zod.number().int().optional(),
+  "classificationReason": zod.string().optional(),
+  "classificationNotes": zod.string().optional(),
+  "expectedClassificationRevision": zod.number().int().optional(),
   "summary": zod.string().optional(),
   "topic": zod.string().optional(),
   "entities": zod.array(zod.string()).optional(),
@@ -1255,7 +1360,717 @@ export const DeleteRecordParams = zod.object({
   "id": zod.coerce.string()
 })
 
+export const deleteRecordBodyNotesMax = 4000;
+
+export const deleteRecordBodyRequestIdMin = 8;
+export const deleteRecordBodyRequestIdMax = 100;
+
+
+
+export const DeleteRecordBody = zod.object({
+  "reason": zod.enum(['Duplicate item', 'Irrelevant item', 'Incorrect content', 'Other']),
+  "notes": zod.string().max(deleteRecordBodyNotesMax).optional(),
+  "duplicateOf": zod.string().optional(),
+  "requestId": zod.string().min(deleteRecordBodyRequestIdMin).max(deleteRecordBodyRequestIdMax)
+})
+
 export const DeleteRecordResponse = zod.void()
+
+
+export const CorrectArticleClassificationParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const correctArticleClassificationBodyValueMax = 120;
+
+export const correctArticleClassificationBodyNotesMax = 4000;
+
+export const correctArticleClassificationBodyRequestIdMin = 8;
+export const correctArticleClassificationBodyRequestIdMax = 100;
+
+export const correctArticleClassificationBodyExpectedRevisionMin = 0;
+
+
+
+export const CorrectArticleClassificationBody = zod.object({
+  "field": zod.enum(['impact', 'topic']),
+  "mode": zod.enum(['auto', 'manual']),
+  "value": zod.string().max(correctArticleClassificationBodyValueMax).optional(),
+  "reason": zod.enum(['Overrated', 'Underrated', 'Wrong topic', 'Incidental mention', 'Incorrect entity match', 'Other']),
+  "notes": zod.string().max(correctArticleClassificationBodyNotesMax).optional(),
+  "requestId": zod.string().min(correctArticleClassificationBodyRequestIdMin).max(correctArticleClassificationBodyRequestIdMax),
+  "expectedRevision": zod.number().int().min(correctArticleClassificationBodyExpectedRevisionMin)
+})
+
+
+
+export const correctArticleClassificationResponseOneTierMax = 3;
+
+
+
+export const CorrectArticleClassificationResponse = zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['article', 'claim', 'watch', 'outlet']),
+  "title": zod.string().min(1),
+  "url": zod.string().optional(),
+  "outlet": zod.string().optional(),
+  "journalists": zod.array(zod.string()).optional(),
+  "byline": zod.string().optional(),
+  "credits": zod.array(zod.object({
+  "name": zod.string().min(1),
+  "role": zod.enum(['author', 'contributor', 'reporting', 'research', 'photography', 'editing', 'other']),
+  "attribution": zod.string().optional()
+})).optional(),
+  "publishedAt": zod.string().optional(),
+  "publicationSource": zod.enum(['publisher', 'google-news', 'manual']).optional(),
+  "publicationSourceUrl": zod.string().optional(),
+  "fullText": zod.string().optional(),
+  "fullTextHash": zod.string().optional(),
+  "fullTextLength": zod.number().int().optional(),
+  "contentNormalization": zod.object({
+  "method": zod.string(),
+  "sourceCharacters": zod.number().int(),
+  "articleCharacters": zod.number().int()
+}).optional(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "classificationEvidence": zod.array(zod.object({
+  "signal": zod.string(),
+  "value": zod.string(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "rank": zod.number().int().optional()
+})).optional(),
+  "retrieval": zod.object({
+  "status": zod.string().optional(),
+  "method": zod.string().optional(),
+  "lastAttempt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "message": zod.string().optional(),
+  "characters": zod.number().int().optional(),
+  "rawCharacters": zod.number().int().optional(),
+  "attempts": zod.number().int().optional(),
+  "manualRequested": zod.boolean().optional()
+}).optional(),
+  "fullTextComplete": zod.boolean().optional(),
+  "retainedContent": zod.array(zod.object({
+  "id": zod.string(),
+  "text": zod.string().optional(),
+  "raw": zod.string().optional(),
+  "source": zod.string(),
+  "sourceUrl": zod.string().optional(),
+  "capturedAt": zod.string(),
+  "fileName": zod.string().optional(),
+  "uploadId": zod.string().optional(),
+  "bodyHash": zod.string().optional(),
+  "textLength": zod.number().int().optional(),
+  "rawLength": zod.number().int().optional()
+})).optional(),
+  "contentRetained": zod.boolean().optional(),
+  "retainedCharacters": zod.number().int().optional(),
+  "impact": zod.enum(['critical', 'high', 'low']).optional(),
+  "automaticAssessment": zod.object({
+  "policyVersion": zod.string(),
+  "impact": zod.enum(['critical', 'high', 'low']),
+  "topic": zod.string(),
+  "relevance": zod.enum(['relevant', 'unrelated', 'review']),
+  "confidence": zod.enum(['high', 'limited']),
+  "explanation": zod.string(),
+  "evidence": zod.array(zod.string()),
+  "evidenceRefs": zod.array(zod.object({
+  "source": zod.enum(['headline', 'summary', 'body']),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "contentHash": zod.string().optional()
+})).optional(),
+  "contentHash": zod.string().optional()
+}).optional(),
+  "impactMode": zod.enum(['auto', 'manual']).optional(),
+  "topicMode": zod.enum(['auto', 'manual']).optional(),
+  "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "classificationRevision": zod.number().int().optional(),
+  "classificationReason": zod.string().optional(),
+  "classificationNotes": zod.string().optional(),
+  "expectedClassificationRevision": zod.number().int().optional(),
+  "summary": zod.string().optional(),
+  "topic": zod.string().optional(),
+  "entities": zod.array(zod.string()).optional(),
+  "sentiment": zod.enum(['negative', 'positive', 'neutral', 'unassessed']).optional(),
+  "focus": zod.enum(['blame', 'performance', 'replacement', 'decision-making', 'institutional', 'other']).optional(),
+  "reportingType": zod.enum(['unassessed', 'original', 'independent', 'republication', 'commentary', 'official-response']).optional(),
+  "sourceType": zod.enum(['article', 'x', 'statement', 'document']).optional(),
+  "saved": zod.boolean().optional(),
+  "flagged": zod.boolean().optional(),
+  "flaggedAt": zod.string().optional(),
+  "articleId": zod.string().optional(),
+  "tier": zod.number().int().min(1).max(correctArticleClassificationResponseOneTierMax).optional(),
+  "watchType": zod.enum(['person', 'position', 'organization', 'journalist', 'x-account', 'attribution', 'topic']).optional(),
+  "organization": zod.string().optional(),
+  "position": zod.string().optional(),
+  "individual": zod.string().optional(),
+  "aliases": zod.array(zod.string()).optional(),
+  "enabled": zod.boolean().optional(),
+  "feedUrl": zod.string().optional(),
+  "lastChecked": zod.string().optional(),
+  "feedStatus": zod.string().optional(),
+  "feedHealth": zod.array(zod.object({
+  "url": zod.string(),
+  "kind": zod.enum(['rss', 'sitemap', 'google-news']),
+  "role": zod.enum(['primary', 'supplement', 'fallback']),
+  "status": zod.enum(['connected', 'failed', 'stale', 'empty', 'standby']),
+  "checkedAt": zod.string().optional(),
+  "message": zod.string(),
+  "items": zod.number().int(),
+  "latestItemAt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "failures": zod.number().int().optional()
+})).optional(),
+  "intakeMethod": zod.enum(['rss', 'sitemap', 'google-news']).optional(),
+  "intakeUrl": zod.string().optional(),
+  "discoveryOnly": zod.boolean().optional(),
+  "discoveredAt": zod.string().optional(),
+  "observations": zod.array(zod.object({
+  "id": zod.string(),
+  "stage": zod.enum(['origin', 'sourcing', 'addition', 'republication']),
+  "articleId": zod.string(),
+  "journalist": zod.string(),
+  "attribution": zod.string(),
+  "evidence": zod.string(),
+  "observedAt": zod.string(),
+  "verified": zod.boolean(),
+  "url": zod.string().optional()
+})).optional()
+}).and(zod.object({
+  "id": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+
+
+export const RestoreArticleParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+
+export const restoreArticleResponseOneTierMax = 3;
+
+
+
+export const RestoreArticleResponse = zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['article', 'claim', 'watch', 'outlet']),
+  "title": zod.string().min(1),
+  "url": zod.string().optional(),
+  "outlet": zod.string().optional(),
+  "journalists": zod.array(zod.string()).optional(),
+  "byline": zod.string().optional(),
+  "credits": zod.array(zod.object({
+  "name": zod.string().min(1),
+  "role": zod.enum(['author', 'contributor', 'reporting', 'research', 'photography', 'editing', 'other']),
+  "attribution": zod.string().optional()
+})).optional(),
+  "publishedAt": zod.string().optional(),
+  "publicationSource": zod.enum(['publisher', 'google-news', 'manual']).optional(),
+  "publicationSourceUrl": zod.string().optional(),
+  "fullText": zod.string().optional(),
+  "fullTextHash": zod.string().optional(),
+  "fullTextLength": zod.number().int().optional(),
+  "contentNormalization": zod.object({
+  "method": zod.string(),
+  "sourceCharacters": zod.number().int(),
+  "articleCharacters": zod.number().int()
+}).optional(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "classificationEvidence": zod.array(zod.object({
+  "signal": zod.string(),
+  "value": zod.string(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "rank": zod.number().int().optional()
+})).optional(),
+  "retrieval": zod.object({
+  "status": zod.string().optional(),
+  "method": zod.string().optional(),
+  "lastAttempt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "message": zod.string().optional(),
+  "characters": zod.number().int().optional(),
+  "rawCharacters": zod.number().int().optional(),
+  "attempts": zod.number().int().optional(),
+  "manualRequested": zod.boolean().optional()
+}).optional(),
+  "fullTextComplete": zod.boolean().optional(),
+  "retainedContent": zod.array(zod.object({
+  "id": zod.string(),
+  "text": zod.string().optional(),
+  "raw": zod.string().optional(),
+  "source": zod.string(),
+  "sourceUrl": zod.string().optional(),
+  "capturedAt": zod.string(),
+  "fileName": zod.string().optional(),
+  "uploadId": zod.string().optional(),
+  "bodyHash": zod.string().optional(),
+  "textLength": zod.number().int().optional(),
+  "rawLength": zod.number().int().optional()
+})).optional(),
+  "contentRetained": zod.boolean().optional(),
+  "retainedCharacters": zod.number().int().optional(),
+  "impact": zod.enum(['critical', 'high', 'low']).optional(),
+  "automaticAssessment": zod.object({
+  "policyVersion": zod.string(),
+  "impact": zod.enum(['critical', 'high', 'low']),
+  "topic": zod.string(),
+  "relevance": zod.enum(['relevant', 'unrelated', 'review']),
+  "confidence": zod.enum(['high', 'limited']),
+  "explanation": zod.string(),
+  "evidence": zod.array(zod.string()),
+  "evidenceRefs": zod.array(zod.object({
+  "source": zod.enum(['headline', 'summary', 'body']),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "contentHash": zod.string().optional()
+})).optional(),
+  "contentHash": zod.string().optional()
+}).optional(),
+  "impactMode": zod.enum(['auto', 'manual']).optional(),
+  "topicMode": zod.enum(['auto', 'manual']).optional(),
+  "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "classificationRevision": zod.number().int().optional(),
+  "classificationReason": zod.string().optional(),
+  "classificationNotes": zod.string().optional(),
+  "expectedClassificationRevision": zod.number().int().optional(),
+  "summary": zod.string().optional(),
+  "topic": zod.string().optional(),
+  "entities": zod.array(zod.string()).optional(),
+  "sentiment": zod.enum(['negative', 'positive', 'neutral', 'unassessed']).optional(),
+  "focus": zod.enum(['blame', 'performance', 'replacement', 'decision-making', 'institutional', 'other']).optional(),
+  "reportingType": zod.enum(['unassessed', 'original', 'independent', 'republication', 'commentary', 'official-response']).optional(),
+  "sourceType": zod.enum(['article', 'x', 'statement', 'document']).optional(),
+  "saved": zod.boolean().optional(),
+  "flagged": zod.boolean().optional(),
+  "flaggedAt": zod.string().optional(),
+  "articleId": zod.string().optional(),
+  "tier": zod.number().int().min(1).max(restoreArticleResponseOneTierMax).optional(),
+  "watchType": zod.enum(['person', 'position', 'organization', 'journalist', 'x-account', 'attribution', 'topic']).optional(),
+  "organization": zod.string().optional(),
+  "position": zod.string().optional(),
+  "individual": zod.string().optional(),
+  "aliases": zod.array(zod.string()).optional(),
+  "enabled": zod.boolean().optional(),
+  "feedUrl": zod.string().optional(),
+  "lastChecked": zod.string().optional(),
+  "feedStatus": zod.string().optional(),
+  "feedHealth": zod.array(zod.object({
+  "url": zod.string(),
+  "kind": zod.enum(['rss', 'sitemap', 'google-news']),
+  "role": zod.enum(['primary', 'supplement', 'fallback']),
+  "status": zod.enum(['connected', 'failed', 'stale', 'empty', 'standby']),
+  "checkedAt": zod.string().optional(),
+  "message": zod.string(),
+  "items": zod.number().int(),
+  "latestItemAt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "failures": zod.number().int().optional()
+})).optional(),
+  "intakeMethod": zod.enum(['rss', 'sitemap', 'google-news']).optional(),
+  "intakeUrl": zod.string().optional(),
+  "discoveryOnly": zod.boolean().optional(),
+  "discoveredAt": zod.string().optional(),
+  "observations": zod.array(zod.object({
+  "id": zod.string(),
+  "stage": zod.enum(['origin', 'sourcing', 'addition', 'republication']),
+  "articleId": zod.string(),
+  "journalist": zod.string(),
+  "attribution": zod.string(),
+  "evidence": zod.string(),
+  "observedAt": zod.string(),
+  "verified": zod.boolean(),
+  "url": zod.string().optional()
+})).optional()
+}).and(zod.object({
+  "id": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+
+
+export const getArticleFeedbackQueryQMax = 300;
+
+export const getArticleFeedbackQueryPageDefault = 1;
+
+
+
+export const GetArticleFeedbackQueryParams = zod.object({
+  "q": zod.coerce.string().max(getArticleFeedbackQueryQMax).optional(),
+  "action": zod.enum(['correction', 'deletion', 'restoration', 'system-correction']).optional(),
+  "reason": zod.coerce.string().optional(),
+  "page": zod.coerce.number().int().min(1).default(getArticleFeedbackQueryPageDefault)
+})
+
+
+
+export const getArticleFeedbackResponseEventsItemSnapshotTierMax = 3;
+
+
+
+export const GetArticleFeedbackResponse = zod.object({
+  "events": zod.array(zod.object({
+  "id": zod.string(),
+  "articleId": zod.string(),
+  "action": zod.enum(['correction', 'deletion', 'restoration', 'system-correction']),
+  "headline": zod.string(),
+  "outlet": zod.string().optional(),
+  "publishedAt": zod.string().optional(),
+  "timestamp": zod.string(),
+  "actor": zod.string(),
+  "field": zod.string().optional(),
+  "reason": zod.string(),
+  "notes": zod.string().optional(),
+  "duplicateOf": zod.string().optional(),
+  "before": zod.object({
+  "effective": zod.string(),
+  "raw": zod.string().optional(),
+  "mode": zod.string(),
+  "origin": zod.string().optional(),
+  "automatic": zod.object({
+  "policyVersion": zod.string(),
+  "impact": zod.enum(['critical', 'high', 'low']),
+  "topic": zod.string(),
+  "relevance": zod.enum(['relevant', 'unrelated', 'review']),
+  "confidence": zod.enum(['high', 'limited']),
+  "explanation": zod.string(),
+  "evidence": zod.array(zod.string()),
+  "evidenceRefs": zod.array(zod.object({
+  "source": zod.enum(['headline', 'summary', 'body']),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "contentHash": zod.string().optional()
+})).optional(),
+  "contentHash": zod.string().optional()
+}).optional()
+}).optional(),
+  "after": zod.object({
+  "effective": zod.string(),
+  "raw": zod.string().optional(),
+  "mode": zod.string(),
+  "origin": zod.string().optional(),
+  "automatic": zod.object({
+  "policyVersion": zod.string(),
+  "impact": zod.enum(['critical', 'high', 'low']),
+  "topic": zod.string(),
+  "relevance": zod.enum(['relevant', 'unrelated', 'review']),
+  "confidence": zod.enum(['high', 'limited']),
+  "explanation": zod.string(),
+  "evidence": zod.array(zod.string()),
+  "evidenceRefs": zod.array(zod.object({
+  "source": zod.enum(['headline', 'summary', 'body']),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "contentHash": zod.string().optional()
+})).optional(),
+  "contentHash": zod.string().optional()
+}).optional()
+}).optional(),
+  "snapshot": zod.object({
+  "id": zod.string().optional(),
+  "kind": zod.enum(['article', 'claim', 'watch', 'outlet']),
+  "title": zod.string().min(1),
+  "url": zod.string().optional(),
+  "outlet": zod.string().optional(),
+  "journalists": zod.array(zod.string()).optional(),
+  "byline": zod.string().optional(),
+  "credits": zod.array(zod.object({
+  "name": zod.string().min(1),
+  "role": zod.enum(['author', 'contributor', 'reporting', 'research', 'photography', 'editing', 'other']),
+  "attribution": zod.string().optional()
+})).optional(),
+  "publishedAt": zod.string().optional(),
+  "publicationSource": zod.enum(['publisher', 'google-news', 'manual']).optional(),
+  "publicationSourceUrl": zod.string().optional(),
+  "fullText": zod.string().optional(),
+  "fullTextHash": zod.string().optional(),
+  "fullTextLength": zod.number().int().optional(),
+  "contentNormalization": zod.object({
+  "method": zod.string(),
+  "sourceCharacters": zod.number().int(),
+  "articleCharacters": zod.number().int()
+}).optional(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "classificationEvidence": zod.array(zod.object({
+  "signal": zod.string(),
+  "value": zod.string(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "rank": zod.number().int().optional()
+})).optional(),
+  "retrieval": zod.object({
+  "status": zod.string().optional(),
+  "method": zod.string().optional(),
+  "lastAttempt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "message": zod.string().optional(),
+  "characters": zod.number().int().optional(),
+  "rawCharacters": zod.number().int().optional(),
+  "attempts": zod.number().int().optional(),
+  "manualRequested": zod.boolean().optional()
+}).optional(),
+  "fullTextComplete": zod.boolean().optional(),
+  "retainedContent": zod.array(zod.object({
+  "id": zod.string(),
+  "text": zod.string().optional(),
+  "raw": zod.string().optional(),
+  "source": zod.string(),
+  "sourceUrl": zod.string().optional(),
+  "capturedAt": zod.string(),
+  "fileName": zod.string().optional(),
+  "uploadId": zod.string().optional(),
+  "bodyHash": zod.string().optional(),
+  "textLength": zod.number().int().optional(),
+  "rawLength": zod.number().int().optional()
+})).optional(),
+  "contentRetained": zod.boolean().optional(),
+  "retainedCharacters": zod.number().int().optional(),
+  "impact": zod.enum(['critical', 'high', 'low']).optional(),
+  "automaticAssessment": zod.object({
+  "policyVersion": zod.string(),
+  "impact": zod.enum(['critical', 'high', 'low']),
+  "topic": zod.string(),
+  "relevance": zod.enum(['relevant', 'unrelated', 'review']),
+  "confidence": zod.enum(['high', 'limited']),
+  "explanation": zod.string(),
+  "evidence": zod.array(zod.string()),
+  "evidenceRefs": zod.array(zod.object({
+  "source": zod.enum(['headline', 'summary', 'body']),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "contentHash": zod.string().optional()
+})).optional(),
+  "contentHash": zod.string().optional()
+}).optional(),
+  "impactMode": zod.enum(['auto', 'manual']).optional(),
+  "topicMode": zod.enum(['auto', 'manual']).optional(),
+  "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "classificationRevision": zod.number().int().optional(),
+  "classificationReason": zod.string().optional(),
+  "classificationNotes": zod.string().optional(),
+  "expectedClassificationRevision": zod.number().int().optional(),
+  "summary": zod.string().optional(),
+  "topic": zod.string().optional(),
+  "entities": zod.array(zod.string()).optional(),
+  "sentiment": zod.enum(['negative', 'positive', 'neutral', 'unassessed']).optional(),
+  "focus": zod.enum(['blame', 'performance', 'replacement', 'decision-making', 'institutional', 'other']).optional(),
+  "reportingType": zod.enum(['unassessed', 'original', 'independent', 'republication', 'commentary', 'official-response']).optional(),
+  "sourceType": zod.enum(['article', 'x', 'statement', 'document']).optional(),
+  "saved": zod.boolean().optional(),
+  "flagged": zod.boolean().optional(),
+  "flaggedAt": zod.string().optional(),
+  "articleId": zod.string().optional(),
+  "tier": zod.number().int().min(1).max(getArticleFeedbackResponseEventsItemSnapshotTierMax).optional(),
+  "watchType": zod.enum(['person', 'position', 'organization', 'journalist', 'x-account', 'attribution', 'topic']).optional(),
+  "organization": zod.string().optional(),
+  "position": zod.string().optional(),
+  "individual": zod.string().optional(),
+  "aliases": zod.array(zod.string()).optional(),
+  "enabled": zod.boolean().optional(),
+  "feedUrl": zod.string().optional(),
+  "lastChecked": zod.string().optional(),
+  "feedStatus": zod.string().optional(),
+  "feedHealth": zod.array(zod.object({
+  "url": zod.string(),
+  "kind": zod.enum(['rss', 'sitemap', 'google-news']),
+  "role": zod.enum(['primary', 'supplement', 'fallback']),
+  "status": zod.enum(['connected', 'failed', 'stale', 'empty', 'standby']),
+  "checkedAt": zod.string().optional(),
+  "message": zod.string(),
+  "items": zod.number().int(),
+  "latestItemAt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "failures": zod.number().int().optional()
+})).optional(),
+  "intakeMethod": zod.enum(['rss', 'sitemap', 'google-news']).optional(),
+  "intakeUrl": zod.string().optional(),
+  "discoveryOnly": zod.boolean().optional(),
+  "discoveredAt": zod.string().optional(),
+  "observations": zod.array(zod.object({
+  "id": zod.string(),
+  "stage": zod.enum(['origin', 'sourcing', 'addition', 'republication']),
+  "articleId": zod.string(),
+  "journalist": zod.string(),
+  "attribution": zod.string(),
+  "evidence": zod.string(),
+  "observedAt": zod.string(),
+  "verified": zod.boolean(),
+  "url": zod.string().optional()
+})).optional()
+})
+})),
+  "total": zod.number().int(),
+  "page": zod.number().int(),
+  "pageSize": zod.number().int(),
+  "reasons": zod.array(zod.string()).optional()
+})
+
+
+export const GetFeedbackArticleParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+
+export const getFeedbackArticleResponseOneTierMax = 3;
+
+
+
+export const GetFeedbackArticleResponse = zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['article', 'claim', 'watch', 'outlet']),
+  "title": zod.string().min(1),
+  "url": zod.string().optional(),
+  "outlet": zod.string().optional(),
+  "journalists": zod.array(zod.string()).optional(),
+  "byline": zod.string().optional(),
+  "credits": zod.array(zod.object({
+  "name": zod.string().min(1),
+  "role": zod.enum(['author', 'contributor', 'reporting', 'research', 'photography', 'editing', 'other']),
+  "attribution": zod.string().optional()
+})).optional(),
+  "publishedAt": zod.string().optional(),
+  "publicationSource": zod.enum(['publisher', 'google-news', 'manual']).optional(),
+  "publicationSourceUrl": zod.string().optional(),
+  "fullText": zod.string().optional(),
+  "fullTextHash": zod.string().optional(),
+  "fullTextLength": zod.number().int().optional(),
+  "contentNormalization": zod.object({
+  "method": zod.string(),
+  "sourceCharacters": zod.number().int(),
+  "articleCharacters": zod.number().int()
+}).optional(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "classificationEvidence": zod.array(zod.object({
+  "signal": zod.string(),
+  "value": zod.string(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "rank": zod.number().int().optional()
+})).optional(),
+  "retrieval": zod.object({
+  "status": zod.string().optional(),
+  "method": zod.string().optional(),
+  "lastAttempt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "message": zod.string().optional(),
+  "characters": zod.number().int().optional(),
+  "rawCharacters": zod.number().int().optional(),
+  "attempts": zod.number().int().optional(),
+  "manualRequested": zod.boolean().optional()
+}).optional(),
+  "fullTextComplete": zod.boolean().optional(),
+  "retainedContent": zod.array(zod.object({
+  "id": zod.string(),
+  "text": zod.string().optional(),
+  "raw": zod.string().optional(),
+  "source": zod.string(),
+  "sourceUrl": zod.string().optional(),
+  "capturedAt": zod.string(),
+  "fileName": zod.string().optional(),
+  "uploadId": zod.string().optional(),
+  "bodyHash": zod.string().optional(),
+  "textLength": zod.number().int().optional(),
+  "rawLength": zod.number().int().optional()
+})).optional(),
+  "contentRetained": zod.boolean().optional(),
+  "retainedCharacters": zod.number().int().optional(),
+  "impact": zod.enum(['critical', 'high', 'low']).optional(),
+  "automaticAssessment": zod.object({
+  "policyVersion": zod.string(),
+  "impact": zod.enum(['critical', 'high', 'low']),
+  "topic": zod.string(),
+  "relevance": zod.enum(['relevant', 'unrelated', 'review']),
+  "confidence": zod.enum(['high', 'limited']),
+  "explanation": zod.string(),
+  "evidence": zod.array(zod.string()),
+  "evidenceRefs": zod.array(zod.object({
+  "source": zod.enum(['headline', 'summary', 'body']),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "contentHash": zod.string().optional()
+})).optional(),
+  "contentHash": zod.string().optional()
+}).optional(),
+  "impactMode": zod.enum(['auto', 'manual']).optional(),
+  "topicMode": zod.enum(['auto', 'manual']).optional(),
+  "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "classificationRevision": zod.number().int().optional(),
+  "classificationReason": zod.string().optional(),
+  "classificationNotes": zod.string().optional(),
+  "expectedClassificationRevision": zod.number().int().optional(),
+  "summary": zod.string().optional(),
+  "topic": zod.string().optional(),
+  "entities": zod.array(zod.string()).optional(),
+  "sentiment": zod.enum(['negative', 'positive', 'neutral', 'unassessed']).optional(),
+  "focus": zod.enum(['blame', 'performance', 'replacement', 'decision-making', 'institutional', 'other']).optional(),
+  "reportingType": zod.enum(['unassessed', 'original', 'independent', 'republication', 'commentary', 'official-response']).optional(),
+  "sourceType": zod.enum(['article', 'x', 'statement', 'document']).optional(),
+  "saved": zod.boolean().optional(),
+  "flagged": zod.boolean().optional(),
+  "flaggedAt": zod.string().optional(),
+  "articleId": zod.string().optional(),
+  "tier": zod.number().int().min(1).max(getFeedbackArticleResponseOneTierMax).optional(),
+  "watchType": zod.enum(['person', 'position', 'organization', 'journalist', 'x-account', 'attribution', 'topic']).optional(),
+  "organization": zod.string().optional(),
+  "position": zod.string().optional(),
+  "individual": zod.string().optional(),
+  "aliases": zod.array(zod.string()).optional(),
+  "enabled": zod.boolean().optional(),
+  "feedUrl": zod.string().optional(),
+  "lastChecked": zod.string().optional(),
+  "feedStatus": zod.string().optional(),
+  "feedHealth": zod.array(zod.object({
+  "url": zod.string(),
+  "kind": zod.enum(['rss', 'sitemap', 'google-news']),
+  "role": zod.enum(['primary', 'supplement', 'fallback']),
+  "status": zod.enum(['connected', 'failed', 'stale', 'empty', 'standby']),
+  "checkedAt": zod.string().optional(),
+  "message": zod.string(),
+  "items": zod.number().int(),
+  "latestItemAt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "failures": zod.number().int().optional()
+})).optional(),
+  "intakeMethod": zod.enum(['rss', 'sitemap', 'google-news']).optional(),
+  "intakeUrl": zod.string().optional(),
+  "discoveryOnly": zod.boolean().optional(),
+  "discoveredAt": zod.string().optional(),
+  "observations": zod.array(zod.object({
+  "id": zod.string(),
+  "stage": zod.enum(['origin', 'sourcing', 'addition', 'republication']),
+  "articleId": zod.string(),
+  "journalist": zod.string(),
+  "attribution": zod.string(),
+  "evidence": zod.string(),
+  "observedAt": zod.string(),
+  "verified": zod.boolean(),
+  "url": zod.string().optional()
+})).optional()
+}).and(zod.object({
+  "id": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
 
 
 export const RefreshFeedsResponse = zod.object({
@@ -1341,6 +2156,31 @@ export const FlagArticleResponse = zod.object({
   "contentRetained": zod.boolean().optional(),
   "retainedCharacters": zod.number().int().optional(),
   "impact": zod.enum(['critical', 'high', 'low']).optional(),
+  "automaticAssessment": zod.object({
+  "policyVersion": zod.string(),
+  "impact": zod.enum(['critical', 'high', 'low']),
+  "topic": zod.string(),
+  "relevance": zod.enum(['relevant', 'unrelated', 'review']),
+  "confidence": zod.enum(['high', 'limited']),
+  "explanation": zod.string(),
+  "evidence": zod.array(zod.string()),
+  "evidenceRefs": zod.array(zod.object({
+  "source": zod.enum(['headline', 'summary', 'body']),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "contentHash": zod.string().optional()
+})).optional(),
+  "contentHash": zod.string().optional()
+}).optional(),
+  "impactMode": zod.enum(['auto', 'manual']).optional(),
+  "topicMode": zod.enum(['auto', 'manual']).optional(),
+  "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "classificationRevision": zod.number().int().optional(),
+  "classificationReason": zod.string().optional(),
+  "classificationNotes": zod.string().optional(),
+  "expectedClassificationRevision": zod.number().int().optional(),
   "summary": zod.string().optional(),
   "topic": zod.string().optional(),
   "entities": zod.array(zod.string()).optional(),
@@ -1492,6 +2332,31 @@ export const AnalyzeImportResponse = zod.object({
   "contentRetained": zod.boolean().optional(),
   "retainedCharacters": zod.number().int().optional(),
   "impact": zod.enum(['critical', 'high', 'low']).optional(),
+  "automaticAssessment": zod.object({
+  "policyVersion": zod.string(),
+  "impact": zod.enum(['critical', 'high', 'low']),
+  "topic": zod.string(),
+  "relevance": zod.enum(['relevant', 'unrelated', 'review']),
+  "confidence": zod.enum(['high', 'limited']),
+  "explanation": zod.string(),
+  "evidence": zod.array(zod.string()),
+  "evidenceRefs": zod.array(zod.object({
+  "source": zod.enum(['headline', 'summary', 'body']),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "contentHash": zod.string().optional()
+})).optional(),
+  "contentHash": zod.string().optional()
+}).optional(),
+  "impactMode": zod.enum(['auto', 'manual']).optional(),
+  "topicMode": zod.enum(['auto', 'manual']).optional(),
+  "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "classificationRevision": zod.number().int().optional(),
+  "classificationReason": zod.string().optional(),
+  "classificationNotes": zod.string().optional(),
+  "expectedClassificationRevision": zod.number().int().optional(),
   "summary": zod.string().optional(),
   "topic": zod.string().optional(),
   "entities": zod.array(zod.string()).optional(),
@@ -1633,6 +2498,31 @@ export const CommitImportResponse = zod.object({
   "contentRetained": zod.boolean().optional(),
   "retainedCharacters": zod.number().int().optional(),
   "impact": zod.enum(['critical', 'high', 'low']).optional(),
+  "automaticAssessment": zod.object({
+  "policyVersion": zod.string(),
+  "impact": zod.enum(['critical', 'high', 'low']),
+  "topic": zod.string(),
+  "relevance": zod.enum(['relevant', 'unrelated', 'review']),
+  "confidence": zod.enum(['high', 'limited']),
+  "explanation": zod.string(),
+  "evidence": zod.array(zod.string()),
+  "evidenceRefs": zod.array(zod.object({
+  "source": zod.enum(['headline', 'summary', 'body']),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "contentHash": zod.string().optional()
+})).optional(),
+  "contentHash": zod.string().optional()
+}).optional(),
+  "impactMode": zod.enum(['auto', 'manual']).optional(),
+  "topicMode": zod.enum(['auto', 'manual']).optional(),
+  "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "classificationRevision": zod.number().int().optional(),
+  "classificationReason": zod.string().optional(),
+  "classificationNotes": zod.string().optional(),
+  "expectedClassificationRevision": zod.number().int().optional(),
   "summary": zod.string().optional(),
   "topic": zod.string().optional(),
   "entities": zod.array(zod.string()).optional(),

@@ -3,6 +3,8 @@ import {
   getGetRetrievalReportQueryKey,
   getGetWorkspaceQueryKey,
   useEnqueueEnrichment,
+  useCorrectArticleClassification,
+  useRestoreArticle,
   useDeleteRecord,
   useFlagArticle,
   useGetWorkspace,
@@ -24,7 +26,7 @@ function useInvalidate() {
   return () => Promise.all([
     qc.invalidateQueries({ queryKey: getGetWorkspaceQueryKey() }),
     qc.invalidateQueries({ queryKey: getGetRetrievalReportQueryKey() }),
-    qc.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === 'string' && (/^\/api\/tripwire\/records\/[^/]+\/content$/.test(q.queryKey[0]) || q.queryKey[0] === '/api/tripwire/content-search') }),
+    qc.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === 'string' && (/^\/api\/tripwire\/records\/[^/]+\/content$/.test(q.queryKey[0]) || q.queryKey[0] === '/api/tripwire/content-search' || q.queryKey[0].startsWith('/api/tripwire/feedback') || q.queryKey[0] === 'retained-content') }),
   ]);
 }
 
@@ -150,3 +152,22 @@ export function useFlag() {
 }
 
 export function useInvalidateWorkspace() { return useInvalidate(); }
+
+export const newRequestId = () => crypto.randomUUID();
+export const isConflict = (e: unknown) => !!e && typeof e === 'object' && 'status' in e && (e as { status: unknown }).status === 409;
+
+export function useCorrect() {
+  const invalidate = useInvalidate();
+  return useCorrectArticleClassification({ mutation: { onSettled: () => invalidate() } });
+}
+
+export function useRestore() {
+  const invalidate = useInvalidate();
+  const { toast } = useToast();
+  return useRestoreArticle({
+    mutation: {
+      onSuccess: () => { invalidate(); toast({ title: 'Article restored' }); },
+      onError: (e: unknown) => { invalidate(); toast({ title: isConflict(e) ? 'Already restored or changed' : 'Restore failed', description: errText(e), variant: 'destructive' }); },
+    },
+  });
+}

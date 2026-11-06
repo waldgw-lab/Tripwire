@@ -25,6 +25,9 @@ import type {
 
 import type {
   ArticleContent,
+  ArticleCorrectionInput,
+  ArticleDismissalInput,
+  ArticleFeedbackPage,
   AutomationAction,
   AutomationHealth,
   ContentSearch,
@@ -40,6 +43,7 @@ import type {
   EvidenceInput,
   FlagRequest,
   GetArticleContentParams,
+  GetArticleFeedbackParams,
   GetEntityAutomationParams,
   GetEntityParams,
   GetQuickEnrichmentText200,
@@ -2032,14 +2036,29 @@ export const getDeleteRecordUrl = (id: string,) => {
   return `/api/tripwire/records/${id}`
 }
 
-export const deleteRecord = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+export const deleteRecord = async (id: string,
+    articleDismissalInput?: ArticleDismissalInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
 
-  return customFetch<void>(getDeleteRecordUrl(id),
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getDeleteRecordUrl(id),
   {
     ...options,
-    method: 'DELETE'
-
-
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(articleDismissalInput)
   }
 );}
 
@@ -2064,9 +2083,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteRecord>>, DeleteRecordMutationVariables> = (props) => {
-          const {id} = props ?? {};
+          const {id,data} = props ?? {};
 
-          return  deleteRecord(id,requestOptions)
+          return  deleteRecord(id,data,requestOptions)
         }
 
 
@@ -2077,9 +2096,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type DeleteRecordMutationResult = NonNullable<Awaited<ReturnType<typeof deleteRecord>>>
-
+    export type DeleteRecordMutationBody = BodyType<ArticleDismissalInput> | undefined
     export type DeleteRecordMutationError = ErrorType<unknown>
-    export type DeleteRecordMutationVariables = {id: string}
+    export type DeleteRecordMutationVariables = {id: string;data?: BodyType<ArticleDismissalInput>}
 
     export const useDeleteRecord = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRecord>>, TError,DeleteRecordMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -2091,6 +2110,354 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getDeleteRecordMutationOptions(options), queryClient);
     }
+
+export const getCorrectArticleClassificationUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/records/${id}/classification`
+}
+
+export const correctArticleClassification = async (id: string,
+    articleCorrectionInput: ArticleCorrectionInput, options?: Parameters<typeof customFetch>[1]): Promise<TrackedRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<TrackedRecord>(getCorrectArticleClassificationUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(articleCorrectionInput)
+  }
+);}
+
+
+
+
+
+export const getCorrectArticleClassificationMutationKey = () => ['correctArticleClassification'] as const;
+
+export const getCorrectArticleClassificationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof correctArticleClassification>>, TError,CorrectArticleClassificationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof correctArticleClassification>>, TError,CorrectArticleClassificationMutationVariables, TContext> => {
+
+const mutationKey = getCorrectArticleClassificationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof correctArticleClassification>>, CorrectArticleClassificationMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  correctArticleClassification(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CorrectArticleClassificationMutationResult = NonNullable<Awaited<ReturnType<typeof correctArticleClassification>>>
+    export type CorrectArticleClassificationMutationBody = BodyType<ArticleCorrectionInput>
+    export type CorrectArticleClassificationMutationError = ErrorType<unknown>
+    export type CorrectArticleClassificationMutationVariables = {id: string;data: BodyType<ArticleCorrectionInput>}
+
+    export const useCorrectArticleClassification = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof correctArticleClassification>>, TError,CorrectArticleClassificationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof correctArticleClassification>>,
+        TError,
+        CorrectArticleClassificationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCorrectArticleClassificationMutationOptions(options), queryClient);
+    }
+
+export const getRestoreArticleUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/records/${id}/restore`
+}
+
+export const restoreArticle = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<TrackedRecord> => {
+
+  return customFetch<TrackedRecord>(getRestoreArticleUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestoreArticleMutationKey = () => ['restoreArticle'] as const;
+
+export const getRestoreArticleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreArticle>>, TError,RestoreArticleMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreArticle>>, TError,RestoreArticleMutationVariables, TContext> => {
+
+const mutationKey = getRestoreArticleMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreArticle>>, RestoreArticleMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  restoreArticle(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreArticleMutationResult = NonNullable<Awaited<ReturnType<typeof restoreArticle>>>
+
+    export type RestoreArticleMutationError = ErrorType<unknown>
+    export type RestoreArticleMutationVariables = {id: string}
+
+    export const useRestoreArticle = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreArticle>>, TError,RestoreArticleMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof restoreArticle>>,
+        TError,
+        RestoreArticleMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRestoreArticleMutationOptions(options), queryClient);
+    }
+
+export const getGetArticleFeedbackUrl = (params?: GetArticleFeedbackParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/tripwire/feedback?${stringifiedParams}` : `/api/tripwire/feedback`
+}
+
+export const getArticleFeedback = async (params?: GetArticleFeedbackParams, options?: Parameters<typeof customFetch>[1]): Promise<ArticleFeedbackPage> => {
+
+  return customFetch<ArticleFeedbackPage>(getGetArticleFeedbackUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetArticleFeedbackQueryKey = (params?: GetArticleFeedbackParams,) => {
+    return [
+    `/api/tripwire/feedback`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetArticleFeedbackQueryOptions = <TData = Awaited<ReturnType<typeof getArticleFeedback>>, TError = ErrorType<unknown>>(params?: GetArticleFeedbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getArticleFeedback>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetArticleFeedbackQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getArticleFeedback>>> = ({ signal }) => getArticleFeedback(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getArticleFeedback>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetArticleFeedbackQueryResult = NonNullable<Awaited<ReturnType<typeof getArticleFeedback>>>
+export type GetArticleFeedbackQueryError = ErrorType<unknown>
+
+
+export function useGetArticleFeedback<TData = Awaited<ReturnType<typeof getArticleFeedback>>, TError = ErrorType<unknown>>(
+ params: undefined |  GetArticleFeedbackParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getArticleFeedback>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getArticleFeedback>>,
+          TError,
+          Awaited<ReturnType<typeof getArticleFeedback>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetArticleFeedback<TData = Awaited<ReturnType<typeof getArticleFeedback>>, TError = ErrorType<unknown>>(
+ params?: GetArticleFeedbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getArticleFeedback>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getArticleFeedback>>,
+          TError,
+          Awaited<ReturnType<typeof getArticleFeedback>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetArticleFeedback<TData = Awaited<ReturnType<typeof getArticleFeedback>>, TError = ErrorType<unknown>>(
+ params?: GetArticleFeedbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getArticleFeedback>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetArticleFeedback<TData = Awaited<ReturnType<typeof getArticleFeedback>>, TError = ErrorType<unknown>>(
+ params?: GetArticleFeedbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getArticleFeedback>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetArticleFeedbackQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetFeedbackArticleUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/feedback/${id}/article`
+}
+
+export const getFeedbackArticle = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<TrackedRecord> => {
+
+  return customFetch<TrackedRecord>(getGetFeedbackArticleUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFeedbackArticleQueryKey = (id: string,) => {
+    return [
+    `/api/tripwire/feedback/${id}/article`
+    ] as const;
+    }
+
+
+export const getGetFeedbackArticleQueryOptions = <TData = Awaited<ReturnType<typeof getFeedbackArticle>>, TError = ErrorType<unknown>>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFeedbackArticle>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFeedbackArticleQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFeedbackArticle>>> = ({ signal }) => getFeedbackArticle(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFeedbackArticle>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetFeedbackArticleQueryResult = NonNullable<Awaited<ReturnType<typeof getFeedbackArticle>>>
+export type GetFeedbackArticleQueryError = ErrorType<unknown>
+
+
+export function useGetFeedbackArticle<TData = Awaited<ReturnType<typeof getFeedbackArticle>>, TError = ErrorType<unknown>>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFeedbackArticle>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getFeedbackArticle>>,
+          TError,
+          Awaited<ReturnType<typeof getFeedbackArticle>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetFeedbackArticle<TData = Awaited<ReturnType<typeof getFeedbackArticle>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFeedbackArticle>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getFeedbackArticle>>,
+          TError,
+          Awaited<ReturnType<typeof getFeedbackArticle>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetFeedbackArticle<TData = Awaited<ReturnType<typeof getFeedbackArticle>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFeedbackArticle>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetFeedbackArticle<TData = Awaited<ReturnType<typeof getFeedbackArticle>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFeedbackArticle>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetFeedbackArticleQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getRefreshFeedsUrl = () => {
 

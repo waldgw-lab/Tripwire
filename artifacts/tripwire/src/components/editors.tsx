@@ -1,11 +1,13 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import type { ArticleCredit, Observation, RecordInput, TrackedRecord } from '@workspace/api-client-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ArticleCorrectionInputReason, ArticleDismissalInputReason, type ArticleCredit, type Observation, type RecordInput, type TrackedRecord } from '@workspace/api-client-react';
 import { articleCredits, creditRoles } from '@/lib/media-coverage';
 import { Plus, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useQueryClient } from '@tanstack/react-query';
+import { useDeleteRecord } from '@workspace/api-client-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -13,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FieldLabel } from '@/components/bits';
 import {
-  FOCUS, REPORTING, SENTIMENT, STAGES, WATCH_TYPES, fromLocalInput, splitList, toInput, toLocalInput, useRemove, useSave, useWorkspace, byKind,
+  FOCUS, REPORTING, SENTIMENT, STAGES, WATCH_TYPES, errText, fromLocalInput, isConflict, newRequestId, useInvalidateWorkspace, splitList, toInput, toLocalInput, useRemove, useSave, useWorkspace, byKind,
 } from '@/lib/workspace';
 
 function F({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
@@ -52,22 +54,40 @@ function Shell({ open, onOpenChange, title, onSubmit, pending, canSubmit = true,
 
 type EditorProps = { open: boolean; onOpenChange: (o: boolean) => void; record?: TrackedRecord | null };
 
-export function ArticleEditor({ open, onOpenChange, record }: EditorProps) {
+const initImpact = (r?: TrackedRecord | null) => !r ? 'auto' : r.impactMode ? (r.impactMode === 'manual' ? r.impact ?? 'auto' : 'auto') : r.impact ?? 'auto';
+const initTopicAuto = (r?: TrackedRecord | null) => !r ? true : r.topicMode ? r.topicMode !== 'manual' : !r.topic;
+
+export function ArticleEditor({ open, onOpenChange, record: opened }: EditorProps) {
   const save = useSave();
+  const { data: ws } = useWorkspace();
+  const record = opened ? (ws?.records.find(r => r.id === opened.id) ?? opened) : opened;
+  const [baseRev, setBaseRev] = useState(0);
+  const [topicAuto, setTopicAuto] = useState(true);
+  const [cReason, setCReason] = useState('');
+  const [cNotes, setCNotes] = useState('');
+  const [conflict, setConflict] = useState(false);
   const [credits, setCredits] = useState<ArticleCredit[]>([]);
   const [f, setF] = useState({ sourceType: 'article', title: '', url: '', outlet: '', publishedAt: '', topic: '', entities: '', reportingType: 'unassessed', sentiment: 'unassessed', focus: '', summary: '', fullText: '', fullTextComplete: false, impact: 'auto', saved: false });
   useEffect(() => {
     if (!open) return;
+    const record = opened;
+    setBaseRev(record?.classificationRevision ?? 0); setTopicAuto(initTopicAuto(record)); setCReason(''); setCNotes(''); setConflict(false);
     setCredits(record ? articleCredits(record) : [{ name: '', role: 'author' }]);
     setF({
       sourceType: record?.sourceType ?? 'article', title: record?.title ?? '', url: record?.url ?? '', outlet: record?.outlet ?? '',
       publishedAt: toLocalInput(record?.publishedAt), topic: record?.topic ?? '',
       entities: (record?.entities ?? []).join(', '), reportingType: record?.reportingType ?? 'unassessed', sentiment: record?.sentiment ?? 'unassessed',
-      focus: record?.focus ?? '', summary: record?.summary ?? '', fullText: record?.fullText ?? '', fullTextComplete: record?.fullTextComplete ?? false, impact: record?.impact ?? 'auto', saved: record ? (record.flagged ?? record.saved ?? false) : false,
+      focus: record?.focus ?? '', summary: record?.summary ?? '', fullText: record?.fullText ?? '', fullTextComplete: record?.fullTextComplete ?? false, impact: initImpact(record), saved: record ? (record.flagged ?? record.saved ?? false) : false,
     });
-  }, [open, record]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, opened?.id]);
   const set = (k: keyof typeof f) => (v: string | boolean) => setF((p) => ({ ...p, [k]: v }));
   const isX = f.sourceType === 'x';
+  const impactChanged = !!opened && f.impact !== initImpact(opened);
+  const topicChanged = !!opened && (topicAuto !== initTopicAuto(opened) || (!topicAuto && f.topic.trim() !== (opened.topic ?? '')));
+  const classChanged = impactChanged || topicChanged;
+  const classOk = !classChanged || (!!cReason && (cReason !== 'Other' || !!cNotes.trim()));
+  const currentRev = record?.classificationRevision ?? 0;
 
   const submit = () => {
     const data: RecordInput = {
@@ -75,17 +95,19 @@ export function ArticleEditor({ open, onOpenChange, record }: EditorProps) {
       sourceType: f.sourceType as RecordInput['sourceType'], url: f.url || undefined, outlet: f.outlet || undefined,
       credits: credits.filter(c => c.name.trim()).map(c => ({ ...c, name: c.name.trim() })),
       journalists: [...new Set(credits.filter(c => c.role === 'author' && c.name.trim()).map(c => c.name.trim()))],
-      publishedAt: fromLocalInput(f.publishedAt), topic: f.topic || undefined,
+      publishedAt: fromLocalInput(f.publishedAt), topic: topicAuto ? undefined : (f.topic.trim() || undefined), topicMode: topicAuto ? 'auto' : 'manual', impactMode: f.impact === 'auto' ? 'auto' : 'manual',
+      ...(classChanged ? { classificationReason: cReason, classificationNotes: cNotes.trim() || undefined } : { classificationReason: undefined, classificationNotes: undefined }),
+      expectedClassificationRevision: record ? baseRev : undefined,
       entities: splitList(f.entities), reportingType: f.reportingType as RecordInput['reportingType'],
       sentiment: f.sentiment as RecordInput['sentiment'], focus: (f.focus || undefined) as RecordInput['focus'],
       summary: f.summary || undefined, fullText: f.fullText || undefined, fullTextComplete: f.fullTextComplete,
       impact: f.impact === 'auto' ? undefined : f.impact as RecordInput['impact'], saved: f.saved, flagged: f.saved, flaggedAt: f.saved ? (record?.flaggedAt ?? new Date().toISOString()) : undefined,
     };
-    save.mutate({ data }, { onSuccess: () => onOpenChange(false) });
+    save.mutate({ data }, { onSuccess: () => onOpenChange(false), onError: (e) => { if (isConflict(e)) setConflict(true); } });
   };
 
   return (
-    <Shell open={open} onOpenChange={onOpenChange} title={record ? 'Edit item' : 'Intake'} onSubmit={submit} pending={save.isPending} canSubmit={!!f.title.trim()} wide>
+    <Shell open={open} onOpenChange={onOpenChange} title={record ? 'Edit item' : 'Intake'} onSubmit={submit} pending={save.isPending} canSubmit={!!f.title.trim() && classOk && !conflict} wide>
       <div className="grid gap-3 sm:grid-cols-[140px_1fr]">
         <F label="Source"><Pick testId="select-source-type" value={f.sourceType} onChange={set('sourceType')} options={['article', 'x', 'statement', 'document']} /></F>
         <F label={isX ? 'Post text (headline)' : 'Headline'}><Input data-testid="input-title" value={f.title} onChange={(e) => set('title')(e.target.value)} /></F>
@@ -94,7 +116,10 @@ export function ArticleEditor({ open, onOpenChange, record }: EditorProps) {
         <F label="URL"><Input data-testid="input-url" value={f.url} onChange={(e) => set('url')(e.target.value)} /></F>
         <F label={isX ? 'Account' : 'Outlet'}><Input data-testid="input-outlet" value={f.outlet} onChange={(e) => set('outlet')(e.target.value)} /></F>
         <F label="Published"><Input type="datetime-local" data-testid="input-published" value={f.publishedAt} onChange={(e) => set('publishedAt')(e.target.value)} /></F>
-        <F label="Topic"><Input data-testid="input-topic" value={f.topic} onChange={(e) => set('topic')(e.target.value)} /></F>
+        <F label="Topic"><div className="flex items-center gap-2">
+          <Input data-testid="input-topic" value={topicAuto ? (record?.automaticAssessment?.topic ?? f.topic) : f.topic} disabled={topicAuto} onChange={(e) => set('topic')(e.target.value)} />
+          <span className="flex shrink-0 items-center gap-1.5 text-xs"><Switch checked={topicAuto} onCheckedChange={setTopicAuto} aria-label="Automatic topic" data-testid="switch-topic-auto" /> Auto</span>
+        </div></F>
         <F label="Entities, comma separated"><Input data-testid="input-entities" value={f.entities} onChange={(e) => set('entities')(e.target.value)} /></F>
       </div>
       <fieldset className="space-y-2">
@@ -117,6 +142,18 @@ export function ArticleEditor({ open, onOpenChange, record }: EditorProps) {
           <SelectContent>{[['auto', 'Automatic'], ['critical', 'CRITICAL'], ['high', 'HIGH'], ['low', 'LOW']].map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent>
         </Select></F>
       </div>
+      {classChanged && (
+        <div className="grid gap-3 rounded-md border border-border p-3 sm:grid-cols-[200px_1fr]" data-testid="editor-classification-reason">
+          <F label="Classification reason"><Pick testId="select-classification-reason" value={cReason} onChange={setCReason} options={Object.values(ArticleCorrectionInputReason)} placeholder="Required" /></F>
+          <F label={cReason === 'Other' ? 'Note (required)' : 'Note'}><Input data-testid="input-classification-notes" value={cNotes} maxLength={4000} onChange={e => setCNotes(e.target.value)} /></F>
+        </div>
+      )}
+      {conflict && (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-destructive/50 px-3 py-2 text-xs" data-testid="text-editor-conflict">
+          <span>Classification changed elsewhere (rev {baseRev} {'->'} {currentRev}). Now: impact {record?.impact?.toUpperCase() ?? '—'} ({record?.impactMode ?? 'auto'}), topic {record?.topic || '—'} ({record?.topicMode ?? 'auto'}).</span>
+          <button type="button" className="underline underline-offset-4" data-testid="button-editor-decide-again" onClick={() => { setBaseRev(currentRev); setConflict(false); }}>Keep my choice, decide again</button>
+        </div>
+      )}
       <F label="Summary" className="block"><Textarea rows={2} data-testid="input-summary" value={f.summary} onChange={(e) => set('summary')(e.target.value)} /></F>
       <F label="Full text" className="block"><Textarea rows={9} className="font-serif text-[15px] leading-relaxed" data-testid="input-fulltext" value={f.fullText} onChange={(e) => set('fullText')(e.target.value)} /></F>
       <label className="flex items-center gap-2 text-sm"><Checkbox checked={f.fullTextComplete} onCheckedChange={value => set('fullTextComplete')(value === true)} data-testid="checkbox-fulltext-complete" /> Full article text is complete</label>
@@ -262,7 +299,56 @@ export function OutletEditor({ open, onOpenChange, record }: EditorProps) {
   );
 }
 
+const DISMISS_REASONS = Object.values(ArticleDismissalInputReason);
+
+function ArticleDelete({ target, onClose }: { target: TrackedRecord; onClose: () => void }) {
+  const invalidate = useInvalidateWorkspace();
+  const qc = useQueryClient();
+  const remove = useDeleteRecord({ mutation: { onSettled: () => invalidate() } });
+  const [reason, setReason] = useState('');
+  const [notes, setNotes] = useState('');
+  const [dup, setDup] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const requestId = useRef(newRequestId());
+  const canSubmit = !!reason && (reason !== 'Other' || !!notes.trim()) && !remove.isPending;
+  const submit = () => {
+    if (!canSubmit) return;
+    setError(null);
+    remove.mutate({ id: target.id, data: { reason: reason as ArticleDismissalInputReason, notes: notes.trim() || undefined, duplicateOf: reason === 'Duplicate item' && dup.trim() ? dup.trim() : undefined, requestId: requestId.current } }, {
+      onSuccess: onClose,
+      onError: (e) => {
+        if (isConflict(e)) { requestId.current = newRequestId(); void qc.invalidateQueries(); setError('This article changed or was already removed. Review the current state and confirm again.'); }
+        else setError(errText(e));
+      },
+    });
+  };
+  return (
+    <Dialog open onOpenChange={o => !o && !remove.isPending && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader><DialogTitle className="font-serif text-xl font-normal">Delete “{target.title}”?</DialogTitle></DialogHeader>
+        <form onSubmit={e => { e.preventDefault(); submit(); }} className="space-y-3">
+          <F label="Reason" className="block"><Pick testId="select-delete-reason" value={reason} onChange={setReason} options={DISMISS_REASONS} placeholder="Required" /></F>
+          {reason === 'Duplicate item' && <F label="Duplicate of article id (optional)" className="block"><Input className="font-mono text-xs" data-testid="input-delete-duplicate" value={dup} onChange={e => setDup(e.target.value)} /></F>}
+          <F label={reason === 'Other' ? 'Note (required)' : 'Note (optional)'} className="block"><Textarea rows={2} maxLength={4000} data-testid="input-delete-notes" value={notes} onChange={e => setNotes(e.target.value)} /></F>
+          {error && <p role="alert" className="text-xs text-destructive" data-testid="text-delete-error">{error}</p>}
+          <DialogFooter>
+            <button type="button" onClick={onClose} disabled={remove.isPending} className="h-9 rounded-md px-4 text-sm text-muted-foreground hover:text-foreground" data-testid="button-cancel-delete">Cancel</button>
+            <button type="submit" disabled={!canSubmit} className="h-9 rounded-md bg-destructive px-5 text-sm text-destructive-foreground disabled:opacity-50" data-testid="button-confirm-delete">
+              {remove.isPending ? 'Deleting' : error ? 'Retry delete' : 'Delete'}
+            </button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function ConfirmDelete({ target, onClose }: { target: TrackedRecord | null; onClose: () => void }) {
+  if (target?.kind === 'article') return <ArticleDelete key={target.id} target={target} onClose={onClose} />;
+  return <GenericDelete target={target} onClose={onClose} />;
+}
+
+function GenericDelete({ target, onClose }: { target: TrackedRecord | null; onClose: () => void }) {
   const remove = useRemove();
   return (
     <AlertDialog open={!!target} onOpenChange={(o) => !o && onClose()}>

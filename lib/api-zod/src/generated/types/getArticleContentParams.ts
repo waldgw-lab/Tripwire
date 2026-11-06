@@ -7,4 +7,8 @@
 
 export type GetArticleContentParams = {
 capture?: string;
+/**
+ * @maxLength 1000
+ */
+feedback?: string;
 };

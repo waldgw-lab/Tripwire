@@ -3,6 +3,7 @@ import { db, tripwireContent, tripwireRecords } from "@workspace/db";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { RecordData } from "./tripwire-store";
 import type { Capture } from "./tripwire-content";
+import { assessArticle } from "./tripwire-impact-policy";
 
 export async function storeContent(text: string, raw?: string) {
   const actualRaw = raw ?? text;
@@ -30,7 +31,19 @@ export async function archiveArticle<T extends RecordData>(article: T): Promise<
     fullTextHash = await storeContent(article.fullText);
   }
   const { fullText, ...metadata } = article;
-  return { ...metadata, retainedContent, fullTextHash, fullTextLength: fullText?.length ?? article.fullTextLength ?? article.retainedCharacters ?? 0 } as T;
+  const body = fullText ?? (fullTextHash ? (await readContent(fullTextHash)).text : "");
+  const automaticAssessment = assessArticle({ ...article, fullText: body, fullTextHash });
+  // Legacy explicit impact is retained as an analyst override, never overwritten
+  // by a new automatic policy. Topics become explicit overrides on correction.
+  const impactMode = article.impactMode ?? (article.impact ? "manual" : "auto");
+  const topicMode = article.topicMode ?? "auto";
+  return { ...metadata, retainedContent, fullTextHash, fullTextLength: fullText?.length ?? article.fullTextLength ?? article.retainedCharacters ?? 0,
+    automaticAssessment, impactMode, topicMode,
+    impactOverrideOrigin: impactMode === "manual" ? article.impactOverrideOrigin ?? "legacy-unknown" : undefined,
+    topicOverrideOrigin: topicMode === "manual" ? article.topicOverrideOrigin ?? "legacy-unknown" : undefined,
+    impact: impactMode === "manual" ? article.impact : automaticAssessment.impact,
+    topic: topicMode === "manual" ? article.topic : automaticAssessment.topic,
+  } as T;
 }
 export async function hydrateArticles<T extends RecordData>(records: T[]): Promise<T[]> {
   const hashes = [...new Set(records.flatMap(r => [r.fullTextHash, ...r.retainedContent?.map(c => c.bodyHash) ?? []]).filter((h): h is string => !!h))];

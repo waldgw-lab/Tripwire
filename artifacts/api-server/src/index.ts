@@ -8,6 +8,7 @@ import { classifyExistingArticles, reprocessSavedPages, startRetrieval } from ".
 import { startPasteJobs } from "./lib/tripwire-enrichment-jobs";
 import { migrateWatches } from "./lib/entity-db";
 import { startEntityWorker } from "./lib/entity-worker";
+import { startArchiveReassessment } from "./lib/tripwire-reassessment";
 
 const rawPort = process.env["PORT"];
 
@@ -41,6 +42,7 @@ async function start() {
     startRetrieval();
     startPasteJobs();
     startEntityWorker();
+    startArchiveReassessment();
   });
 }
 void start().catch(err => { logger.error({ err }, "Tripwire initialization failed"); process.exit(1); });

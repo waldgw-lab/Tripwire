@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { automaticRetrievalAllowed } from "../lib/tripwire-priority";
-import { and, inArray, sql } from "drizzle-orm";
-import { db, tripwireContent } from "@workspace/db";
+import { and, inArray, sql, eq } from "drizzle-orm";
+import { db, tripwireContent, tripwireRecords } from "@workspace/db";
+import { currentArticle } from "../lib/tripwire-feedback";
 import { recordsFor, writeRecord } from "../lib/tripwire-store";
 import { WORKSPACE_OWNER } from "../lib/tripwire-access";
 import { readContent } from "../lib/tripwire-content-storage";
@@ -10,7 +11,15 @@ import { runRetrievalTick } from "../lib/tripwire-retrieval";
 const router = Router();
 router.get("/tripwire/records/:id/content", async (req, res) => {
   try {
-    const article = (await recordsFor(WORKSPACE_OWNER, false)).find(r => r.id === req.params.id && r.kind === "article");
+    let article = (await recordsFor(WORKSPACE_OWNER, false)).find(r => r.id === req.params.id && r.kind === "article");
+    if (!article && typeof req.query.feedback === "string") {
+      const [event] = await db.select().from(tripwireRecords).where(and(eq(tripwireRecords.id, req.query.feedback),
+        eq(tripwireRecords.owner, WORKSPACE_OWNER), eq(tripwireRecords.kind, "feedback"), sql`${tripwireRecords.data}->>'articleId' = ${String(req.params.id)}`));
+      if (event) {
+        const retained = await db.transaction(tx => currentArticle(tx, WORKSPACE_OWNER, String(req.params.id)));
+        article = { ...retained.data, id: String(req.params.id), createdAt: retained.createdAt, updatedAt: retained.updatedAt };
+      }
+    }
     if (!article) { res.status(404).json({ error: "Article not found" }); return; }
     const captureId = typeof req.query.capture === "string" ? req.query.capture : undefined;
     const capture = captureId?.startsWith("canonical:") && captureId === `canonical:${article.fullTextHash}`

@@ -1,0 +1,128 @@
+{
+  "policyVersion": "consequence-2026-11-06.2",
+  "generatedAt": "2026-11-06T16:44:49.571Z",
+  "inventoryRows": 582,
+  "matchedSampleRows": 577,
+  "unresolvedSampleRows": 5,
+  "reviewSampleRows": 423,
+  "uniqueArticlesWithChangedAutomaticValues": {
+    "impact": 419,
+    "topic": 283,
+    "entities": 169
+  },
+  "reassessmentBatches": [
+    {
+      "done": true,
+      "topic": 360,
+      "cursor": "workspace:ffec023cc4c1346c1bc278a2",
+      "impact": 574,
+      "review": 658,
+      "entities": 238,
+      "processed": 860,
+      "policyVersion": "consequence-2026-11-06.1"
+    },
+    {
+      "done": true,
+      "topic": 0,
+      "cursor": "workspace:ffec023cc4c1346c1bc278a2",
+      "impact": 4,
+      "review": 721,
+      "entities": 0,
+      "processed": 927,
+      "policyVersion": "consequence-2026-11-06.2"
+    }
+  ],
+  "sampleResults": {
+    "LOW": {
+      "rows": 158,
+      "matched": 155,
+      "unresolved": 3,
+      "finalImpact": {
+        "critical": 6,
+        "high": 31,
+        "low": 118
+      },
+      "dismissed": 0
+    },
+    "HIGH": {
+      "rows": 202,
+      "matched": 202,
+      "unresolved": 0,
+      "finalImpact": {
+        "critical": 4,
+        "high": 65,
+        "low": 133
+      },
+      "dismissed": 3
+    },
+    "CRITICAL": {
+      "rows": 222,
+      "matched": 220,
+      "unresolved": 2,
+      "finalImpact": {
+        "critical": 7,
+        "high": 84,
+        "low": 129
+      },
+      "dismissed": 0
+    }
+  },
+  "circledNegatives": [
+    {
+      "headline": "Can LeBron James Chase Away Philadelphia’s…",
+      "id": "67c585a197c983179f3ad4d4",
+      "finalImpact": "low",
+      "dismissed": true
+    },
+    {
+      "headline": "Photos of the Week: Mountain Castle, Fire Festival, C…",
+      "id": "93e3f9eea0c78ac1e87099fd",
+      "finalImpact": "low",
+      "dismissed": true
+    },
+    {
+      "headline": "An Absolute Beauty",
+      "id": "09e1e16cc84d6e4e0285244e",
+      "finalImpact": "low",
+      "dismissed": true
+    }
+  ],
+  "unresolved": [
+    {
+      "sample": "CRITICAL",
+      "page": 21,
+      "row": 183,
+      "headline": "U.S. will stop $4B in aid to Israel at the end of the yea…",
+      "status": "ambiguous"
+    },
+    {
+      "sample": "CRITICAL",
+      "page": 21,
+      "row": 185,
+      "headline": "U.S. will stop $4B in aid to Israel at the end of the yea…",
+      "status": "ambiguous"
+    },
+    {
+      "sample": "LOW",
+      "page": null,
+      "row": 63,
+      "headline": "How Democrats Won Across the South",
+      "status": "ambiguous"
+    },
+    {
+      "sample": "LOW",
+      "page": null,
+      "row": 64,
+      "headline": "How Democrats Won Across the South",
+      "status": "ambiguous"
+    },
+    {
+      "sample": "LOW",
+      "page": null,
+      "row": 147,
+      "headline": "Minor detained after U.S. warned Russia of possible Moscow terrorist attack, FSB says",
+      "status": "unresolved"
+    }
+  ],
+  "note": "Sample rows are not unique articles. Counts include public/shadow deduplication where labeled unique. Review denotes uncertain relevance or limited retained text, not verified low importance. No sourcing verification was added. Only the three explicitly circled negatives were suppressed; automatic classification changes do not dismiss articles."
+}

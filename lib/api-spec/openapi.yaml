@@ -222,6 +222,7 @@ paths:
       parameters:
         - { name: id, in: path, required: true, schema: { type: string } }
         - { name: capture, in: query, schema: { type: string } }
+        - { name: feedback, in: query, schema: { type: string, maxLength: 1000 } }
       responses:
         "200":
           description: Retained content for this article or selected source capture
@@ -286,8 +287,64 @@ paths:
       operationId: deleteRecord
       parameters:
         - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ArticleDismissalInput" }
       responses:
         "204": { description: Deleted }
+  /tripwire/records/{id}/classification:
+    patch:
+      operationId: correctArticleClassification
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ArticleCorrectionInput" }
+      responses:
+        "200":
+          description: Updated article
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TrackedRecord" }
+  /tripwire/records/{id}/restore:
+    post:
+      operationId: restoreArticle
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Restored article
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TrackedRecord" }
+  /tripwire/feedback:
+    get:
+      operationId: getArticleFeedback
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 300 } }
+        - { name: action, in: query, schema: { type: string, enum: [correction, deletion, restoration, system-correction] } }
+        - { name: reason, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+      responses:
+        "200":
+          description: Workspace feedback history
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArticleFeedbackPage" }
+  /tripwire/feedback/{id}/article:
+    get:
+      operationId: getFeedbackArticle
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Retained article including dismissed items
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TrackedRecord" }
   /tripwire/refresh:
     post:
       operationId: refreshFeeds
@@ -675,6 +732,86 @@ components:
       required: [status]
       properties:
         status: { type: string }
+    AutomaticAssessment:
+      type: object
+      required: [policyVersion, impact, topic, relevance, confidence, explanation, evidence]
+      properties:
+        policyVersion: { type: string }
+        impact: { type: string, enum: [critical, high, low] }
+        topic: { type: string }
+        relevance: { type: string, enum: [relevant, unrelated, review] }
+        confidence: { type: string, enum: [high, limited] }
+        explanation: { type: string }
+        evidence: { type: array, items: { type: string } }
+        evidenceRefs:
+          type: array
+          items: { $ref: "#/components/schemas/ImpactEvidenceReference" }
+        contentHash: { type: string }
+    ImpactEvidenceReference:
+      type: object
+      required: [source, excerpt, start, end]
+      properties:
+        source: { type: string, enum: [headline, summary, body] }
+        excerpt: { type: string }
+        start: { type: integer }
+        end: { type: integer }
+        contentHash: { type: string }
+    ArticleDismissalInput:
+      type: object
+      required: [reason, requestId]
+      properties:
+        reason: { type: string, enum: [Duplicate item, Irrelevant item, Incorrect content, Other] }
+        notes: { type: string, maxLength: 4000 }
+        duplicateOf: { type: string }
+        requestId: { type: string, minLength: 8, maxLength: 100 }
+    ArticleCorrectionInput:
+      type: object
+      required: [field, mode, reason, requestId, expectedRevision]
+      properties:
+        field: { type: string, enum: [impact, topic] }
+        mode: { type: string, enum: [auto, manual] }
+        value: { type: string, maxLength: 120 }
+        reason: { type: string, enum: [Overrated, Underrated, Wrong topic, Incidental mention, Incorrect entity match, Other] }
+        notes: { type: string, maxLength: 4000 }
+        requestId: { type: string, minLength: 8, maxLength: 100 }
+        expectedRevision: { type: integer, minimum: 0 }
+    ClassificationSnapshot:
+      type: object
+      required: [effective, mode]
+      properties:
+        effective: { type: string }
+        raw: { type: string }
+        mode: { type: string }
+        origin: { type: string }
+        automatic: { $ref: "#/components/schemas/AutomaticAssessment" }
+    ArticleFeedback:
+      type: object
+      required: [id, articleId, action, headline, timestamp, actor, reason, snapshot]
+      properties:
+        id: { type: string }
+        articleId: { type: string }
+        action: { type: string, enum: [correction, deletion, restoration, system-correction] }
+        headline: { type: string }
+        outlet: { type: string }
+        publishedAt: { type: string }
+        timestamp: { type: string }
+        actor: { type: string }
+        field: { type: string }
+        reason: { type: string }
+        notes: { type: string }
+        duplicateOf: { type: string }
+        before: { $ref: "#/components/schemas/ClassificationSnapshot" }
+        after: { $ref: "#/components/schemas/ClassificationSnapshot" }
+        snapshot: { $ref: "#/components/schemas/RecordInput" }
+    ArticleFeedbackPage:
+      type: object
+      required: [events, total, page, pageSize]
+      properties:
+        events: { type: array, items: { $ref: "#/components/schemas/ArticleFeedback" } }
+        total: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+        reasons: { type: array, items: { type: string } }
     RecordInput:
       type: object
       required: [kind, title]
@@ -705,6 +842,15 @@ components:
         contentRetained: { type: boolean }
         retainedCharacters: { type: integer }
         impact: { type: string, enum: [critical, high, low] }
+        automaticAssessment: { $ref: "#/components/schemas/AutomaticAssessment" }
+        impactMode: { type: string, enum: [auto, manual] }
+        topicMode: { type: string, enum: [auto, manual] }
+        impactOverrideOrigin: { type: string, enum: [analyst, legacy-unknown] }
+        topicOverrideOrigin: { type: string, enum: [analyst, legacy-unknown] }
+        classificationRevision: { type: integer }
+        classificationReason: { type: string }
+        classificationNotes: { type: string }
+        expectedClassificationRevision: { type: integer }
         summary: { type: string }
         topic: { type: string }
         entities: { type: array, items: { type: string } }

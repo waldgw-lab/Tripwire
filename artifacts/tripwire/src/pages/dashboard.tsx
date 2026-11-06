@@ -6,6 +6,7 @@ import { Importer } from '@/components/importer';
 import { useEnrich } from '@/lib/workspace';
 import { IntakeHealth } from '@/components/feed/intake-health';
 import { CriticalEnrichmentQueue } from '@/components/dashboard/critical-enrichment-queue';
+import { FeedbackLog } from '@/components/dashboard/feedback-log';
 
 const n = (v: number) => v.toLocaleString('en-US');
 
@@ -85,6 +86,7 @@ export default function DashboardPage() {
         <CriticalEnrichmentQueue />
         <IntakeHealth />
         <RetrievalTable />
+        <FeedbackLog />
       </div>
     </div>
   );

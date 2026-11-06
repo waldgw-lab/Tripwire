@@ -28,23 +28,23 @@ test('yellow for summaries or incomplete text; red for metadata only', () => {
   assert.equal(contentStatus({ title: 'Headline', fullText: 'Excerpt', fullTextComplete: false }).value, 'partial');
   assert.equal(contentStatus({ title: 'Headline', summary: ' ', fullTextComplete: true }).value, 'minimal');
 });
-test('primary headline mention and assessed original reporting are critical', () => {
-  assert.equal(impactRating({ title: 'Trump reviews military advice' }, [primary]).value, 'critical');
-  assert.equal(impactRating({ title: 'New investigation', reportingType: 'original' }, []).value, 'critical');
+test('names and originality cannot promote impact in the browser', () => {
+  assert.equal(impactRating({ title: 'Trump reviews military advice' }, [primary]).value, 'low');
+  assert.equal(impactRating({ title: 'New investigation', reportingType: 'original' }, []).value, 'low');
 });
-test('secondary or body-only primary mentions are high', () => {
-  assert.equal(impactRating({ title: 'Rubio discusses negotiations' }, [secondary]).value, 'high');
-  assert.equal(impactRating({ title: 'Negotiations continue', summary: 'Trump met advisers.' }, [primary]).value, 'high');
+test('feed consumes server assessment, not body-only or secondary name matches', () => {
+  assert.equal(impactRating({ title: 'Rubio discusses negotiations' }, [secondary]).value, 'low');
+  assert.equal(impactRating({ title: 'Negotiations continue', summary: 'Trump met advisers.', automaticAssessment: { impact: 'high', explanation: 'Retained substantive consultation' } }, [primary]).value, 'high');
 });
 test('disabled watches, unrelated entities and substring matches do not inflate impact', () => {
   assert.equal(impactRating({ title: 'Trump reviews advice' }, [{ ...primary, enabled: false }]).value, 'low');
   assert.equal(impactRating({ title: 'Trumpeter performs', entities: ['Politics'] }, [primary]).value, 'low');
 });
-test('independent reporting and accountability focus are high', () => {
-  assert.equal(impactRating({ title: 'New investigation', reportingType: 'independent' }, []).value, 'high');
-  assert.equal(impactRating({ title: 'Leader replaced', focus: 'replacement' }, []).value, 'high');
+test('independent reporting and focus labels do not substitute for consequence evidence', () => {
+  assert.equal(impactRating({ title: 'New investigation', reportingType: 'independent' }, []).value, 'low');
+  assert.equal(impactRating({ title: 'Leader replaced', focus: 'replacement' }, []).value, 'low');
 });
 test('analyst overrides take precedence and auto mode recalculates', () => {
   assert.deepEqual(impactRating({ title: 'Trump', impact: 'low' }, [primary]), { value: 'low', reason: 'Analyst-selected impact', manual: true });
-  assert.equal(impactRating({ title: 'Trump', impact: undefined }, [primary]).value, 'critical');
+  assert.equal(impactRating({ title: 'Trump', impact: undefined, impactMode: 'auto', automaticAssessment: { impact: 'high', explanation: 'Policy assessment' } }, [primary]).value, 'high');
 });

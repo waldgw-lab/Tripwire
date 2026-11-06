@@ -1,6 +1,6 @@
 import { gunzipSync } from "node:zlib";
 import { db, tripwireRecords } from "@workspace/db";
-import { recordsFor } from "./tripwire-store";
+import { recordsFor, writeRecord } from "./tripwire-store";
 import { stableId } from "./tripwire-config";
 import { logger } from "./logger";
 import { and, eq, sql } from "drizzle-orm";
@@ -14,11 +14,12 @@ import { fetchPublicDocument } from "./tripwire-fetch";
 import { intakeSources, publisherUrl, sitemapItems, feedFreshness, retryAfter, discoveryTitle, titleKey, parseRssItems, type IntakeItem, type IntakeSource, type FeedHealth } from "./tripwire-intake";
 import { checkRobots } from "./tripwire-retrieval";
 import { publicationUpdate } from "./tripwire-publication";
+import { assessArticle } from "./tripwire-impact-policy";
+import { appendFeedback, classificationSnapshot, canonicalArticleUrl } from "./tripwire-feedback";
 
 const locks = new Set<string>();
 const cooldown = new Map<string, number>();
 const strip = (s: string) => s.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim();
-const relevant = /\b(politic|trump|vance|rubio|hegseth|caine|cooper|pentagon|defen[sc]e|military|intelligence|iran|israel|ukraine|russia|china|foreign policy|state department|white house|congress|senate|war|diploma|nato|munitions|geopolitic)/i;
 export async function fetchFeed(url: string): Promise<string> {
   const result = await fetchPublicDocument(url, 0, { httpsOnly: true, accept: "application/rss+xml,application/atom+xml,application/xml,text/xml" });
   const bytes = result.bytes[0] === 0x1f && result.bytes[1] === 0x8b
@@ -48,6 +49,10 @@ export async function refreshFeeds(_userId?: string | null) {
   const refreshedAt = new Date().toISOString();
   try {
     const records = await recordsFor("workspace", false);
+    const dismissedRows = await db.select({ data: tripwireRecords.data }).from(tripwireRecords).where(and(
+      eq(tripwireRecords.owner, "workspace"), eq(tripwireRecords.kind, "article"), sql`${tripwireRecords.data}->>'hidden' = 'true'`));
+    const dismissedIds = new Set(dismissedRows.map(r => String(r.data.baseId ?? "")));
+    const dismissedUrls = new Set(dismissedRows.map(r => canonicalArticleUrl(String(r.data.url ?? ""))).filter(Boolean));
     const outlets = records.filter(r => r.kind === "outlet" && r.enabled !== false);
     const watches = records.filter(r => r.kind === "watch" && r.enabled !== false);
     // Limit concurrent external requests to avoid overwhelming feed servers.
@@ -99,7 +104,10 @@ export async function refreshFeeds(_userId?: string | null) {
               fullText: sitemapDescription || undefined, contentRetained: true, retainedCharacters: sitemapDescription.length,
             };
             const text = `${title} ${retained.fullText ?? ""}`;
-            if (!relevant.test(text)) continue;
+            const assessment = assessArticle({ title, fullText: retained.fullText });
+            // Uncertain consequential metadata stays reviewable; unrelated
+            // entertainment/sport/credits are not keyword-based admission.
+            if (assessment.relevance === "unrelated" || assessment.topic === "Unclassified" && !assessment.evidence.length) continue;
             const url = new URL(item.link);
             for (const key of [...url.searchParams.keys()]) if (/^(utm_|fbclid|gclid)/.test(key)) url.searchParams.delete(key);
             url.hash = "";
@@ -108,6 +116,7 @@ export async function refreshFeeds(_userId?: string | null) {
             // Don't create a Google duplicate of an already-known publisher item.
             if (discovery && existingDiscovery && !existingDiscovery.discoveryOnly) continue;
             const id = existingDiscovery?.discoveryOnly ? existingDiscovery.id : stableId(discovery ? `discovery:${outlet.title}:${titleKey(title)}` : `article:${url.href}`);
+            if (dismissedIds.has(id) || dismissedUrls.has(canonicalArticleUrl(url.href))) continue;
             const entities = mentionedEntities(text, watches);
             const published = item.isoDate ?? item.pubDate;
             const publication = publicationUpdate({}, { publishedAt: published, publicationSource: discovery ? "google-news" : "publisher", publicationSourceUrl: source.url });
@@ -134,8 +143,23 @@ export async function refreshFeeds(_userId?: string | null) {
                 const archived = await archiveArticle({ ...currentData, ...promotion, ...merged,
                   publishedAt: currentData.publishedAt, publicationSource: currentData.publicationSource, publicationSourceUrl: currentData.publicationSourceUrl,
                   ...publicationUpdate(currentData, data), ...mergeClassification(currentData, classification) } as RecordData);
+                if (JSON.stringify(currentData.automaticAssessment) !== JSON.stringify(archived.automaticAssessment)) {
+                  archived.classificationRevision = (currentData.classificationRevision ?? 0) + 1;
+                  for (const field of ["impact", "topic"] as const) await appendFeedback(tx, "workspace", id, currentData, {
+                    action: "system-correction", actor: "System", field, before: classificationSnapshot(currentData, field),
+                    after: classificationSnapshot(archived, field), reason: "Publisher feed content or policy reassessment",
+                    requestId: `feed:${archived.automaticAssessment?.policyVersion}:${archived.fullTextHash}:${field}` });
+                }
                 await tx.update(tripwireRecords).set({ data: archived, updatedAt: new Date() }).where(and(eq(tripwireRecords.id, recordId), eq(tripwireRecords.owner, owner)));
               });
+              const workspaceArticle = records.find(r => r.id === id && r.kind === "article");
+              // Refresh an existing workspace shadow from retained publisher
+              // content through the same override/audit rules as retrieval.
+              const [shadow] = await db.select({ id: tripwireRecords.id }).from(tripwireRecords).where(eq(tripwireRecords.id, `workspace:${id}`));
+              if (shadow && workspaceArticle) {
+                try { await writeRecord("workspace", workspaceArticle, true); }
+                catch (error) { if (!(error instanceof Error && /dismissed/.test(error.message))) throw error; }
+              }
             }
             // Repair cached RSS bylines once, without touching private edits or existing structured credits.
             if (!result.length && owner === "public" && credits.length) {

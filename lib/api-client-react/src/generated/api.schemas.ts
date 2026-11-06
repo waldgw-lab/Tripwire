@@ -124,6 +124,93 @@ export const RecordInputImpact = {
   low: 'low',
 } as const;
 
+export type AutomaticAssessmentImpact = typeof AutomaticAssessmentImpact[keyof typeof AutomaticAssessmentImpact];
+
+
+export const AutomaticAssessmentImpact = {
+  critical: 'critical',
+  high: 'high',
+  low: 'low',
+} as const;
+
+export type AutomaticAssessmentRelevance = typeof AutomaticAssessmentRelevance[keyof typeof AutomaticAssessmentRelevance];
+
+
+export const AutomaticAssessmentRelevance = {
+  relevant: 'relevant',
+  unrelated: 'unrelated',
+  review: 'review',
+} as const;
+
+export type AutomaticAssessmentConfidence = typeof AutomaticAssessmentConfidence[keyof typeof AutomaticAssessmentConfidence];
+
+
+export const AutomaticAssessmentConfidence = {
+  high: 'high',
+  limited: 'limited',
+} as const;
+
+export type ImpactEvidenceReferenceSource = typeof ImpactEvidenceReferenceSource[keyof typeof ImpactEvidenceReferenceSource];
+
+
+export const ImpactEvidenceReferenceSource = {
+  headline: 'headline',
+  summary: 'summary',
+  body: 'body',
+} as const;
+
+export interface ImpactEvidenceReference {
+  source: ImpactEvidenceReferenceSource;
+  excerpt: string;
+  start: number;
+  end: number;
+  contentHash?: string;
+}
+
+export interface AutomaticAssessment {
+  policyVersion: string;
+  impact: AutomaticAssessmentImpact;
+  topic: string;
+  relevance: AutomaticAssessmentRelevance;
+  confidence: AutomaticAssessmentConfidence;
+  explanation: string;
+  evidence: string[];
+  evidenceRefs?: ImpactEvidenceReference[];
+  contentHash?: string;
+}
+
+export type RecordInputImpactMode = typeof RecordInputImpactMode[keyof typeof RecordInputImpactMode];
+
+
+export const RecordInputImpactMode = {
+  auto: 'auto',
+  manual: 'manual',
+} as const;
+
+export type RecordInputTopicMode = typeof RecordInputTopicMode[keyof typeof RecordInputTopicMode];
+
+
+export const RecordInputTopicMode = {
+  auto: 'auto',
+  manual: 'manual',
+} as const;
+
+export type RecordInputImpactOverrideOrigin = typeof RecordInputImpactOverrideOrigin[keyof typeof RecordInputImpactOverrideOrigin];
+
+
+export const RecordInputImpactOverrideOrigin = {
+  analyst: 'analyst',
+  'legacy-unknown': 'legacy-unknown',
+} as const;
+
+export type RecordInputTopicOverrideOrigin = typeof RecordInputTopicOverrideOrigin[keyof typeof RecordInputTopicOverrideOrigin];
+
+
+export const RecordInputTopicOverrideOrigin = {
+  analyst: 'analyst',
+  'legacy-unknown': 'legacy-unknown',
+} as const;
+
 export type RecordInputSentiment = typeof RecordInputSentiment[keyof typeof RecordInputSentiment];
 
 
@@ -280,6 +367,15 @@ export interface RecordInput {
   contentRetained?: boolean;
   retainedCharacters?: number;
   impact?: RecordInputImpact;
+  automaticAssessment?: AutomaticAssessment;
+  impactMode?: RecordInputImpactMode;
+  topicMode?: RecordInputTopicMode;
+  impactOverrideOrigin?: RecordInputImpactOverrideOrigin;
+  topicOverrideOrigin?: RecordInputTopicOverrideOrigin;
+  classificationRevision?: number;
+  classificationReason?: string;
+  classificationNotes?: string;
+  expectedClassificationRevision?: number;
   summary?: string;
   topic?: string;
   entities?: string[];
@@ -898,6 +994,117 @@ export interface HealthStatus {
   status: string;
 }
 
+export type ArticleDismissalInputReason = typeof ArticleDismissalInputReason[keyof typeof ArticleDismissalInputReason];
+
+
+export const ArticleDismissalInputReason = {
+  Duplicate_item: 'Duplicate item',
+  Irrelevant_item: 'Irrelevant item',
+  Incorrect_content: 'Incorrect content',
+  Other: 'Other',
+} as const;
+
+export interface ArticleDismissalInput {
+  reason: ArticleDismissalInputReason;
+  /** @maxLength 4000 */
+  notes?: string;
+  duplicateOf?: string;
+  /**
+     * @minLength 8
+     * @maxLength 100
+     */
+  requestId: string;
+}
+
+export type ArticleCorrectionInputField = typeof ArticleCorrectionInputField[keyof typeof ArticleCorrectionInputField];
+
+
+export const ArticleCorrectionInputField = {
+  impact: 'impact',
+  topic: 'topic',
+} as const;
+
+export type ArticleCorrectionInputMode = typeof ArticleCorrectionInputMode[keyof typeof ArticleCorrectionInputMode];
+
+
+export const ArticleCorrectionInputMode = {
+  auto: 'auto',
+  manual: 'manual',
+} as const;
+
+export type ArticleCorrectionInputReason = typeof ArticleCorrectionInputReason[keyof typeof ArticleCorrectionInputReason];
+
+
+export const ArticleCorrectionInputReason = {
+  Overrated: 'Overrated',
+  Underrated: 'Underrated',
+  Wrong_topic: 'Wrong topic',
+  Incidental_mention: 'Incidental mention',
+  Incorrect_entity_match: 'Incorrect entity match',
+  Other: 'Other',
+} as const;
+
+export interface ArticleCorrectionInput {
+  field: ArticleCorrectionInputField;
+  mode: ArticleCorrectionInputMode;
+  /** @maxLength 120 */
+  value?: string;
+  reason: ArticleCorrectionInputReason;
+  /** @maxLength 4000 */
+  notes?: string;
+  /**
+     * @minLength 8
+     * @maxLength 100
+     */
+  requestId: string;
+  /** @minimum 0 */
+  expectedRevision: number;
+}
+
+export interface ClassificationSnapshot {
+  effective: string;
+  raw?: string;
+  mode: string;
+  origin?: string;
+  automatic?: AutomaticAssessment;
+}
+
+export type ArticleFeedbackAction = typeof ArticleFeedbackAction[keyof typeof ArticleFeedbackAction];
+
+
+export const ArticleFeedbackAction = {
+  correction: 'correction',
+  deletion: 'deletion',
+  restoration: 'restoration',
+  'system-correction': 'system-correction',
+} as const;
+
+export interface ArticleFeedback {
+  id: string;
+  articleId: string;
+  action: ArticleFeedbackAction;
+  headline: string;
+  outlet?: string;
+  publishedAt?: string;
+  timestamp: string;
+  actor: string;
+  field?: string;
+  reason: string;
+  notes?: string;
+  duplicateOf?: string;
+  before?: ClassificationSnapshot;
+  after?: ClassificationSnapshot;
+  snapshot: RecordInput;
+}
+
+export interface ArticleFeedbackPage {
+  events: ArticleFeedback[];
+  total: number;
+  page: number;
+  pageSize: number;
+  reasons?: string[];
+}
+
 export interface ArticleContent {
   text: string;
   raw: string;
@@ -1078,6 +1285,10 @@ export type GetQuickEnrichmentText200 = {
 
 export type GetArticleContentParams = {
 capture?: string;
+/**
+ * @maxLength 1000
+ */
+feedback?: string;
 };
 
 export type SearchArticleContentParams = {
@@ -1094,6 +1305,29 @@ export type EnqueueEnrichmentBody = {
 export type EnqueueEnrichment200 = {
   queued: number;
 };
+
+export type GetArticleFeedbackParams = {
+/**
+ * @maxLength 300
+ */
+q?: string;
+action?: GetArticleFeedbackAction;
+reason?: string;
+/**
+ * @minimum 1
+ */
+page?: number;
+};
+
+export type GetArticleFeedbackAction = typeof GetArticleFeedbackAction[keyof typeof GetArticleFeedbackAction];
+
+
+export const GetArticleFeedbackAction = {
+  correction: 'correction',
+  deletion: 'deletion',
+  restoration: 'restoration',
+  'system-correction': 'system-correction',
+} as const;
 
 export type RequestImportUpload200 = {
   uploadId: string;

@@ -1,4 +1,4 @@
-import { db, entityIdentifiers } from "@workspace/db";
+import { db, entityIdentifiers, tripwireRecords } from "@workspace/db";
 import { and, eq, sql, inArray, or, lte } from "drizzle-orm";
 import { entities, captures, evidence, assertions, candidates, lineage, automation, jobs,
   W, uid, key, settings, scoped, syncCaptures, logDecision, type Tx } from "./entity-db";
@@ -6,6 +6,7 @@ import { extractCapture, providerConfig, RESERVED_TOKENS, MAX_EXCERPT, type Extr
 import { readContent } from "./tripwire-content-storage";
 import { recordDevelopment } from "./entity-actions";
 import { logger } from "./logger";
+import { articleLock } from "./tripwire-feedback";
 
 const worker = uid();
 const LEASE_MS = 90000;
@@ -22,6 +23,9 @@ export async function enqueueCaptures() {
       and(eq(jobs.captureId, captures.id), eq(jobs.workspace, captures.workspace), eq(jobs.policyVersion, config.policyVersion)))
       .where(and(scoped(captures), eq(captures.authorized, true), sql`${jobs.id} is null`)).limit(Math.min(100, 1000 - (size?.count ?? 0)));
     for (const { capture } of rows) {
+      const [dismissed] = await tx.select({ id: tripwireRecords.id }).from(tripwireRecords).where(and(
+        eq(tripwireRecords.id, `${W}:${capture.articleId}`), sql`${tripwireRecords.data}->>'hidden' = 'true'`));
+      if (dismissed) continue;
       await tx.insert(jobs).values({ id: key(W, capture.id, config.policyVersion), workspace: W,
         captureId: capture.id, policyVersion: config.policyVersion }).onConflictDoNothing();
     }
@@ -30,6 +34,7 @@ export async function enqueueCaptures() {
 }
 export async function leaseJob(owner = worker, providerOverride?: { cost: number } | null, onlyJobId?: string) {
   return db.transaction(async tx => {
+    await articleLock(tx, W);
     const config = await settings(tx, true);
     if (config.mode === "paused" || !config.authorized || config.failures >= 5) return null;
     const now = new Date();
@@ -47,6 +52,11 @@ export async function leaseJob(owner = worker, providerOverride?: { cost: number
       return null;
     }
     const [capture] = await tx.select().from(captures).where(and(scoped(captures), eq(captures.id, job.captureId)));
+    const [dismissed] = capture ? await tx.select({ id: tripwireRecords.id }).from(tripwireRecords).where(and(
+      eq(tripwireRecords.id, `${W}:${capture.articleId}`), sql`${tripwireRecords.data}->>'hidden' = 'true'`)) : [];
+    if (dismissed) {
+      await tx.update(jobs).set({ status: "excluded", error: "Article dismissed; evidence retained" }).where(eq(jobs.id, job.id)); return null;
+    }
     if (!capture?.authorized) {
       await tx.update(jobs).set({ status: "excluded", error: "Capture processing not authorized" }).where(eq(jobs.id, job.id)); return null;
     }
@@ -69,6 +79,7 @@ export async function leaseJob(owner = worker, providerOverride?: { cost: number
 // All writes plus job completion are one transaction, fenced by owner/epoch/expiry.
 export async function commitExtraction(jobId: string, result: ExtractionResult, owner = worker) {
   return db.transaction(async tx => {
+    await articleLock(tx, W);
     const config = await settings(tx, true);
     const [job] = await tx.select().from(jobs).where(and(scoped(jobs), eq(jobs.id, jobId))).for("update");
     if (!job || job.status !== "leased" || job.leaseOwner !== owner || !job.leaseUntil
@@ -76,6 +87,12 @@ export async function commitExtraction(jobId: string, result: ExtractionResult, 
       return false;
     const [capture] = await tx.select().from(captures).where(and(scoped(captures), eq(captures.id, job.captureId)));
     if (!capture?.authorized) return false;
+    const [dismissed] = await tx.select({ id: tripwireRecords.id }).from(tripwireRecords).where(and(
+      eq(tripwireRecords.id, `${W}:${capture.articleId}`), sql`${tripwireRecords.data}->>'hidden' = 'true'`));
+    if (dismissed) {
+      await tx.update(jobs).set({ status: "excluded", leaseOwner: null, leaseUntil: null, error: "Article dismissed before commit; evidence retained" }).where(eq(jobs.id, job.id));
+      return false;
+    }
     const { text } = await readContent(capture.hash);
     // Revalidate at commit, independent of provider adapter.
     const { validateExtraction } = await import("./entity-extractor");

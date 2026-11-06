@@ -7,6 +7,7 @@ import { mergeArticleContent, type Capture } from "./tripwire-content";
 import { archiveArticle, hydrateArticles } from "./tripwire-content-storage";
 import { mergeClassification } from "./tripwire-classification";
 import { publicationUpdate } from "./tripwire-publication";
+import { articleLock, currentArticle, FeedbackError, canonicalArticleUrl, classificationSnapshot, appendFeedback, CORRECTION_REASONS } from "./tripwire-feedback";
 
 export type RecordData = typeof SaveRecordBody._output;
 export async function seedConfig() {
@@ -64,13 +65,51 @@ export async function recordsFor(userId?: string | null, includeContent = true) 
   return includeContent ? hydrateArticles(records) : records;
 }
 
-export async function writeRecord(userId: string, data: RecordData, protectMetadata = false) {
+export async function writeRecord(userId: string, data: RecordData, protectMetadata = false, analystEdit = false) {
   const baseId = data.id ?? crypto.randomUUID();
   // Per-user shadow copies allow edits/bookmarks without mutating shared feed metadata.
   const id = `${userId}:${baseId}`;
   return db.transaction(async tx => {
-  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${id}))`);
+  await articleLock(tx, userId);
+  const correctionEvents: { field: "impact" | "topic"; before: ReturnType<typeof classificationSnapshot> }[] = [];
+  let original: RecordData | undefined;
   if (data.kind === "article") {
+    const canonical = canonicalArticleUrl(data.url);
+    const hiddenRows = await tx.select().from(tripwireRecords).where(and(eq(tripwireRecords.owner, userId), eq(tripwireRecords.kind, "article"), sql`${tripwireRecords.data}->>'hidden' = 'true'`));
+    if (hiddenRows.some(row => row.id === id || canonical && canonicalArticleUrl(String(row.data.url ?? "")) === canonical)) {
+      throw new FeedbackError(409, "This article is dismissed. Restore it from Dashboard feedback before updating it.");
+    }
+    try { original = (await currentArticle(tx, userId, baseId)).data; } catch (error) { if (!(error instanceof FeedbackError && error.status === 404)) throw error; }
+    if (original) {
+      const incoming = data;
+      data = { ...original, ...data, ...mergeArticleContent(original, data), automaticAssessment: original.automaticAssessment, impact: original.impact, topic: original.topic,
+        impactMode: original.impactMode, topicMode: original.topicMode, impactOverrideOrigin: original.impactOverrideOrigin,
+        topicOverrideOrigin: original.topicOverrideOrigin, classificationRevision: original.classificationRevision };
+      if (analystEdit) {
+        for (const field of ["impact", "topic"] as const) {
+          const before = classificationSnapshot(original, field);
+          const mode = incoming[`${field}Mode`] ?? (field === "impact" && !incoming.impact ? "auto" : before.mode);
+          const desired = mode === "auto" ? original.automaticAssessment?.[field] ?? incoming[field] : incoming[field];
+          if (mode === "manual" && (!desired?.trim() || field === "impact" && !["critical", "high", "low"].includes(desired))) {
+            throw new FeedbackError(400, "Select a valid classification value.");
+          }
+          if (desired === before.raw && mode === before.mode) continue;
+          if (!incoming.classificationReason || !CORRECTION_REASONS.includes(incoming.classificationReason) || incoming.classificationReason === "Other" && !incoming.classificationNotes?.trim()) {
+            throw new FeedbackError(400, "Classification changes require a reason; Other requires a note.");
+          }
+          if (incoming.expectedClassificationRevision !== (original.classificationRevision ?? 0)) throw new FeedbackError(409, "Classifications changed. Refresh and make a new decision.");
+          Object.assign(data, { [field]: desired, [`${field}Mode`]: mode, [`${field}OverrideOrigin`]: mode === "manual" ? "analyst" : undefined });
+          correctionEvents.push({ field, before });
+        }
+        if (correctionEvents.length) data.classificationRevision = (original.classificationRevision ?? 0) + 1;
+      }
+    } else {
+      // Ignore client-supplied automatic suggestions and revisions.
+      data = { ...data, automaticAssessment: undefined, classificationRevision: 0,
+        impactMode: data.impact ? "manual" : "auto", topicMode: analystEdit && data.topic ? "manual" : "auto",
+        impactOverrideOrigin: data.impact && analystEdit ? "analyst" : undefined,
+        topicOverrideOrigin: data.topic && analystEdit ? "analyst" : undefined };
+    }
     const [existing] = await tx.select().from(tripwireRecords).where(and(eq(tripwireRecords.id, id), eq(tripwireRecords.owner, userId)));
     if (existing) {
       if (protectMetadata) {
@@ -88,6 +127,17 @@ export async function writeRecord(userId: string, data: RecordData, protectMetad
     }
   }
   data = await archiveArticle(data);
+  for (const event of correctionEvents) {
+    await appendFeedback(tx, userId, baseId, original!, { ...event, action: "correction", after: classificationSnapshot(data, event.field),
+      reason: data.classificationReason!, notes: data.classificationNotes, requestId: `editor:${data.classificationRevision}:${event.field}` });
+  }
+  if (original?.automaticAssessment && JSON.stringify(original.automaticAssessment) !== JSON.stringify(data.automaticAssessment)) {
+    await appendFeedback(tx, userId, baseId, original, { action: "system-correction", field: "impact",
+      reason: "Retained content or automatic policy reassessment", actor: "System",
+      before: classificationSnapshot(original, "impact"), after: classificationSnapshot(data, "impact"), requestId: crypto.randomUUID() });
+    data.classificationRevision = Math.max(data.classificationRevision ?? 0, (original.classificationRevision ?? 0) + 1);
+  }
+  delete data.classificationReason; delete data.classificationNotes; delete data.expectedClassificationRevision;
   const now = new Date();
   const [row] = await tx.insert(tripwireRecords).values({id, owner: userId, kind: data.kind, data: {...data, baseId}, updatedAt: now})
     .onConflictDoUpdate({target: tripwireRecords.id, set: {data: {...data, baseId}, kind: data.kind, updatedAt: now}}).returning();
@@ -98,6 +148,8 @@ export async function writeRecord(userId: string, data: RecordData, protectMetad
 export async function removeRecord(userId: string, id: string) {
   const privateId = `${userId}:${id}`;
   const [shared] = await db.select().from(tripwireRecords).where(and(eq(tripwireRecords.id, id), eq(tripwireRecords.owner, "public")));
+  const [owned] = await db.select().from(tripwireRecords).where(and(eq(tripwireRecords.id, privateId), eq(tripwireRecords.owner, userId)));
+  if (shared?.kind === "article" || owned?.kind === "article") throw new FeedbackError(400, "Article deletion requires a reason.");
   if (shared) {
     const data = {...shared.data, baseId: id, hidden: true};
     await db.insert(tripwireRecords).values({id: privateId, owner: userId, kind: shared.kind, data})

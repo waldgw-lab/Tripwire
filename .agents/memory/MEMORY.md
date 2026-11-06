@@ -5,3 +5,4 @@
 - [Testing visibility](testing-visibility.md) — keep synthetic news fixtures out of the user's shared feed, even during temporary browser verification.
 - [Article identity](article-identity.md) — verify identity by source URL; require explicit review before redirecting a manual import to another known record.
 - [Entity automation gates](entity-automation-gates.md) — stage discovery separately from live decisions; use journaled migrations for workspace-scoped graph constraints.
+- [Classification feedback](classification-feedback.md) — corrections explain article judgments; they never imply global exclusions, entity removal or verified sourcing.
