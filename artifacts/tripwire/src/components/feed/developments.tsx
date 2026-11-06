@@ -64,7 +64,9 @@ export function DevelopmentsPanel({ articleId, compact }: { articleId?: string; 
   const params: ListDevelopmentsParams = { ...(articleId && { articleId }), ...(disp && { disposition: disp }), offset };
   const q = useListDevelopments(params, { query: { queryKey: getListDevelopmentsQueryKey(params), refetchInterval: POLL_MS, placeholderData: p => p } });
   const items = q.data?.items ?? []; const total = q.data?.total ?? 0;
-  if (compact && !q.isLoading && !q.isError && !total) return null;
+  // These filter entity developments, not feed articles. Do not expose an
+  // inactive empty control strip, but keep a selected empty category escapable.
+  if (!disp && offset === 0 && !q.isError && (q.isLoading || !total)) return null;
   return <section className={compact ? 'mt-6' : 'px-3 pt-3 md:px-5'} data-testid={articleId ? 'panel-article-developments' : 'panel-developments'}>
     <div className="mb-2 flex flex-wrap items-center gap-1">
       <button onClick={() => setCollapsed(v => !v)} aria-expanded={!collapsed} className="mr-2 inline-flex items-center gap-1 font-display text-lg font-semibold uppercase tracking-wide" data-testid="button-toggle-developments">

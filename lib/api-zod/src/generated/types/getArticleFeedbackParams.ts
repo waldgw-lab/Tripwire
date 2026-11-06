@@ -5,8 +5,10 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { GetArticleFeedbackAction } from './getArticleFeedbackAction';
+import type { GetArticleFeedbackScope } from './getArticleFeedbackScope';
 
 export type GetArticleFeedbackParams = {
+scope?: GetArticleFeedbackScope;
 /**
  * @maxLength 300
  */

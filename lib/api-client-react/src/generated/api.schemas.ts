@@ -968,6 +968,17 @@ export interface ImportAnalyzeRequest {
   targetId?: string;
 }
 
+/**
+ * Explicitly update a match or create a distinct source item.
+ */
+export type ImportCommitRequestMatchAction = typeof ImportCommitRequestMatchAction[keyof typeof ImportCommitRequestMatchAction];
+
+
+export const ImportCommitRequestMatchAction = {
+  update: 'update',
+  create: 'create',
+} as const;
+
 export type ImportCommitRequestSourceType = typeof ImportCommitRequestSourceType[keyof typeof ImportCommitRequestSourceType];
 
 
@@ -978,6 +989,8 @@ export const ImportCommitRequestSourceType = {
 
 export interface ImportCommitRequest {
   draftId: string;
+  /** Explicitly update a match or create a distinct source item. */
+  matchAction?: ImportCommitRequestMatchAction;
   /** @minLength 1 */
   title: string;
   outlet?: string;
@@ -1307,6 +1320,7 @@ export type EnqueueEnrichment200 = {
 };
 
 export type GetArticleFeedbackParams = {
+scope?: GetArticleFeedbackScope;
 /**
  * @maxLength 300
  */
@@ -1318,6 +1332,14 @@ reason?: string;
  */
 page?: number;
 };
+
+export type GetArticleFeedbackScope = typeof GetArticleFeedbackScope[keyof typeof GetArticleFeedbackScope];
+
+
+export const GetArticleFeedbackScope = {
+  analyst: 'analyst',
+  all: 'all',
+} as const;
 
 export type GetArticleFeedbackAction = typeof GetArticleFeedbackAction[keyof typeof GetArticleFeedbackAction];
 

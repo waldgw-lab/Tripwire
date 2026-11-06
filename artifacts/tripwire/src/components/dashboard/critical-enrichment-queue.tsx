@@ -197,6 +197,7 @@ export function CriticalEnrichmentQueue() {
           {isFetching && !isLoading && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-foreground/60" aria-label="Updating" />}
         </div>
       </div>
+      <p className="border-b border-border px-4 py-2 text-xs text-muted-foreground">Critical impact · first ingested in the last 12 hours · still missing article text. RSS summaries alone do not count as enrichment.</p>
       {isLoading ? (
         <div className="space-y-2 p-4">{[0, 1, 2].map(i => <div key={i} className="h-6 animate-pulse rounded bg-muted" />)}</div>
       ) : isError || !data ? (

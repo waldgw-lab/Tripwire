@@ -33,7 +33,7 @@ export async function reassessArchiveBatch(owner = "workspace", batchSize = 40) 
     const cursor = String(job?.data.cursor ?? "");
     const rows = await tx.select().from(tripwireRecords).where(and(eq(tripwireRecords.kind, "article"),
       inArray(tripwireRecords.owner, ["public", owner]), or(gt(tripwireRecords.id, cursor),
-        sql`coalesce(${tripwireRecords.data}->'automaticAssessment'->>'policyVersion', '') <> ${IMPACT_POLICY_VERSION}`))).orderBy(asc(tripwireRecords.id)).limit(Math.min(100, Math.max(1, batchSize)));
+        sql`coalesce(${tripwireRecords.data}->'automaticAssessment'->>'policyVersion', '') <> ${IMPACT_POLICY_VERSION}`))).orderBy(asc(tripwireRecords.id)).limit(Math.min(100, Math.max(1, batchSize))).for("update");
     const watches = await tx.select().from(tripwireRecords).where(and(eq(tripwireRecords.kind, "watch"), inArray(tripwireRecords.owner, ["public", owner])));
     const changes = { impact: 0, topic: 0, entities: 0, review: 0 };
     for (const row of rows) {
@@ -99,12 +99,18 @@ export async function reassessArchiveBatch(owner = "workspace", batchSize = 40) 
   });
 }
 export function startArchiveReassessment() {
+  let conflicts = 0;
   const run = async () => {
     try {
       const state = await reassessArchiveBatch();
+      conflicts = 0;
       if (!state.done) setTimeout(() => { void run(); }, 1000).unref();
       else logger.info(state, "Archive classification reassessment complete");
     } catch (err) {
+      if (err instanceof Error && err.message === "Concurrent archive change; retry this batch" && ++conflicts <= 5) {
+        setTimeout(() => { void run(); }, Math.min(30000, 1000 * 2 ** conflicts)).unref();
+        return;
+      }
       logger.warn({ err }, "Archive reassessment paused; next startup or explicit runner resumes its durable cursor");
     }
   };

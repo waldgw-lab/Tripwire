@@ -3,7 +3,7 @@ import {
   ArticleCorrectionInputReason, ArticleDismissalInputReason, GetArticleFeedbackAction, getGetArticleFeedbackQueryKey, getGetFeedbackArticleQueryKey,
   useGetArticleFeedback, useGetFeedbackArticle, type ArticleFeedback, type ClassificationSnapshot, type GetArticleFeedbackParams,
 } from '@workspace/api-client-react';
-import { ChevronLeft, ChevronRight, ExternalLink, RotateCcw, Search } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, RotateCcw, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ErrorState } from '@/components/bits';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -55,6 +55,8 @@ function Retained({ event, onClose }: { event: ArticleFeedback; onClose: () => v
 }
 
 export function FeedbackLog() {
+  const [expanded, setExpanded] = useState(false);
+  const [scope, setScope] = useState<'analyst' | 'all'>('analyst');
   const [input, setInput] = useState('');
   const [q, setQ] = useState('');
   const [action, setAction] = useState('');
@@ -64,8 +66,8 @@ export function FeedbackLog() {
   const [restoringId, setRestoringId] = useState<string | null>(null);
   const restore = useRestore();
   useEffect(() => { const t = setTimeout(() => { setQ(input.trim()); setPage(1); }, 300); return () => clearTimeout(t); }, [input]);
-  const params: GetArticleFeedbackParams = { q: q || undefined, action: (action || undefined) as GetArticleFeedbackParams['action'], reason: reason || undefined, page };
-  const { data, isLoading, isError, refetch, isFetching } = useGetArticleFeedback(params, { query: { queryKey: getGetArticleFeedbackQueryKey(params), placeholderData: p => p } });
+  const params: GetArticleFeedbackParams = { scope, q: q || undefined, action: (action || undefined) as GetArticleFeedbackParams['action'], reason: reason || undefined, page };
+  const { data, isLoading, isError, refetch, isFetching } = useGetArticleFeedback(params, { query: { enabled: expanded, queryKey: getGetArticleFeedbackQueryKey(params), placeholderData: p => p, refetchInterval: expanded ? 30000 : false } });
   const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
   const filtered = !!(q || action || reason);
 
@@ -73,26 +75,33 @@ export function FeedbackLog() {
     <section className="tw-glass mt-6 rounded-xl border border-border" data-testid="section-feedback">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2.5">
         <div className="flex items-baseline gap-3">
-          <h2 className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Feedback</h2>
-          {data && <span className="font-mono text-[11px] text-muted-foreground" data-testid="text-feedback-total">{data.total.toLocaleString('en-US')} events</span>}
+          <button onClick={() => setExpanded(v => !v)} aria-expanded={expanded} className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground" data-testid="button-toggle-feedback">
+            {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />} Correction history
+          </button>
+          {data && <span className="font-mono text-[11px] text-muted-foreground" data-testid="text-feedback-total">{data.total.toLocaleString('en-US')} {scope === 'analyst' ? 'analyst actions' : 'meaningful changes'}</span>}
           {isFetching && !isLoading && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-foreground/60" aria-label="Updating" />}
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
+        {expanded && <div className="flex flex-wrap items-center gap-1.5">
+          <select aria-label="History scope" value={scope} onChange={e => { setScope(e.target.value as typeof scope); setAction(''); setReason(''); setPage(1); }} className={ctl} data-testid="select-feedback-scope">
+            <option value="analyst">Analyst actions</option><option value="all">All meaningful changes</option>
+          </select>
           <label className="relative">
             <Search className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
             <input value={input} maxLength={300} onChange={e => setInput(e.target.value)} placeholder="Headline, outlet, note" aria-label="Search feedback" className={cn(ctl, 'w-48 pl-6')} data-testid="input-feedback-search" />
           </label>
           <select aria-label="Action" value={action} onChange={e => { setAction(e.target.value); setPage(1); }} className={ctl} data-testid="select-feedback-action">
             <option value="">Action</option>
-            {Object.values(GetArticleFeedbackAction).map(a => <option key={a} value={a}>{a.replace('-', ' ')}</option>)}
+            {Object.values(GetArticleFeedbackAction).filter(a => scope === 'all' || a !== 'system-correction').map(a => <option key={a} value={a}>{a.replace('-', ' ')}</option>)}
           </select>
           <select aria-label="Reason" value={reason} onChange={e => { setReason(e.target.value); setPage(1); }} className={ctl} data-testid="select-feedback-reason">
             <option value="">Reason</option>
             {[...new Set([...REASONS, ...(data?.reasons ?? [])])].map(r => <option key={r} value={r}>{r}</option>)}
           </select>
           {filtered && <button type="button" onClick={() => { setInput(''); setQ(''); setAction(''); setReason(''); setPage(1); }} className="h-7 px-1.5 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground" data-testid="button-feedback-reset">Reset</button>}
-        </div>
+        </div>}
       </div>
+      {expanded && <>
+      <p className="px-4 py-2 text-xs text-muted-foreground">Audit history, not a task queue. Review changes with View, or Restore a dismissed article. Automatic updates do not change monitoring policy.</p>
       {isLoading ? (
         <div className="space-y-2 p-4">{[0, 1, 2, 3].map(i => <div key={i} className="h-5 animate-pulse rounded bg-muted" />)}</div>
       ) : isError || !data ? (
@@ -148,6 +157,7 @@ export function FeedbackLog() {
         </div>
       )}
       {viewing && <Retained event={viewing} onClose={() => setViewing(null)} />}
+      </>}
     </section>
   );
 }

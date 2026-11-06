@@ -4,10 +4,13 @@
  * Api
  * OpenAPI spec version: 1.0.0
  */
+import type { ImportCommitRequestMatchAction } from './importCommitRequestMatchAction';
 import type { ImportCommitRequestSourceType } from './importCommitRequestSourceType';
 
 export interface ImportCommitRequest {
   draftId: string;
+  /** Explicitly update a match or create a distinct source item. */
+  matchAction?: ImportCommitRequestMatchAction;
   /** @minLength 1 */
   title: string;
   outlet?: string;

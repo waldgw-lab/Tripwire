@@ -324,6 +324,7 @@ paths:
     get:
       operationId: getArticleFeedback
       parameters:
+        - { name: scope, in: query, schema: { type: string, enum: [analyst, all], default: analyst } }
         - { name: q, in: query, schema: { type: string, maxLength: 300 } }
         - { name: action, in: query, schema: { type: string, enum: [correction, deletion, restoration, system-correction] } }
         - { name: reason, in: query, schema: { type: string } }
@@ -719,6 +720,7 @@ components:
       required: [draftId, title]
       properties:
         draftId: { type: string }
+        matchAction: { type: string, enum: [update, create], description: "Explicitly update a match or create a distinct source item." }
         title: { type: string, minLength: 1 }
         outlet: { type: string }
         url: { type: string }

@@ -127,7 +127,7 @@ export async function analyzeImport(userId: string, input: unknown, options: { a
     const articleId = existing?.id ?? crypto.randomUUID();
     candidate.retainedContent = [capture];
     const archivedCandidate = await archiveArticle(candidate);
-    await db.insert(tripwireRecords).values({ id: `draft:${draftId}`, owner: userId, kind: "import-draft", data: { candidate: archivedCandidate, articleId, matchedId: existing?.id, capture: archivedCandidate.retainedContent?.[0], source } });
+    await db.insert(tripwireRecords).values({ id: `draft:${draftId}`, owner: userId, kind: "import-draft", data: { candidate: archivedCandidate, articleId, matchedId: existing?.id, matchReason: matched.reason, capture: archivedCandidate.retainedContent?.[0], source } });
     return AnalyzeImportResponse.parse({ draftId, candidate, matchedId: existing?.id, matchReason: matched.conflict ? "Matching another existing article" : target ? "Selected article" : matched.reason, warnings, characterCount: candidate.fullText?.length ?? 0, source });
 }
 
@@ -165,9 +165,18 @@ export async function commitImport(userId: string, input: unknown) {
       if (draft.data.matchedId && !existing) throw new IntakeError("The matching article was removed. Analyze again.", 409);
       const finalMetadata = { title: body.title.trim(), outlet: body.outlet?.trim() || undefined, url };
       const match = matchImport(finalMetadata, records);
-      if (match.ambiguous) throw new IntakeError("Multiple articles match these details. Open the intended item and enrich it there.", 409);
-      if (existing && match.record && match.record.id !== existing.id) throw new IntakeError("These details identify another article. Analyze it separately.", 409);
-      existing ??= match.record;
+      if (body.matchAction === "create") {
+        // A tentative headline match can be declined. Exact source identity
+        // cannot: require a distinct URL rather than duplicating one article.
+        const sourceMatch = url ? matchImport({ title: "", url }, records) : {};
+        if (sourceMatch.record || sourceMatch.ambiguous || !url && draft.data.matchReason === "Matching source URL")
+          throw new IntakeError("That source URL already belongs to an existing item. Update it, or enter a different URL for a separate article.", 409);
+        existing = undefined;
+      } else {
+        if (match.ambiguous) throw new IntakeError("Multiple articles match these details. Open the intended item and enrich it there.", 409);
+        if (existing && match.record && match.record.id !== existing.id) throw new IntakeError("These details identify another article. Analyze it separately.", 409);
+        existing ??= match.record;
+      }
       const keepBody = !!existing?.fullText && !prefersIncomingContent(existing, { ...candidate, fullTextComplete: body.fullTextComplete ?? false });
       const oldCapture = existing?.fullText ? [captureContent(existing.fullText, "previous article text")] : [];
       const retainedContent = mergeCaptures(existing?.retainedContent, oldCapture, candidate.retainedContent);
@@ -179,7 +188,7 @@ export async function commitImport(userId: string, input: unknown) {
         ? [...reviewed, ...(candidate.credits ?? existing?.credits ?? []).filter(c => c.role !== "author" && !reviewed.some(r => r.name === c.name))]
         : existing?.credits ?? candidate.credits;
       const credits = reviewedContributors(baseCredits ?? [], body.contributors);
-      const data: RecordData = { ...candidate, ...existing, ...mergeClassification(existing ?? {}, candidate), id: existing?.id ?? String(draft.data.articleId), kind: "article", ...finalMetadata,
+      const data: RecordData = { ...candidate, ...existing, ...mergeClassification(existing ?? {}, candidate), id: existing?.id ?? (body.matchAction === "create" ? crypto.randomUUID() : String(draft.data.articleId)), kind: "article", ...finalMetadata,
         discoveryOnly: existing?.discoveryOnly ? !url || !publisherUrl(url, finalMetadata.outlet ?? "") : false,
         byline, credits, journalists: credits?.filter(c => c.role === "author").map(c => c.name) ?? [],
         publishedAt: body.publishedAt || undefined,

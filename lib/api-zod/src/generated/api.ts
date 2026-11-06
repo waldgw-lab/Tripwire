@@ -1700,6 +1700,7 @@ export const RestoreArticleResponse = zod.object({
 }))
 
 
+export const getArticleFeedbackQueryScopeDefault = `analyst`;
 export const getArticleFeedbackQueryQMax = 300;
 
 export const getArticleFeedbackQueryPageDefault = 1;
@@ -1707,6 +1708,7 @@ export const getArticleFeedbackQueryPageDefault = 1;
 
 
 export const GetArticleFeedbackQueryParams = zod.object({
+  "scope": zod.enum(['analyst', 'all']).default(getArticleFeedbackQueryScopeDefault),
   "q": zod.coerce.string().max(getArticleFeedbackQueryQMax).optional(),
   "action": zod.enum(['correction', 'deletion', 'restoration', 'system-correction']).optional(),
   "reason": zod.coerce.string().optional(),
@@ -2421,6 +2423,7 @@ export const commitImportBodyContributorsMax = 2000;
 
 export const CommitImportBody = zod.object({
   "draftId": zod.string(),
+  "matchAction": zod.enum(['update', 'create']).optional().describe('Explicitly update a match or create a distinct source item.'),
   "title": zod.string().min(1),
   "outlet": zod.string().optional(),
   "url": zod.string().optional(),

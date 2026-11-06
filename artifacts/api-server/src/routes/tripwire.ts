@@ -80,15 +80,24 @@ router.post("/tripwire/records/:id/restore", async (req, res): Promise<void> => 
 router.get("/tripwire/feedback", async (req, res): Promise<void> => {
   const input = GetArticleFeedbackQueryParams.safeParse(req.query);
   if (!input.success) { res.status(400).json({ error: input.error.message }); return; }
-  const { q, action, reason, page = 1 } = input.data;
+  const { q, action, reason, scope = "analyst", page = 1 } = input.data;
   const where = and(eq(tripwireRecords.owner, workspaceIdentity(req).userId), eq(tripwireRecords.kind, "feedback"),
+    scope === "analyst" ? sql`${tripwireRecords.data}->>'action' <> 'system-correction'` : undefined,
+    // Retain full audit records, but do not present metadata-only assessment
+    // refreshes as rating/topic changes requiring an analyst's attention.
+    sql`(${tripwireRecords.data}->>'action' <> 'system-correction'
+      OR ${tripwireRecords.data}->>'field' NOT IN ('impact', 'topic')
+      OR ${tripwireRecords.data}->'before'->>'effective' IS DISTINCT FROM ${tripwireRecords.data}->'after'->>'effective'
+      OR ${tripwireRecords.data}->'before'->>'mode' IS DISTINCT FROM ${tripwireRecords.data}->'after'->>'mode'
+      OR ${tripwireRecords.data}->'before'->>'origin' IS DISTINCT FROM ${tripwireRecords.data}->'after'->>'origin')`,
     action ? sql`${tripwireRecords.data}->>'action' = ${action}` : undefined,
     reason ? sql`${tripwireRecords.data}->>'reason' = ${reason}` : undefined,
     q?.trim() ? sql`strpos(lower(concat_ws(' ', ${tripwireRecords.data}->>'headline', ${tripwireRecords.data}->>'outlet', ${tripwireRecords.data}->>'notes', ${tripwireRecords.data}->>'reason')), lower(${q.trim()})) > 0` : undefined);
   const [count] = await db.select({ total: sql<number>`count(*)::integer` }).from(tripwireRecords).where(where);
   const rows = await db.select({ data: tripwireRecords.data }).from(tripwireRecords).where(where).orderBy(desc(tripwireRecords.createdAt), desc(tripwireRecords.id)).limit(25).offset((page - 1) * 25);
   const reasons = await db.selectDistinct({ reason: sql<string>`${tripwireRecords.data}->>'reason'` }).from(tripwireRecords)
-    .where(and(eq(tripwireRecords.owner, workspaceIdentity(req).userId), eq(tripwireRecords.kind, "feedback")));
+    .where(and(eq(tripwireRecords.owner, workspaceIdentity(req).userId), eq(tripwireRecords.kind, "feedback"),
+      scope === "analyst" ? sql`${tripwireRecords.data}->>'action' <> 'system-correction'` : undefined));
   res.setHeader("Cache-Control", "private, no-store");
   res.json(GetArticleFeedbackResponse.parse({ events: rows.map(r => r.data), total: count?.total ?? 0, page, pageSize: 25, reasons: reasons.map(r => r.reason).filter(Boolean).sort() }));
 });

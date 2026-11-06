@@ -25,6 +25,7 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
   const [uploading, setUploading] = useState(false);
   const [draft, setDraft] = useState<ImportDraft | null>(null);
   const [reviewedMatch, setReviewedMatch] = useState(false);
+  const [matchAction, setMatchAction] = useState<'update' | 'create' | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [done, setDone] = useState<TrackedRecord | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -35,7 +36,7 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
   const busy = uploading || analyze.isPending;
   const urlMode = !file && isUrl(text);
   const differentMatch = !!targetId && !!draft?.matchedId && draft.matchedId !== targetId;
-  const needsMatchReview = differentMatch && !reviewedMatch;
+  const needsMatchReview = !!draft?.matchedId && !reviewedMatch;
 
   const pickFile = (f: File | undefined) => {
     setError(null);
@@ -46,7 +47,7 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
   };
 
   const run = async () => {
-    setError(null); setDone(null); setReviewedMatch(false);
+    setError(null); setDone(null); setReviewedMatch(false); setMatchAction(null);
     try {
       let body: { text?: string; url?: string; uploadId?: string; targetId?: string };
       if (file) {
@@ -80,6 +81,7 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
     commit.mutate({
       data: {
         draftId: draft.draftId, title: meta.title.trim(), outlet: meta.outlet || undefined, url: meta.url || undefined,
+        matchAction: matchAction ?? undefined,
         byline: meta.byline || undefined,
         contributors: meta.contributors,
         // The minute-precision form must not truncate seconds or relabel an
@@ -99,13 +101,13 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
   };
 
   const set = <K extends keyof Meta>(k: K, v: Meta[K]) => setMeta(m => (m ? { ...m, [k]: v } : m));
-  const matchedTarget = draft?.matchedId ?? targetId;
+  const matchedTarget = matchAction === 'create' ? undefined : draft?.matchedId ?? targetId;
 
   return (
     <section className={cn('rounded-xl border border-border bg-card/85 backdrop-blur-sm', compact ? 'p-3' : 'p-4 md:p-5')} data-testid="panel-importer">
       {targetId && (
         <p className="mb-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground" data-testid="text-import-target">
-          Enriching: {differentMatch && reviewedMatch ? draft?.candidate.title : targetTitle ?? 'this article'}
+          {matchAction === 'create' ? 'Creating separate item' : `Enriching: ${differentMatch && reviewedMatch ? draft?.candidate.title : targetTitle ?? 'this article'}`}
         </p>
       )}
       {!draft && (
@@ -139,12 +141,13 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
 
       {draft && meta && needsMatchReview && (
         <div className="space-y-3 rounded-md border border-border p-3" data-testid="panel-import-match-conflict">
-          <p className="text-xs text-muted-foreground">This content matches another existing item:</p>
+          <p className="text-xs text-muted-foreground">A possible existing item was identified{draft.matchReason ? ` · ${draft.matchReason}` : ''}. Would you like to update it or create a separate item?</p>
           <p className="text-sm font-medium" data-testid="text-import-matching-title">{draft.candidate.title}</p>
-          <p className="text-xs text-muted-foreground">Your paste is retained. The currently selected item will not be changed.</p>
+          <p className="text-xs text-muted-foreground">Your content is retained. Nothing is saved until you review and confirm.{differentMatch ? ' The originally selected item will not be changed.' : ''}</p>
           <div className="flex flex-wrap justify-end gap-2">
             <button onClick={() => { setDraft(null); setMeta(null); }} className="h-8 rounded-md border border-border px-3 text-xs" data-testid="button-import-match-back">Back</button>
-            <button onClick={() => setReviewedMatch(true)} className="h-8 rounded-md bg-primary px-3 text-xs text-primary-foreground" data-testid="button-import-review-match">Review matching item</button>
+            <button onClick={() => { setMatchAction('create'); setReviewedMatch(true); }} className="h-8 rounded-md border border-border px-3 text-xs" data-testid="button-import-create-separate">Create separate item</button>
+            <button onClick={() => { setMatchAction('update'); setReviewedMatch(true); }} className="h-8 rounded-md bg-primary px-3 text-xs text-primary-foreground" data-testid="button-import-review-match">Update matched item</button>
           </div>
         </div>
       )}
@@ -161,6 +164,8 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
               {draft.warnings.map((w, i) => <li key={i}>{w}</li>)}
             </ul>
           )}
+          {matchAction === 'create' && <p className="text-xs text-muted-foreground">For a different article, verify its title and source URL below. An existing source URL cannot be duplicated.</p>}
+          {draft.matchedId && <button onClick={() => setReviewedMatch(false)} className="text-xs underline underline-offset-4" data-testid="button-import-change-match">Change match choice</button>}
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="sm:col-span-2 text-xs">Title<Input value={meta.title} onChange={e => set('title', e.target.value)} className="mt-1 h-8" data-testid="input-import-title" /></label>
             <label className="text-xs">Outlet<Input value={meta.outlet} onChange={e => set('outlet', e.target.value)} className="mt-1 h-8" data-testid="input-import-outlet" /></label>
@@ -194,7 +199,7 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
       {done && !targetId && (
         <p className="mt-2 text-xs" data-testid="text-import-done">Saved: <Link href={`/?article=${done.id}`} className="underline underline-offset-4">{done.title}</Link></p>
       )}
-      {done && targetId && <p className="mt-2 text-xs" data-testid="text-import-done">Content added to this article.</p>}
+      {done && targetId && <p className="mt-2 text-xs" data-testid="text-import-done">Saved: {done.title}</p>}
     </section>
   );
 }

@@ -31,6 +31,28 @@ connect an ai,” rather than a personal API-key connection.
 **How to apply:** Use Replit-managed provider provisioning; do not substitute a
 personally billed API-key setup without the user's approval.
 
+Managed provisioning availability can differ between an isolated task session
+and the main Agent session. Missing setup tooling in one session is not proof
+that the platform requires manual credentials or a separate chat.
+
+**Why:** Normal main-Agent managed OpenRouter setup succeeded after the earlier
+isolated task could not access provisioning.
+
+**How to apply:** Follow the current managed-provider skill and normal approval
+flow. Do not infer that choosing a blueprint provisioned the connection.
+
+A configured provider and a successful HTTP/model response do not establish a
+verified extraction connection.
+
+**Why:** A real managed response returned usage but failed Tripwire's strict
+completion/evidence validation; the initial runner lacked rejected-output
+diagnostics.
+
+**How to apply:** Require structure and exact-evidence validation as well as
+provider success. Keep failed-attempt reservations, preserve fictional-test
+diagnostics, and respect an explicit one-request limit without retries. Keep
+real processing unauthorized until its separate approval.
+
 A model-proposed external identifier is an unresolved match suggestion, not a
 validated link to the quoted subject, even if that identifier is already
 verified elsewhere in the registry.

@@ -13,6 +13,8 @@ import { FittedHeadline } from '@/components/feed/fitted-headline';
 import { DevelopmentsPanel } from '@/components/feed/developments';
 import { ArticleReader } from '@/components/feed/article-reader';
 import { ArticleEditor, ConfirmDelete } from '@/components/editors';
+import { Importer } from '@/components/importer';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { OutletBrand } from '@/components/outlet-brand';
 import { articleCredits } from '@/lib/media-coverage';
 import { FOCUS, REPORTING, SENTIMENT, byKind, isFlagged, useFlag, useRefresh, useWorkspace } from '@/lib/workspace';
@@ -187,7 +189,13 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
       )}
       </div>
 
-      <ArticleEditor open={creating || !!editing} onOpenChange={(o) => { if (!o) { setCreating(false); setEditing(null); } }} record={editing} />
+      <Dialog open={creating} onOpenChange={setCreating}>
+        <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto">
+          <DialogTitle>Add / update content</DialogTitle>
+          <Importer onCommitted={article => { setCreating(false); setOpen(article.id); }} />
+        </DialogContent>
+      </Dialog>
+      <ArticleEditor open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }} record={editing} />
       <ConfirmDelete target={deleting} onClose={() => setDeleting(null)} />
     </div>
   );
