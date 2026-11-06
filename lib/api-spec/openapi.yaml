@@ -23,6 +23,54 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Workspace" }
+  /tripwire/quick-enrichment:
+    get:
+      operationId: getQuickEnrichment
+      responses:
+        "200":
+          description: Recent critical items needing article text and persistent paste jobs
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuickEnrichmentQueue" }
+    post:
+      operationId: queueQuickEnrichment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuickEnrichmentInput" }
+      responses:
+        "202":
+          description: Paste durably retained and queued for analysis and saving
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuickEnrichmentJob" }
+  /tripwire/quick-enrichment/{id}/retry:
+    post:
+      operationId: retryQuickEnrichment
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Job queued again using its retained original paste
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuickEnrichmentJob" }
+  /tripwire/quick-enrichment/{id}/text:
+    get:
+      operationId: getQuickEnrichmentText
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Original retained paste for restoring a failed edit
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [text]
+                properties:
+                  text: { type: string }
   /tripwire/records/{id}/content:
     get:
       operationId: getArticleContent
@@ -180,6 +228,31 @@ paths:
               schema: { type: string, format: binary }
 components:
   schemas:
+    QuickEnrichmentInput:
+      type: object
+      required: [articleId, text, requestId]
+      properties:
+        articleId: { type: string, minLength: 1 }
+        text: { type: string, minLength: 250, maxLength: 1000000 }
+        requestId: { type: string, format: uuid }
+    QuickEnrichmentJob:
+      type: object
+      required: [id, articleId, title, status, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        articleId: { type: string }
+        title: { type: string }
+        outlet: { type: string }
+        status: { type: string, enum: [queued, running, saved, failed] }
+        error: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+    QuickEnrichmentQueue:
+      type: object
+      required: [items, jobs]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/TrackedRecord" } }
+        jobs: { type: array, items: { $ref: "#/components/schemas/QuickEnrichmentJob" } }
     FlagRequest:
       type: object
       required: [flagged]
@@ -334,6 +407,7 @@ components:
         characters: { type: integer }
         rawCharacters: { type: integer }
         attempts: { type: integer }
+        manualRequested: { type: boolean }
     ArticleContent:
       type: object
       required: [text, raw, characters, rawCharacters]

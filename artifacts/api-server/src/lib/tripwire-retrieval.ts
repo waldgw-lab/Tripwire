@@ -9,6 +9,7 @@ import { classifyContent, mergeClassification } from "./tripwire-classification"
 import { logger } from "./logger";
 import { readContent } from "./tripwire-content-storage";
 import { publicationUpdate } from "./tripwire-publication";
+import { automaticRetrievalAllowed, compareRetrievalPriority } from "./tripwire-priority";
 
 const active = new Set<string>();
 const hostNext = new Map<string, number>();
@@ -75,7 +76,7 @@ export async function retrieveItem(article: Item, cachedPage?: { raw: string; ur
   try {
     const url = new URL(article.url!);
     if (!cachedPage) await checkRobots(url);
-    const fetched = cachedPage ? { bytes: Buffer.from(cachedPage.raw), url: cachedPage.url, contentType: "text/html" } : await fetchPublicDocument(url.href);
+    const fetched = cachedPage ? { bytes: Buffer.from(cachedPage.raw), url: cachedPage.url, contentType: "text/html" } : await fetchPublicDocument(url.href, 0, { maxBytes: 8_000_000 });
     if (!/html|text\//i.test(fetched.contentType)) throw new Error(`Source returned ${fetched.contentType || "an unsupported format"}; upload the document to retain it`);
     raw = fetched.bytes.toString("utf8");
     classification = htmlClassification(raw, fetched.url, article.title);
@@ -92,6 +93,7 @@ export async function retrieveItem(article: Item, cachedPage?: { raw: string; ur
     const next = new Date(Date.now() + (mergedClassification.contentFormat === "live-updates" ? 15 * 60_000 : 7 * DAY)).toISOString();
     await writeRecord(WORKSPACE_OWNER, {
       ...existing, ...content, ...mergedClassification,
+      ...(!existing.summary && candidate.summary ? { summary: candidate.summary } : {}),
       ...(existing.byline || !candidate.byline ? {} : { byline: candidate.byline, credits: candidate.credits, journalists: candidate.journalists }),
       ...publicationUpdate(existing, { publishedAt: candidate.publishedAt, publicationSource: "publisher", publicationSourceUrl: fetched.url }),
       retrieval: { status: "retrieved", method, lastAttempt: now, nextAttemptAt: next, characters: candidate.fullText?.length ?? 0, rawCharacters: raw.length,
@@ -127,16 +129,17 @@ export async function runRetrievalTick() {
   try {
     const records = await recordsFor(WORKSPACE_OWNER, false);
     const outlets = records.filter(r => r.kind === "outlet");
+    const watches = records.filter(r => r.kind === "watch");
     const attempts = new Map<string, number>();
     for (const a of records.filter(r => r.kind === "article" && r.retrieval?.lastAttempt)) attempts.set(a.outlet ?? "", (attempts.get(a.outlet ?? "") ?? 0) + 1);
     const due = records.filter(a => {
       if (a.kind !== "article" || !a.url || a.discoveryOnly || a.sourceType === "x" || active.has(a.id)) return false;
+      if (!automaticRetrievalAllowed(a, watches)) return false;
       const outlet = outlets.find(o => o.title === a.outlet) as (Item & { pageBackoffUntil?: string }) | undefined;
       if (outlet?.enabled === false || Date.parse(outlet?.pageBackoffUntil ?? "") > Date.now()) return false;
       if (Date.parse(a.retrieval?.nextAttemptAt ?? "") > Date.now()) return false;
       try { return (hostNext.get(new URL(a.url).host) ?? 0) <= Date.now(); } catch { return false; }
-    }).sort((a, b) => (attempts.get(a.outlet ?? "") ?? 0) - (attempts.get(b.outlet ?? "") ?? 0) ||
-      Date.parse(b.publishedAt ?? b.createdAt) - Date.parse(a.publishedAt ?? a.createdAt));
+    }).sort((a, b) => compareRetrievalPriority(a, b, watches, attempts));
     const selected: typeof due = [];
     const hosts = new Set<string>();
     for (const item of due) {

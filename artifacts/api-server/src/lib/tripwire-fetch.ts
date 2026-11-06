@@ -10,7 +10,9 @@ export function publicAddress(ip: string) {
   }
   return isIP(ip) === 6 && !ip.includes(".") && !/^(::|fc|fd|fe[89ab]|ff|2001:db8)/i.test(ip);
 }
-export async function fetchPublicDocument(rawUrl: string, depth = 0, options: { httpsOnly?: boolean; accept?: string } = {}): Promise<{ bytes: Buffer; contentType: string; url: string }> {
+export async function fetchPublicDocument(rawUrl: string, depth = 0, options: { httpsOnly?: boolean; accept?: string; maxBytes?: number } = {}): Promise<{ bytes: Buffer; contentType: string; url: string }> {
+  const maxBytes = options.maxBytes ?? 3_000_000;
+  if (!Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > 8_000_000) throw new Error("Invalid source fetch limit");
   const target = new URL(rawUrl);
   if (options.httpsOnly && target.protocol !== "https:") throw new Error("Intake requires HTTPS, including redirects");
   if (!["http:", "https:"].includes(target.protocol) || target.username || target.password || target.port && !["80", "443"].includes(target.port) || target.href.length > 4000) throw new Error("Use a public http or https URL");
@@ -32,7 +34,7 @@ export async function fetchPublicDocument(rawUrl: string, depth = 0, options: { 
       }
       if ((response.statusCode ?? 0) < 200 || (response.statusCode ?? 0) >= 300) { response.resume(); reject(new Error(`Source returned HTTP ${response.statusCode}`)); return; }
       let size = 0; const chunks: Buffer[] = [];
-      response.on("data", (chunk: Buffer) => { size += chunk.length; if (size > 3_000_000) { response.destroy(new Error("Source exceeds the 3 MB fetch limit")); } else chunks.push(chunk); });
+      response.on("data", (chunk: Buffer) => { size += chunk.length; if (size > maxBytes) { response.destroy(new Error(`Source exceeds the ${maxBytes / 1_000_000} MB fetch limit`)); } else chunks.push(chunk); });
       response.on("error", reject);
       response.on("end", () => resolve({ bytes: Buffer.concat(chunks), contentType: response.headers["content-type"] ?? "", url: target.href }));
     });

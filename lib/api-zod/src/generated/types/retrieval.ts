@@ -14,4 +14,5 @@ export interface Retrieval {
   characters?: number;
   rawCharacters?: number;
   attempts?: number;
+  manualRequested?: boolean;
 }

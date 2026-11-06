@@ -87,17 +87,18 @@ export function feedFreshness(dates: (string | undefined)[], now = Date.now()) {
 export function retryAfter(failures: number, now = Date.now()) {
   return new Date(now + Math.min(12 * 3_600_000, 30 * 60_000 * 2 ** Math.min(5, failures - 1))).toISOString();
 }
-export type SitemapItem = { title: string; link: string; isoDate?: string; raw: string };
+export type SitemapItem = { title: string; link: string; isoDate?: string; raw: string; contentSnippet?: string };
 export function sitemapItems(xml: string, outlet: string): SitemapItem[] {
   if (/<!DOCTYPE|<!ENTITY/i.test(xml)) throw new Error("Document type declarations are not accepted");
   const document = new DOMParser().parseFromString(xml, "text/xml");
   if (document.documentElement?.localName !== "urlset") throw new Error("Expected a publisher news sitemap, not an index or HTML page");
   return Array.from(document.getElementsByTagName("url")).slice(0, 1000).flatMap(node => {
     const link = node.getElementsByTagName("loc")[0]?.textContent?.trim();
-    const title = node.getElementsByTagName("news:title")[0]?.textContent?.trim();
-    const date = node.getElementsByTagName("news:publication_date")[0]?.textContent?.trim();
+    const title = node.getElementsByTagName("news:title")[0]?.textContent?.trim() || node.getElementsByTagName("video:title")[0]?.textContent?.trim();
+    const contentSnippet = node.getElementsByTagName("video:description")[0]?.textContent?.trim() || undefined;
+    const date = node.getElementsByTagName("news:publication_date")[0]?.textContent?.trim() || node.getElementsByTagName("video:publication_date")[0]?.textContent?.trim();
     // lastmod is not a publication time; URL slugs are not verified headlines.
     if (!link || !title || !publisherUrl(link, outlet)) return [];
-    return [{ title, link, isoDate: date && Number.isFinite(Date.parse(date)) ? new Date(date).toISOString() : undefined, raw: node.toString() }];
+    return [{ title, link, isoDate: date && Number.isFinite(Date.parse(date)) ? new Date(date).toISOString() : undefined, raw: node.toString(), contentSnippet }];
   });
 }

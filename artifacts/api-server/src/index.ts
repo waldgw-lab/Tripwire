@@ -5,6 +5,7 @@ import { startMonitoring } from "./lib/tripwire-feeds";
 import { migrateRetainedContent } from "./lib/tripwire-content-storage";
 import { backfillDiscoveryDates } from "./lib/tripwire-publication-backfill";
 import { classifyExistingArticles, reprocessSavedPages, startRetrieval } from "./lib/tripwire-retrieval";
+import { startPasteJobs } from "./lib/tripwire-enrichment-jobs";
 
 const rawPort = process.env["PORT"];
 
@@ -35,6 +36,7 @@ async function start() {
   logger.info({ port }, "Server listening");
     startMonitoring();
     startRetrieval();
+    startPasteJobs();
   });
 }
 void start().catch(err => { logger.error({ err }, "Tripwire initialization failed"); process.exit(1); });

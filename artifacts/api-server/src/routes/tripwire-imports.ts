@@ -19,7 +19,7 @@ import { mentionedEntities } from "../lib/tripwire-signals";
 const router: IRouter = Router();
 const inFlight = new Set<string>();
 const rate = new Map<string, { count: number; expires: number }>();
-class IntakeError extends Error { constructor(message: string, public status = 400) { super(message); } }
+export class IntakeError extends Error { constructor(message: string, public status = 400) { super(message); } }
 router.use("/tripwire/imports", (req, res, next) => {
   res.setHeader("Cache-Control", "private, no-store");
   next();
@@ -40,16 +40,8 @@ router.post("/tripwire/imports/uploads", async (req, res) => {
   }
 });
 
-router.post("/tripwire/imports/analyze", async (req, res) => {
-  const userId = workspaceIdentity(req).userId;
-  if (inFlight.has(userId)) { res.status(429).json({ error: "An import is already being analyzed" }); return; }
-  const prior = rate.get(userId);
-  const bucket = prior && prior.expires > Date.now() ? prior : { count: 0, expires: Date.now() + 60000 };
-  rate.set(userId, bucket);
-  if (++bucket.count > 12) { res.status(429).json({ error: "Please wait a minute before analyzing more imports" }); return; }
-  inFlight.add(userId);
-  try {
-    const body = AnalyzeImportBody.parse(req.body);
+export async function analyzeImport(userId: string, input: unknown) {
+    const body = AnalyzeImportBody.parse(input);
     let text = body.text?.trim() ?? "";
     let sourceUrl = body.url?.trim();
     if (!sourceUrl && /^https?:\/\/\S+$/i.test(text)) { sourceUrl = text; text = ""; }
@@ -84,7 +76,7 @@ router.post("/tripwire/imports/analyze", async (req, res) => {
       source = "file";
       capture = importCapture(candidate, source, { raw: extracted, fileName: String(upload.data.name), uploadId: body.uploadId });
     } else if (sourceUrl) {
-      const response = await fetchPublicDocument(sourceUrl);
+      const response = await fetchPublicDocument(sourceUrl, 0, { maxBytes: 8_000_000 });
       source = "url";
       if (/pdf|msword|officedocument/i.test(response.contentType) || /\.(pdf|doc|docx)$/i.test(new URL(response.url).pathname)) {
         const filename = new URL(response.url).pathname.split("/").pop() ?? "document.pdf";
@@ -136,17 +128,27 @@ router.post("/tripwire/imports/analyze", async (req, res) => {
     candidate.retainedContent = [capture];
     const archivedCandidate = await archiveArticle(candidate);
     await db.insert(tripwireRecords).values({ id: `draft:${draftId}`, owner: userId, kind: "import-draft", data: { candidate: archivedCandidate, articleId, matchedId: existing?.id, capture: archivedCandidate.retainedContent?.[0], source } });
-    res.json(AnalyzeImportResponse.parse({ draftId, candidate, matchedId: existing?.id, matchReason: target ? "Selected article" : matched.reason, warnings, characterCount: candidate.fullText?.length ?? 0, source }));
+    return AnalyzeImportResponse.parse({ draftId, candidate, matchedId: existing?.id, matchReason: target ? "Selected article" : matched.reason, warnings, characterCount: candidate.fullText?.length ?? 0, source });
+}
+
+router.post("/tripwire/imports/analyze", async (req, res) => {
+  const userId = workspaceIdentity(req).userId;
+  if (inFlight.has(userId)) { res.status(429).json({ error: "An import is already being analyzed" }); return; }
+  const prior = rate.get(userId);
+  const bucket = prior && prior.expires > Date.now() ? prior : { count: 0, expires: Date.now() + 60000 };
+  rate.set(userId, bucket);
+  if (++bucket.count > 12) { res.status(429).json({ error: "Please wait a minute before analyzing more imports" }); return; }
+  inFlight.add(userId);
+  try {
+    res.json(await analyzeImport(userId, req.body));
   } catch (error) {
     req.log.warn({ err: error instanceof Error ? error.message : "Intake error" }, "Import analysis failed");
     res.status(error instanceof IntakeError ? error.status : 400).json({ error: error instanceof Error ? error.message : "Could not analyze this content" });
   } finally { inFlight.delete(userId); }
 });
 
-router.post("/tripwire/imports/commit", async (req, res) => {
-  try {
-    const userId = workspaceIdentity(req).userId;
-    const body = CommitImportBody.parse(req.body);
+export async function commitImport(userId: string, input: unknown) {
+    const body = CommitImportBody.parse(input);
     if (!body.title.trim()) throw new IntakeError("A headline is required");
     const url = body.url?.trim() ? canonicalUrl(body.url) : undefined;
     if (body.publishedAt && isNaN(Date.parse(body.publishedAt))) throw new IntakeError("Enter a valid publication date");
@@ -194,7 +196,12 @@ router.post("/tripwire/imports/commit", async (req, res) => {
       await tx.update(tripwireRecords).set({ data: { ...draft.data, committedId: saved.id }, updatedAt: new Date() }).where(and(eq(tripwireRecords.id, draft.id), eq(tripwireRecords.owner, userId)));
       return saved;
     });
-    res.json(CommitImportResponse.parse(record));
+    return CommitImportResponse.parse(record);
+}
+
+router.post("/tripwire/imports/commit", async (req, res) => {
+  try {
+    res.json(await commitImport(workspaceIdentity(req).userId, req.body));
   } catch (error) {
     req.log.warn({ err: error instanceof Error ? error.message : "Commit error" }, "Import save failed");
     res.status(error instanceof IntakeError ? error.status : 400).json({ error: error instanceof Error ? error.message : "Could not save this import" });

@@ -59,7 +59,7 @@ export async function recordsFor(userId?: string | null, includeContent = true) 
     ...data,
     ...(r.kind === "watch" && r.data.watchType === "person" ? {watchType: "position", ...Object.fromEntries(Object.entries(scopeDefaults(String(r.data.title))).filter(([key]) => r.data[key] === undefined))} : {}),
     id: String(r.data.baseId ?? r.id), kind: r.kind, title: String(r.data.title),
-    createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString(),
+    createdAt: (r.kind === "article" ? base?.createdAt ?? r.createdAt : r.createdAt).toISOString(), updatedAt: r.updatedAt.toISOString(),
   }); }) as (RecordData & {id: string; createdAt: string; updatedAt: string})[];
   return includeContent ? hydrateArticles(records) : records;
 }
@@ -77,6 +77,7 @@ export async function writeRecord(userId: string, data: RecordData, protectMetad
         const current = existing.data as RecordData;
         const incoming = data;
         data = { ...incoming, ...current, ...mergeArticleContent(current, incoming), ...mergeClassification(current, incoming), retrieval: incoming.retrieval,
+          ...(current.summary || !incoming.summary ? {} : { summary: incoming.summary }),
           ...(current.byline || !incoming.byline ? {} : { byline: incoming.byline, credits: incoming.credits, journalists: incoming.journalists }),
           ...publicationUpdate(current, incoming) };
       }

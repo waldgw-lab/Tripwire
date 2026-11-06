@@ -1,3 +1,5 @@
 - [Reporting focus](reporting-focus.md) — user-defined accountability focus and attribution rules; avoid treating repeated coverage as independent sourcing.
 - [Journalist attribution](journalist-attribution.md) — roles belong to article credits, not people; preserve bylines and avoid cross-outlet coverage leakage.
 - [Content storage strategy](content-storage-strategy.md) — prefer PostgreSQL for searchable article text and immutable source versions; reuse retained HTML when extraction improves.
+- [Enrichment priorities](enrichment-priorities.md) — Critical before High; Low keeps easy feed content; the manual queue uses the last 12 hours of ingestion.
+- [Testing visibility](testing-visibility.md) — keep synthetic news fixtures out of the user's shared feed, even during temporary browser verification.

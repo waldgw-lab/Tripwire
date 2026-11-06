@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { automaticRetrievalAllowed } from "../lib/tripwire-priority";
 import { and, inArray, sql } from "drizzle-orm";
 import { db, tripwireContent } from "@workspace/db";
 import { recordsFor, writeRecord } from "../lib/tripwire-store";
@@ -38,6 +39,7 @@ router.get("/tripwire/content-search", async (req, res) => {
 });
 router.get("/tripwire/retrieval", async (_req, res) => {
   const records = await recordsFor(WORKSPACE_OWNER, false);
+  const watches = records.filter(r => r.kind === "watch");
   const articles = records.filter(r => r.kind === "article");
   const [storage] = await db.select({
     blobs: sql<number>`count(*)::integer`, characters: sql<number>`coalesce(sum(length(${tripwireContent.text})), 0)::float8`,
@@ -47,7 +49,7 @@ router.get("/tripwire/retrieval", async (_req, res) => {
     const latest = [...items].sort((a, b) => (b.retrieval?.lastAttempt ?? "").localeCompare(a.retrieval?.lastAttempt ?? ""))[0];
     return { outlet: outlet.title, articles: items.length, retrieved: items.filter(a => a.retrieval?.status === "retrieved").length,
       blocked: items.filter(a => a.retrieval?.status === "blocked").length, failed: items.filter(a => a.retrieval?.status === "failed").length,
-      pending: items.filter(a => !a.discoveryOnly && (!a.retrieval || a.retrieval.status === "pending")).length,
+      pending: items.filter(a => !a.discoveryOnly && automaticRetrievalAllowed(a, watches) && (!a.retrieval || a.retrieval.status === "pending")).length,
       characters: items.reduce((sum, a) => sum + (a.fullTextLength ?? a.retainedCharacters ?? 0), 0),
       lastResult: latest?.retrieval?.message ?? (outlet as typeof outlet & { pageLastResult?: string }).pageLastResult ?? (items.length ? "Awaiting first page retrieval" : outlet.feedStatus ?? "No items yet") };
   });
@@ -57,7 +59,9 @@ router.post("/tripwire/retrieval", async (req, res) => {
   const records = await recordsFor(WORKSPACE_OWNER, false);
   const id = req.body?.articleId;
   if (id !== undefined && typeof id !== "string") { res.status(400).json({ error: "Invalid article identifier" }); return; }
-  const items = records.filter(r => r.kind === "article" && r.url && !r.discoveryOnly && r.sourceType !== "x" && (!id || r.id === id));
+  const watches = records.filter(r => r.kind === "watch");
+  const items = records.filter(r => r.kind === "article" && r.url && !r.discoveryOnly && r.sourceType !== "x" && (!id || r.id === id) &&
+    (id || automaticRetrievalAllowed(r, watches)));
   if (id && !items.length) { res.status(404).json({ error: "Article not found or has no fetchable source URL" }); return; }
   let queued = 0;
   for (const item of items) {
@@ -66,7 +70,7 @@ router.post("/tripwire/retrieval", async (req, res) => {
     const due = !item.retrieval || !(Date.parse(item.retrieval.nextAttemptAt ?? "") > Date.now());
     const manualAllowed = id && item.retrieval?.status === "retrieved" && Date.parse(item.retrieval.lastAttempt ?? "") < Date.now() - 60_000;
     if (!due && !manualAllowed) continue;
-    await writeRecord(WORKSPACE_OWNER, { ...item, retrieval: { ...item.retrieval, status: "pending", nextAttemptAt: new Date().toISOString() } });
+    await writeRecord(WORKSPACE_OWNER, { ...item, retrieval: { ...item.retrieval, status: "pending", manualRequested: !!id, nextAttemptAt: new Date().toISOString() } });
     queued++;
   }
   void runRetrievalTick().catch(error => req.log.error({ err: String(error) }, "Queued article retrieval"));

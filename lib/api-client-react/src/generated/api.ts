@@ -30,11 +30,15 @@ import type {
   EnqueueEnrichmentBody,
   FlagRequest,
   GetArticleContentParams,
+  GetQuickEnrichmentText200,
   HealthStatus,
   ImportAnalyzeRequest,
   ImportCommitRequest,
   ImportDraft,
   ImportUploadRequest,
+  QuickEnrichmentInput,
+  QuickEnrichmentJob,
+  QuickEnrichmentQueue,
   RecordInput,
   RefreshResult,
   RequestImportUpload200,
@@ -249,6 +253,346 @@ export function useGetWorkspace<TData = Awaited<ReturnType<typeof getWorkspace>>
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetWorkspaceQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetQuickEnrichmentUrl = () => {
+
+
+
+
+  return `/api/tripwire/quick-enrichment`
+}
+
+export const getQuickEnrichment = async ( options?: Parameters<typeof customFetch>[1]): Promise<QuickEnrichmentQueue> => {
+
+  return customFetch<QuickEnrichmentQueue>(getGetQuickEnrichmentUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetQuickEnrichmentQueryKey = () => {
+    return [
+    `/api/tripwire/quick-enrichment`
+    ] as const;
+    }
+
+
+export const getGetQuickEnrichmentQueryOptions = <TData = Awaited<ReturnType<typeof getQuickEnrichment>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuickEnrichment>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetQuickEnrichmentQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getQuickEnrichment>>> = ({ signal }) => getQuickEnrichment({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getQuickEnrichment>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetQuickEnrichmentQueryResult = NonNullable<Awaited<ReturnType<typeof getQuickEnrichment>>>
+export type GetQuickEnrichmentQueryError = ErrorType<unknown>
+
+
+export function useGetQuickEnrichment<TData = Awaited<ReturnType<typeof getQuickEnrichment>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuickEnrichment>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getQuickEnrichment>>,
+          TError,
+          Awaited<ReturnType<typeof getQuickEnrichment>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetQuickEnrichment<TData = Awaited<ReturnType<typeof getQuickEnrichment>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuickEnrichment>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getQuickEnrichment>>,
+          TError,
+          Awaited<ReturnType<typeof getQuickEnrichment>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetQuickEnrichment<TData = Awaited<ReturnType<typeof getQuickEnrichment>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuickEnrichment>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetQuickEnrichment<TData = Awaited<ReturnType<typeof getQuickEnrichment>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuickEnrichment>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetQuickEnrichmentQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getQueueQuickEnrichmentUrl = () => {
+
+
+
+
+  return `/api/tripwire/quick-enrichment`
+}
+
+export const queueQuickEnrichment = async (quickEnrichmentInput: QuickEnrichmentInput, options?: Parameters<typeof customFetch>[1]): Promise<QuickEnrichmentJob> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<QuickEnrichmentJob>(getQueueQuickEnrichmentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(quickEnrichmentInput)
+  }
+);}
+
+
+
+
+
+export const getQueueQuickEnrichmentMutationKey = () => ['queueQuickEnrichment'] as const;
+
+export const getQueueQuickEnrichmentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof queueQuickEnrichment>>, TError,QueueQuickEnrichmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof queueQuickEnrichment>>, TError,QueueQuickEnrichmentMutationVariables, TContext> => {
+
+const mutationKey = getQueueQuickEnrichmentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof queueQuickEnrichment>>, QueueQuickEnrichmentMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  queueQuickEnrichment(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type QueueQuickEnrichmentMutationResult = NonNullable<Awaited<ReturnType<typeof queueQuickEnrichment>>>
+    export type QueueQuickEnrichmentMutationBody = BodyType<QuickEnrichmentInput>
+    export type QueueQuickEnrichmentMutationError = ErrorType<unknown>
+    export type QueueQuickEnrichmentMutationVariables = {data: BodyType<QuickEnrichmentInput>}
+
+    export const useQueueQuickEnrichment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof queueQuickEnrichment>>, TError,QueueQuickEnrichmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof queueQuickEnrichment>>,
+        TError,
+        QueueQuickEnrichmentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getQueueQuickEnrichmentMutationOptions(options), queryClient);
+    }
+
+export const getRetryQuickEnrichmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/quick-enrichment/${id}/retry`
+}
+
+export const retryQuickEnrichment = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<QuickEnrichmentJob> => {
+
+  return customFetch<QuickEnrichmentJob>(getRetryQuickEnrichmentUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRetryQuickEnrichmentMutationKey = () => ['retryQuickEnrichment'] as const;
+
+export const getRetryQuickEnrichmentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retryQuickEnrichment>>, TError,RetryQuickEnrichmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof retryQuickEnrichment>>, TError,RetryQuickEnrichmentMutationVariables, TContext> => {
+
+const mutationKey = getRetryQuickEnrichmentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof retryQuickEnrichment>>, RetryQuickEnrichmentMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  retryQuickEnrichment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RetryQuickEnrichmentMutationResult = NonNullable<Awaited<ReturnType<typeof retryQuickEnrichment>>>
+
+    export type RetryQuickEnrichmentMutationError = ErrorType<unknown>
+    export type RetryQuickEnrichmentMutationVariables = {id: string}
+
+    export const useRetryQuickEnrichment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retryQuickEnrichment>>, TError,RetryQuickEnrichmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof retryQuickEnrichment>>,
+        TError,
+        RetryQuickEnrichmentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRetryQuickEnrichmentMutationOptions(options), queryClient);
+    }
+
+export const getGetQuickEnrichmentTextUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/quick-enrichment/${id}/text`
+}
+
+export const getQuickEnrichmentText = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<GetQuickEnrichmentText200> => {
+
+  return customFetch<GetQuickEnrichmentText200>(getGetQuickEnrichmentTextUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetQuickEnrichmentTextQueryKey = (id: string,) => {
+    return [
+    `/api/tripwire/quick-enrichment/${id}/text`
+    ] as const;
+    }
+
+
+export const getGetQuickEnrichmentTextQueryOptions = <TData = Awaited<ReturnType<typeof getQuickEnrichmentText>>, TError = ErrorType<unknown>>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuickEnrichmentText>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetQuickEnrichmentTextQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getQuickEnrichmentText>>> = ({ signal }) => getQuickEnrichmentText(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getQuickEnrichmentText>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetQuickEnrichmentTextQueryResult = NonNullable<Awaited<ReturnType<typeof getQuickEnrichmentText>>>
+export type GetQuickEnrichmentTextQueryError = ErrorType<unknown>
+
+
+export function useGetQuickEnrichmentText<TData = Awaited<ReturnType<typeof getQuickEnrichmentText>>, TError = ErrorType<unknown>>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuickEnrichmentText>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getQuickEnrichmentText>>,
+          TError,
+          Awaited<ReturnType<typeof getQuickEnrichmentText>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetQuickEnrichmentText<TData = Awaited<ReturnType<typeof getQuickEnrichmentText>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuickEnrichmentText>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getQuickEnrichmentText>>,
+          TError,
+          Awaited<ReturnType<typeof getQuickEnrichmentText>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetQuickEnrichmentText<TData = Awaited<ReturnType<typeof getQuickEnrichmentText>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuickEnrichmentText>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetQuickEnrichmentText<TData = Awaited<ReturnType<typeof getQuickEnrichmentText>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuickEnrichmentText>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetQuickEnrichmentTextQueryOptions(id,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

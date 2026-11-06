@@ -32,3 +32,15 @@ Treat PDF text extraction as layout-sensitive and its input buffers as transfera
 **Why:** The print view split contributor names across lines, and line height differed from baseline spacing. Reusing transferred bytes caused cloning errors; assuming a conventional PDF.js proxy destroy method also failed with the installed unpdf runtime.
 
 **How to apply:** Use a fresh byte copy, release the loading task, and distinguish soft wraps from paragraph gaps using measured spacing. Preserve the source PDF and avoid applying a single-column publisher layout rule to unrelated PDFs.
+
+Video descriptions are retained content even when there is no article body or transcript.
+
+**Why:** A CNN video exposed the relevant description in its VideoObject schema and page metadata, while its news-sitemap entry contained only a headline, URL and date. Article-only extraction would miss that text or mistake related-story navigation for reporting.
+
+**How to apply:** Use explicit publisher video descriptions on standalone video pages, retain their raw source, and keep completeness unconfirmed. Do not replace an article with its embedded video's description or infer author credits merely from interview participants named in prose.
+
+A successful ad-hoc public fetch does not establish that automated publisher access is working.
+
+**Why:** The same CNN page returned public HTML to one request while the application's requests received HTTP 403.
+
+**How to apply:** Preserve actual response provenance and keep publisher access failures/backoff honest. Local extraction of an already retrieved response can repair retained content without claiming the network restriction is resolved.

@@ -92,10 +92,11 @@ export async function refreshFeeds(_userId?: string | null) {
             const publisher = item.publisherSource?.[0];
             if (discovery ? !publisher?.$?.url || !publisherUrl(publisher.$.url, outlet.title) || new URL(item.link).hostname !== "news.google.com" || new URL(item.link).protocol !== "https:" : !publisherUrl(item.link, outlet.title)) continue;
             const title = strip(discovery ? discoveryTitle(item.title, publisher?._ ?? "") : item.title);
+            const sitemapDescription = source.kind === "sitemap" ? strip(item.contentSnippet ?? "") : "";
             const retained = source.kind === "rss" ? rssContent(item, item.link) : {
-              retainedContent: [captureContent("", discovery ? "discovery:google-news" : "discovery:publisher-sitemap",
+              retainedContent: [captureContent(sitemapDescription, discovery ? "discovery:google-news" : "discovery:publisher-sitemap",
                 { raw: item.raw ?? JSON.stringify(item), sourceUrl: source.url })],
-              fullText: undefined, contentRetained: true, retainedCharacters: 0,
+              fullText: sitemapDescription || undefined, contentRetained: true, retainedCharacters: sitemapDescription.length,
             };
             const text = `${title} ${retained.fullText ?? ""}`;
             if (!relevant.test(text)) continue;

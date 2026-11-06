@@ -97,7 +97,9 @@ export function textCandidate(text: string, url?: string, outletHint?: string): 
 }
 
 export function htmlClassification(html: string, sourceUrl: string, title?: string) {
-  const { document } = parseHTML(html);
+  return classificationFromDocument(parseHTML(html).document, sourceUrl, title);
+}
+function classificationFromDocument(document: ReturnType<typeof parseHTML>["document"], sourceUrl: string, title?: string) {
   const labels: string[] = [];
   const types: string[] = [];
   const walk = (node: unknown, depth = 0) => {
@@ -127,37 +129,57 @@ export function htmlClassification(html: string, sourceUrl: string, title?: stri
 export function htmlCandidate(html: string, sourceUrl: string) {
   const { document } = parseHTML(html);
   const meta = (name: string) => document.querySelector(`meta[property="${name}"],meta[name="${name}"]`)?.getAttribute("content") ?? undefined;
-  let ld: Record<string, unknown> | undefined;
+  const nodes: Record<string, unknown>[] = [];
+  const walk = (value: unknown, depth = 0) => {
+    if (!value || depth > 5 || nodes.length >= 1000) return;
+    if (Array.isArray(value)) { value.forEach(v => walk(v, depth + 1)); return; }
+    if (typeof value !== "object") return;
+    const node = value as Record<string, unknown>;
+    nodes.push(node);
+    for (const key of ["@graph", "mainEntity", "mainEntityOfPage", "video"]) walk(node[key], depth + 1);
+  };
   for (const element of document.querySelectorAll('script[type="application/ld+json"]')) {
     try {
-      const data = JSON.parse(element.textContent ?? "");
-      const nodes = Array.isArray(data) ? data : [data, ...(Array.isArray(data?.["@graph"]) ? data["@graph"] : [])];
-      ld = nodes.find(node => /article|report|posting/i.test(String(node?.["@type"])));
-      if (ld) break;
+      walk(JSON.parse(element.textContent ?? ""));
     } catch { /* Invalid publisher JSON-LD does not prevent extracting its visible article text. */ }
   }
-  const readable = new Readability(document.cloneNode(true) as never).parse();
+  const initialClassification = classificationFromDocument(document, sourceUrl, meta("og:title"));
+  const isVideo = initialClassification.contentFormat === "video";
+  const videos = nodes.filter(n => (Array.isArray(n["@type"]) ? n["@type"] : [n["@type"]]).includes("VideoObject"));
+  const samePage = (n: Record<string, unknown>) => {
+    const page = n.mainEntityOfPage;
+    const url = typeof page === "string" ? page : page && typeof page === "object" ? (page as Record<string, unknown>).url : n.url;
+    try { return typeof url === "string" && canonicalUrl(url) === canonicalUrl(sourceUrl); } catch { return false; }
+  };
+  const video = videos.find(samePage) ?? (videos.length === 1 ? videos[0] : undefined);
+  const ld = isVideo ? video : nodes.find(node => /article|report|posting/i.test(String(node["@type"])));
+  const description = (isVideo && typeof video?.description === "string" ? plainText(video.description) : "") ||
+    plainText(meta("description") ?? meta("og:description") ?? "");
+  // Readability can mistake navigation and related stories for a video's body.
+  // Retain the publisher's description, not an invented transcript.
+  const readable = isVideo ? undefined : new Readability(document.cloneNode(true) as never).parse();
   // Mail's JSON-LD often contains only a teaser, and generic Readability can pick
   // a short related-links block. Its own article paragraph markers are reliable.
   const mailParagraphs = inferOutlet(sourceUrl) === "Daily Mail"
     ? [...document.querySelectorAll("#js-article-text p.mol-para-with-font")].map(p => p.textContent?.trim()).filter(Boolean).join("\n\n") : "";
-  const text = (mailParagraphs || (typeof ld?.articleBody === "string" ? plainText(ld.articleBody) : readable?.textContent ?? "")).trim();
+  const text = (isVideo ? description : mailParagraphs || (typeof ld?.articleBody === "string" ? plainText(ld.articleBody) : readable?.textContent ?? "")).trim();
   if (!text || text.length < 40) throw new Error("No usable article text was available at this URL. Paste or upload the content instead.");
   if (text.length > 1_000_000) throw new Error("Article text exceeds the intake limit; no content was truncated.");
   const candidate = textCandidate(text, sourceUrl);
   const authors = ld?.author;
   const authorNames = (Array.isArray(authors) ? authors : authors ? [authors] : []).flatMap(author => typeof author === "string" ? [author] : author && typeof author === "object" && "name" in author ? [String(author.name)] : []);
   const byline = authorNames.join(", ") || meta("author") || readable?.byline || undefined;
-  const published = typeof ld?.datePublished === "string" ? ld.datePublished : meta("article:published_time");
-  const title = String(ld?.headline ?? meta("og:title") ?? readable?.title ?? candidate.title).trim();
+  const page = isVideo && video?.mainEntityOfPage && typeof video.mainEntityOfPage === "object" ? video.mainEntityOfPage as Record<string, unknown> : undefined;
+  const published = typeof ld?.datePublished === "string" ? ld.datePublished : typeof page?.datePublished === "string" ? page.datePublished : meta("article:published_time");
+  const title = String(ld?.headline ?? (isVideo ? ld?.name : undefined) ?? meta("og:title") ?? readable?.title ?? candidate.title).trim();
   const outlet = inferOutlet(sourceUrl) ?? meta("og:site_name");
   const credits = byline ? parseByline(byline) : undefined;
-  const classification = htmlClassification(html, sourceUrl, title);
+  const classification = classificationFromDocument(document, sourceUrl, title);
   return { ...candidate, ...classification, title, outlet, byline, credits, journalists: credits?.filter(c => c.role === "author").map(c => c.name),
-    extractionMethod: mailParagraphs ? "publisher article paragraphs" : typeof ld?.articleBody === "string" ? "structured article body" : "article extraction",
-    contentNormalization: { method: "html:article-extraction", sourceCharacters: html.length, articleCharacters: text.length },
+    extractionMethod: isVideo ? "video description" : mailParagraphs ? "publisher article paragraphs" : typeof ld?.articleBody === "string" ? "structured article body" : "article extraction",
+    contentNormalization: { method: isVideo ? "html:video-description" : "html:article-extraction", sourceCharacters: html.length, articleCharacters: text.length },
     publishedAt: published && !isNaN(Date.parse(published)) ? new Date(published).toISOString() : undefined,
-    summary: meta("description") ?? meta("og:description") };
+    summary: description || undefined };
 }
 export function importCapture(candidate: RecordData, source: string, extra: Partial<Capture> = {}) {
   return captureContent(candidate.fullText ?? "", source, { ...extra, sourceUrl: candidate.url ?? extra.sourceUrl });

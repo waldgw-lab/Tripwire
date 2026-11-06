@@ -4,52 +4,36 @@
  * Api
  * OpenAPI spec version: 1.0.0
  */
-export interface FlagRequest {
-  flagged: boolean;
-}
-
-export interface ImportUploadRequest {
-  name: string;
+export interface QuickEnrichmentInput {
+  /** @minLength 1 */
+  articleId: string;
   /**
-     * @minimum 1
-     * @maximum 10485760
+     * @minLength 250
+     * @maxLength 1000000
      */
-  size: number;
-  contentType: string;
+  text: string;
+  requestId: string;
 }
 
-export interface ImportAnalyzeRequest {
-  /** @maxLength 1000000 */
-  text?: string;
-  url?: string;
-  uploadId?: string;
-  targetId?: string;
-}
-
-export type ImportCommitRequestSourceType = typeof ImportCommitRequestSourceType[keyof typeof ImportCommitRequestSourceType];
+export type QuickEnrichmentJobStatus = typeof QuickEnrichmentJobStatus[keyof typeof QuickEnrichmentJobStatus];
 
 
-export const ImportCommitRequestSourceType = {
-  article: 'article',
-  x: 'x',
+export const QuickEnrichmentJobStatus = {
+  queued: 'queued',
+  running: 'running',
+  saved: 'saved',
+  failed: 'failed',
 } as const;
 
-export interface ImportCommitRequest {
-  draftId: string;
-  /** @minLength 1 */
+export interface QuickEnrichmentJob {
+  id: string;
+  articleId: string;
   title: string;
   outlet?: string;
-  url?: string;
-  byline?: string;
-  /** @maxLength 2000 */
-  contributors?: string;
-  publishedAt?: string;
-  sourceType?: ImportCommitRequestSourceType;
-  fullTextComplete?: boolean;
-}
-
-export interface HealthStatus {
-  status: string;
+  status: QuickEnrichmentJobStatus;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type RecordInputKind = typeof RecordInputKind[keyof typeof RecordInputKind];
@@ -62,6 +46,26 @@ export const RecordInputKind = {
   outlet: 'outlet',
 } as const;
 
+export type ArticleCreditRole = typeof ArticleCreditRole[keyof typeof ArticleCreditRole];
+
+
+export const ArticleCreditRole = {
+  author: 'author',
+  contributor: 'contributor',
+  reporting: 'reporting',
+  research: 'research',
+  photography: 'photography',
+  editing: 'editing',
+  other: 'other',
+} as const;
+
+export interface ArticleCredit {
+  /** @minLength 1 */
+  name: string;
+  role: ArticleCreditRole;
+  attribution?: string;
+}
+
 export type RecordInputPublicationSource = typeof RecordInputPublicationSource[keyof typeof RecordInputPublicationSource];
 
 
@@ -70,6 +74,46 @@ export const RecordInputPublicationSource = {
   'google-news': 'google-news',
   manual: 'manual',
 } as const;
+
+export interface ContentNormalization {
+  method: string;
+  sourceCharacters: number;
+  articleCharacters: number;
+}
+
+export interface ClassificationEvidence {
+  signal: string;
+  value: string;
+  contentType?: string;
+  contentFormat?: string;
+  rank?: number;
+}
+
+export interface Retrieval {
+  status?: string;
+  method?: string;
+  lastAttempt?: string;
+  nextAttemptAt?: string;
+  message?: string;
+  characters?: number;
+  rawCharacters?: number;
+  attempts?: number;
+  manualRequested?: boolean;
+}
+
+export interface ContentCapture {
+  id: string;
+  text?: string;
+  raw?: string;
+  source: string;
+  sourceUrl?: string;
+  capturedAt: string;
+  fileName?: string;
+  uploadId?: string;
+  bodyHash?: string;
+  textLength?: number;
+  rawLength?: number;
+}
 
 export type RecordInputImpact = typeof RecordInputImpact[keyof typeof RecordInputImpact];
 
@@ -137,74 +181,6 @@ export const RecordInputWatchType = {
   topic: 'topic',
 } as const;
 
-export type RecordInputIntakeMethod = typeof RecordInputIntakeMethod[keyof typeof RecordInputIntakeMethod];
-
-
-export const RecordInputIntakeMethod = {
-  rss: 'rss',
-  sitemap: 'sitemap',
-  'google-news': 'google-news',
-} as const;
-
-export type ArticleCreditRole = typeof ArticleCreditRole[keyof typeof ArticleCreditRole];
-
-
-export const ArticleCreditRole = {
-  author: 'author',
-  contributor: 'contributor',
-  reporting: 'reporting',
-  research: 'research',
-  photography: 'photography',
-  editing: 'editing',
-  other: 'other',
-} as const;
-
-export interface ArticleCredit {
-  /** @minLength 1 */
-  name: string;
-  role: ArticleCreditRole;
-  attribution?: string;
-}
-
-export interface ContentNormalization {
-  method: string;
-  sourceCharacters: number;
-  articleCharacters: number;
-}
-
-export interface ClassificationEvidence {
-  signal: string;
-  value: string;
-  contentType?: string;
-  contentFormat?: string;
-  rank?: number;
-}
-
-export interface Retrieval {
-  status?: string;
-  method?: string;
-  lastAttempt?: string;
-  nextAttemptAt?: string;
-  message?: string;
-  characters?: number;
-  rawCharacters?: number;
-  attempts?: number;
-}
-
-export interface ContentCapture {
-  id: string;
-  text?: string;
-  raw?: string;
-  source: string;
-  sourceUrl?: string;
-  capturedAt: string;
-  fileName?: string;
-  uploadId?: string;
-  bodyHash?: string;
-  textLength?: number;
-  rawLength?: number;
-}
-
 export type FeedHealthKind = typeof FeedHealthKind[keyof typeof FeedHealthKind];
 
 
@@ -246,6 +222,15 @@ export interface FeedHealth {
   nextAttemptAt?: string;
   failures?: number;
 }
+
+export type RecordInputIntakeMethod = typeof RecordInputIntakeMethod[keyof typeof RecordInputIntakeMethod];
+
+
+export const RecordInputIntakeMethod = {
+  rss: 'rss',
+  sitemap: 'sitemap',
+  'google-news': 'google-news',
+} as const;
 
 export type ObservationStage = typeof ObservationStage[keyof typeof ObservationStage];
 
@@ -328,6 +313,65 @@ export interface RecordInput {
   observations?: Observation[];
 }
 
+export type TrackedRecord = RecordInput & {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export interface QuickEnrichmentQueue {
+  items: TrackedRecord[];
+  jobs: QuickEnrichmentJob[];
+}
+
+export interface FlagRequest {
+  flagged: boolean;
+}
+
+export interface ImportUploadRequest {
+  name: string;
+  /**
+     * @minimum 1
+     * @maximum 10485760
+     */
+  size: number;
+  contentType: string;
+}
+
+export interface ImportAnalyzeRequest {
+  /** @maxLength 1000000 */
+  text?: string;
+  url?: string;
+  uploadId?: string;
+  targetId?: string;
+}
+
+export type ImportCommitRequestSourceType = typeof ImportCommitRequestSourceType[keyof typeof ImportCommitRequestSourceType];
+
+
+export const ImportCommitRequestSourceType = {
+  article: 'article',
+  x: 'x',
+} as const;
+
+export interface ImportCommitRequest {
+  draftId: string;
+  /** @minLength 1 */
+  title: string;
+  outlet?: string;
+  url?: string;
+  byline?: string;
+  /** @maxLength 2000 */
+  contributors?: string;
+  publishedAt?: string;
+  sourceType?: ImportCommitRequestSourceType;
+  fullTextComplete?: boolean;
+}
+
+export interface HealthStatus {
+  status: string;
+}
+
 export interface ArticleContent {
   text: string;
   raw: string;
@@ -370,12 +414,6 @@ export interface ImportDraft {
   source: string;
 }
 
-export type TrackedRecord = RecordInput & {
-  id: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
 export type WorkspaceAccess = {
   signedIn: boolean;
   canEnrich: boolean;
@@ -406,6 +444,10 @@ export interface RefreshResult {
   failures: string[];
   refreshedAt: string;
 }
+
+export type GetQuickEnrichmentText200 = {
+  text: string;
+};
 
 export type GetArticleContentParams = {
 capture?: string;
