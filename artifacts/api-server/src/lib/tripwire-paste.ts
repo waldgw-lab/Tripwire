@@ -1,4 +1,5 @@
 import { parseByline, type ParsedCredit } from "./tripwire-bylines";
+import { washingtonPostCopy } from "./tripwire-washington-post";
 
 export type ContentNormalization = { method: string; sourceCharacters: number; articleCharacters: number };
 const decode = (s: string) => s.replace(/&(?:amp|nbsp|quot|apos|lt|gt);/g, m => ({ "&amp;": "&", "&nbsp;": " ", "&quot;": '"', "&apos;": "'", "&lt;": "<", "&gt;": ">" }[m] ?? m));
@@ -8,6 +9,9 @@ export function pasteSourceUrl(text: string) {
   return lines.find(l => /^https?:\/\/\S+$/i.test(l)) ?? lines[0]?.match(/^\[[^\]]+\]\((https?:\/\/[^)\s]+)\)$/)?.[1];
 }
 export function publicationFromCopy(text: string) {
+  const post = text.split(/\r?\n/).slice(0, 35).map(s => s.trim()).find(s => /^[A-Z][a-z]+ \d{1,2}, \d{4} at /i.test(s))
+    ?.match(/^[A-Z][a-z]+ \d{1,2}, \d{4} at \d{1,2}:\d{2}\s*[ap]\.?m\.?\s*(?:EST|EDT|ET)/i)?.[0];
+  if (post) return publicationFromCopy(`Published: ${post.replace(/\s+at\s+/i, " ").replace(/a\.?m\.?/i, "AM").replace(/p\.?m\.?/i, "PM")}`);
   const line = text.split(/\r?\n/).slice(0, 20).find(l => /^(?:published|date)\s*:|·.*\b(?:ET|EST|EDT)\b/i.test(l));
   if (!line) return undefined;
   const value = line.replace(/^[^·]*·\s*|^(?:published|date)\s*:\s*/i, "").trim();
@@ -27,14 +31,20 @@ export function publicationFromCopy(text: string) {
   }
   return new Date(guess).toISOString();
 }
-export function parsePublisherCopy(raw: string, sourceUrl?: string) {
+export function parsePublisherCopy(raw: string, sourceUrl?: string, outletHint?: string) {
   const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   const headline = lines[0]?.match(/^\[([^\]]+)\]\(https?:\/\/[^)]+\)$/)?.[1] ?? lines[0] ?? "";
   const genericByline = lines.slice(0, 20).find(l => /^by\s+\S+/i.test(l));
   const fallback = { title: decode(headline), text: raw, byline: genericByline, credits: genericByline ? parseByline(genericByline) : undefined,
-    publishedAt: publicationFromCopy(raw), section: undefined as string | undefined, contentNormalization: undefined as ContentNormalization | undefined };
+    publishedAt: publicationFromCopy(raw), summary: undefined as string | undefined, outlet: undefined as string | undefined,
+    section: undefined as string | undefined, contentNormalization: undefined as ContentNormalization | undefined };
   let host = "";
-  try { host = new URL(sourceUrl ?? pasteSourceUrl(raw) ?? "").hostname; } catch { return fallback; }
+  try { host = new URL(sourceUrl ?? pasteSourceUrl(raw) ?? "").hostname; } catch { /* A publisher-identified paste may have no URL. */ }
+  if (/(^|\.)washingtonpost\.com$/i.test(host) ||
+    (!host || host === "news.google.com") && (outletHint === "The Washington Post" || /(?:Try )?Ask The Post AI/.test(raw))) {
+    const post = washingtonPostCopy(raw);
+    return post ? { ...fallback, ...post } : fallback;
+  }
   if (!/(^|\.)axios\.com$/i.test(host)) return fallback;
   const sectionLine = lines.find(l => /\bago\s*-\s*/i.test(l) && l.includes(headline));
   const section = sectionLine ? decode(sectionLine.slice(0, sectionLine.indexOf(headline)).replace(/^.*?\bago\s*-\s*/i, "")).trim() : undefined;

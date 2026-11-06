@@ -68,8 +68,11 @@ test("Clean article replaces a longer dirty copy without claiming completeness; 
 });
 test("An ordinary short partial paste cannot displace a longer article", () => {
   assert.equal(prefersIncomingContent({ fullText: raw }, { fullText: "Only a brief excerpt" }), false);
-  assert.equal(prefersIncomingContent({ fullText: raw, fullTextComplete: true }, { fullText: parsed.text, contentNormalization: parsed.contentNormalization }), false);
+  assert.equal(prefersIncomingContent({ fullText: raw, fullTextComplete: true }, { fullText: "Only a brief excerpt" }), false);
   assert.equal(prefersIncomingContent({ fullTextHash: "stored", fullTextLength: 100 }, { fullTextHash: "stored", fullTextLength: 100, fullTextComplete: true }), true);
+});
+test("Bounded publisher cleanup can repair a confirmed copy containing page controls", () => {
+  assert.equal(prefersIncomingContent({ fullText: raw, fullTextComplete: true }, { fullText: parsed.text, contentNormalization: parsed.contentNormalization }), true);
 });
 test("Agency aliases require word boundaries, not substrings inside officials/social/special", () => {
   for (const text of ["officials", "social", "special", "judicial"]) assert.equal(mentionsTerm(text, "CIA"), false, text);

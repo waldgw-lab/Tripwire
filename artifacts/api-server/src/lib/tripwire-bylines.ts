@@ -36,3 +36,12 @@ export function parseByline(raw: string): ParsedCredit[] {
   }
   return credits;
 }
+
+export function reviewedContributors(credits: ParsedCredit[], input?: string): ParsedCredit[] {
+  if (input === undefined) return credits;
+  const supplied = parseByline(input).map(c => {
+    const previous = credits.find(old => old.role === "contributor" && old.name.toLowerCase() === c.name.toLowerCase());
+    return previous ?? { ...c, role: "contributor" as const, attribution: `Contributors: ${input.trim()}` };
+  });
+  return [...credits.filter(c => c.role !== "contributor"), ...supplied];
+}

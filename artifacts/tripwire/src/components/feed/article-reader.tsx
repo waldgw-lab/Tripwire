@@ -86,7 +86,9 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
   const status = contentStatus(a);
   const tags = articleTags(a);
   const outlet = a.sourceType === 'x' ? (a.outlet ?? 'X') : (a.outlet ?? '—');
-  const attributions = credits.filter((c) => c.attribution);
+  const attributions = [...new Map(credits.filter(c => c.attribution).map(c => [c.attribution, c])).values()];
+  const contributors = credits.filter(c => c.role === 'contributor');
+  const bylineCredits = credits.filter(c => c.role !== 'contributor');
 
   return (
     <article aria-labelledby={`reader-title-${a.id}`} className="flex h-full flex-col" data-testid={`reader-${a.id}`}>
@@ -131,14 +133,19 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
 
         <dl className="mt-5 grid gap-4 rounded-md border border-border/70 bg-background/70 p-4">
           <Field label="Byline">
-            {credits.length ? (
+            {bylineCredits.length ? (
               <ul className="space-y-0.5" data-testid="list-reader-credits">
-                {credits.map((c, i) => (
+                {bylineCredits.map((c, i) => (
                   <li key={`${c.name}-${c.role}-${i}`}>{c.name} <span className="font-mono text-[11px] text-muted-foreground">{c.role}</span></li>
                 ))}
               </ul>
             ) : <span className="text-muted-foreground">Not recorded</span>}
           </Field>
+          {contributors.length > 0 && (
+            <Field label="Contributing reporters">
+              <ul className="space-y-0.5" data-testid="list-reader-contributors">{contributors.map((c, i) => <li key={i}>{c.name}</li>)}</ul>
+            </Field>
+          )}
           {(a.byline || attributions.length > 0) && (
             <Field label="Credit wording">
               {a.byline && <p className="italic" data-testid="text-reader-byline">{a.byline}</p>}

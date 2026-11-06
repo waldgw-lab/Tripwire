@@ -740,6 +740,8 @@ export const AnalyzeImportResponse = zod.object({
 
 
 
+export const commitImportBodyContributorsMax = 2000;
+
 
 
 export const CommitImportBody = zod.object({
@@ -748,6 +750,7 @@ export const CommitImportBody = zod.object({
   "outlet": zod.string().optional(),
   "url": zod.string().optional(),
   "byline": zod.string().optional(),
+  "contributors": zod.string().max(commitImportBodyContributorsMax).optional(),
   "publishedAt": zod.string().optional(),
   "sourceType": zod.enum(['article', 'x']).optional(),
   "fullTextComplete": zod.boolean().optional()

@@ -1,6 +1,6 @@
 import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
-import { extractText } from "unpdf";
+import { pdfDocument } from "./tripwire-pdf";
 import mammoth from "mammoth";
 import WordExtractor from "word-extractor";
 import { parseByline } from "./tripwire-bylines";
@@ -51,7 +51,7 @@ export async function documentText(bytes: Buffer, filename: string) {
   if (bytes.length > 10485760) throw new Error("Files must be 10 MB or smaller");
   let text: string;
   if (bytes.subarray(0, 5).toString() === "%PDF-") {
-    const result = await extractText(new Uint8Array(bytes), { mergePages: true });
+    const result = await pdfDocument(bytes);
     text = result.text;
   } else if (bytes.subarray(0, 8).toString("hex") === "d0cf11e0a1b11ae1") {
     const document = await new WordExtractor().extract(bytes);
@@ -70,12 +70,20 @@ export async function documentText(bytes: Buffer, filename: string) {
   return text;
 }
 
-export function textCandidate(text: string, url?: string): RecordData {
+export async function documentCandidate(bytes: Buffer, filename: string, url?: string, outletHint?: string) {
+  if (bytes.length > 10485760) throw new Error("Files must be 10 MB or smaller");
+  const pdf = bytes.subarray(0, 5).toString() === "%PDF-" ? await pdfDocument(bytes) : undefined;
+  const text = pdf ? pdf.text.trim() : await documentText(bytes, filename);
+  if (!text || text.length > 1_000_000) throw new Error("Document has no readable text or exceeds the 1,000,000-character intake limit");
+  return { text, candidate: textCandidate(text, url, pdf?.outlet ?? outletHint) };
+}
+
+export function textCandidate(text: string, url?: string, outletHint?: string): RecordData {
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   const sourceUrl = url ?? pasteSourceUrl(text);
   const cleanUrl = sourceUrl ? canonicalUrl(sourceUrl) : undefined;
-  const outlet = inferOutlet(cleanUrl, text);
-  const copy = parsePublisherCopy(text, cleanUrl);
+  const copy = parsePublisherCopy(text, cleanUrl, outletHint);
+  const outlet = inferOutlet(cleanUrl, text) ?? copy.outlet ?? outletHint;
   const byline = copy.byline;
   const rawTitle = (lines.find(l => l !== outlet && l !== sourceUrl && l !== byline && !/^(published|updated)\s*:/i.test(l)) ?? "");
   const title = (copy.contentNormalization ? copy.title : rawTitle.replace(/^\[([^\]]+)\]\(https?:\/\/[^)]+\)$/, "$1")).slice(0, 250);
@@ -83,7 +91,7 @@ export function textCandidate(text: string, url?: string): RecordData {
   return { kind: "article", title, url: cleanUrl, outlet, byline, credits, journalists: credits?.filter(c => c.role === "author").map(c => c.name),
     ...classifyContent({ url: cleanUrl, title }),
     publishedAt: copy.publishedAt, topic: inferArticleTopic(title, copy.text, copy.section),
-    summary: copy.contentNormalization ? copy.text.slice(0, 450) : undefined,
+    summary: copy.contentNormalization ? copy.summary ?? copy.text.slice(0, 450) : undefined,
     fullText: copy.text, contentNormalization: copy.contentNormalization, fullTextComplete: false, sourceType: cleanUrl && /^(?:www\.)?(?:x|twitter)\.com$/i.test(new URL(cleanUrl).hostname) ? "x" : "article",
     sentiment: "unassessed", reportingType: "unassessed" };
 }

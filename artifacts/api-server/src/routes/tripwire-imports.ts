@@ -6,11 +6,11 @@ import { AnalyzeImportBody, AnalyzeImportResponse, CommitImportBody, CommitImpor
 import { recordsFor, writeRecord, type RecordData } from "../lib/tripwire-store";
 import { privateFile, uploadUrl } from "../lib/tripwire-files";
 import { fetchPublicDocument } from "../lib/tripwire-fetch";
-import { canonicalUrl, documentText, htmlCandidate, importCapture, matchImport, textCandidate } from "../lib/tripwire-import";
+import { canonicalUrl, documentCandidate, htmlCandidate, importCapture, matchImport, textCandidate } from "../lib/tripwire-import";
 import { publisherUrl } from "../lib/tripwire-intake";
 import { publicationUpdate } from "../lib/tripwire-publication";
 import { mergeCaptures, captureContent, prefersIncomingContent, type Capture } from "../lib/tripwire-content";
-import { parseByline } from "../lib/tripwire-bylines";
+import { parseByline, reviewedContributors } from "../lib/tripwire-bylines";
 import { archiveArticle, hydrateArticles } from "../lib/tripwire-content-storage";
 import { mergeClassification } from "../lib/tripwire-classification";
 import { reconcileCredits } from "../lib/tripwire-paste";
@@ -71,7 +71,8 @@ router.post("/tripwire/imports/analyze", async (req, res) => {
         if (Number(metadata.size) > 10485760 || Number(metadata.size) !== Number(upload.data.size)) throw new IntakeError("Uploaded file size does not match the selected file");
         [bytes] = await object.download();
       } catch (error) { if (error instanceof IntakeError) throw error; throw new IntakeError("The upload is not available yet. Select the file and try again."); }
-      const extracted = await documentText(bytes, String(upload.data.name));
+      const document = await documentCandidate(bytes, String(upload.data.name), undefined, target?.outlet);
+      const extracted = document.text;
       // The upload URL can still be used until it expires. Archive an immutable copy
       // at an unshared object key so later PUTs cannot change the retained original.
       if (!upload.data.archiveId) {
@@ -79,7 +80,7 @@ router.post("/tripwire/imports/analyze", async (req, res) => {
         await privateFile(archiveId).save(bytes, { resumable: false, contentType: String(upload.data.contentType) || "application/octet-stream" });
         await db.update(tripwireRecords).set({ data: { ...upload.data, archiveId } }).where(and(eq(tripwireRecords.id, upload.id), eq(tripwireRecords.owner, userId)));
       }
-      candidate = textCandidate(extracted);
+      candidate = document.candidate;
       source = "file";
       capture = importCapture(candidate, source, { raw: extracted, fileName: String(upload.data.name), uploadId: body.uploadId });
     } else if (sourceUrl) {
@@ -87,8 +88,9 @@ router.post("/tripwire/imports/analyze", async (req, res) => {
       source = "url";
       if (/pdf|msword|officedocument/i.test(response.contentType) || /\.(pdf|doc|docx)$/i.test(new URL(response.url).pathname)) {
         const filename = new URL(response.url).pathname.split("/").pop() ?? "document.pdf";
-        const extracted = await documentText(response.bytes, filename);
-        candidate = textCandidate(extracted, response.url);
+        const document = await documentCandidate(response.bytes, filename, response.url, target?.outlet);
+        const extracted = document.text;
+        candidate = document.candidate;
         // Retain the original fetched document just as with uploaded documents.
         const id = crypto.randomUUID();
         await privateFile(id).save(response.bytes, { resumable: false, contentType: response.contentType });
@@ -101,7 +103,7 @@ router.post("/tripwire/imports/analyze", async (req, res) => {
       }
     } else {
       source = "paste";
-      candidate = textCandidate(body.text ?? text);
+      candidate = textCandidate(body.text ?? text, undefined, target?.outlet);
       capture = importCapture(candidate, source, { raw: body.text ?? text });
     }
     if (candidate.publishedAt) candidate = { ...candidate, publicationSource: source === "url" ? "publisher" : "manual", publicationSourceUrl: candidate.url };
@@ -109,6 +111,13 @@ router.post("/tripwire/imports/analyze", async (req, res) => {
     if (matched.ambiguous && !target) throw new IntakeError("More than one existing item matches. Open the intended article and enrich it there.");
     if (target && matched.record && matched.record.id !== target.id) throw new IntakeError("This content matches a different article. Import it from the Dashboard rather than overwriting this item.");
     const existing = target ?? matched.record;
+    if (existing && !candidate.contentNormalization && source !== "url" && capture.raw) {
+      const cleaned = textCandidate(capture.raw, candidate.url, existing.outlet);
+      if (cleaned.contentNormalization) {
+        candidate = { ...cleaned, publicationSource: candidate.publicationSource, publicationSourceUrl: candidate.publicationSourceUrl };
+        capture = importCapture(candidate, source, { raw: capture.raw, fileName: capture.fileName, uploadId: capture.uploadId });
+      }
+    }
     if (existing) {
       // Keep curated metadata and article-specific credit roles unless a source supplies
       // missing information. Content imports must not silently rewrite attribution.
@@ -164,9 +173,10 @@ router.post("/tripwire/imports/commit", async (req, res) => {
       const bylineChanged = byline !== existing?.byline;
       const reviewed = byline ? parseByline(byline) : [];
       const matchesSource = byline === candidate.byline;
-      const credits = matchesSource ? candidate.credits ?? reviewed : bylineChanged
+      const baseCredits = matchesSource ? candidate.credits ?? reviewed : bylineChanged
         ? [...reviewed, ...(candidate.credits ?? existing?.credits ?? []).filter(c => c.role !== "author" && !reviewed.some(r => r.name === c.name))]
         : existing?.credits ?? candidate.credits;
+      const credits = reviewedContributors(baseCredits ?? [], body.contributors);
       const data: RecordData = { ...candidate, ...existing, ...mergeClassification(existing ?? {}, candidate), id: existing?.id ?? String(draft.data.articleId), kind: "article", ...finalMetadata,
         discoveryOnly: existing?.discoveryOnly ? !url || !publisherUrl(url, finalMetadata.outlet ?? "") : false,
         byline, credits, journalists: credits?.filter(c => c.role === "author").map(c => c.name) ?? [],

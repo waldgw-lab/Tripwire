@@ -208,6 +208,7 @@ components:
         outlet: { type: string }
         url: { type: string }
         byline: { type: string }
+        contributors: { type: string, maxLength: 2000 }
         publishedAt: { type: string }
         sourceType: { type: string, enum: [article, x] }
         fullTextComplete: { type: boolean }

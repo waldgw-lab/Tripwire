@@ -41,6 +41,8 @@ export interface ImportCommitRequest {
   outlet?: string;
   url?: string;
   byline?: string;
+  /** @maxLength 2000 */
+  contributors?: string;
   publishedAt?: string;
   sourceType?: ImportCommitRequestSourceType;
   fullTextComplete?: boolean;

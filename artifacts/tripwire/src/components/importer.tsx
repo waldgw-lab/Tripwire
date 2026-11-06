@@ -14,7 +14,7 @@ const MAX = 10 * 1024 * 1024;
 const ACCEPT = '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const isUrl = (s: string) => /^https?:\/\/\S+$/i.test(s.trim());
 
-type Meta = { title: string; outlet: string; url: string; byline: string; publishedAt: string; sourceType: 'article' | 'x'; fullTextComplete: boolean };
+type Meta = { title: string; outlet: string; url: string; byline: string; contributors: string; publishedAt: string; sourceType: 'article' | 'x'; fullTextComplete: boolean };
 
 export function Importer({ targetId, targetTitle, onCommitted, compact }: {
   targetId?: string; targetTitle?: string; onCommitted?: (r: TrackedRecord) => void; compact?: boolean;
@@ -62,6 +62,7 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
       setDraft(d);
       setMeta({
         title: c.title ?? '', outlet: c.outlet ?? '', url: c.url ?? (urlMode ? text.trim() : ''), byline: c.byline ?? '',
+        contributors: (c.credits ?? []).filter(credit => credit.role === 'contributor').map(credit => credit.name).join(', '),
         publishedAt: toLocalInput(c.publishedAt), sourceType: c.sourceType === 'x' ? 'x' : 'article', fullTextComplete: false,
       });
     } catch (e) {
@@ -77,6 +78,7 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
       data: {
         draftId: draft.draftId, title: meta.title.trim(), outlet: meta.outlet || undefined, url: meta.url || undefined,
         byline: meta.byline || undefined,
+        contributors: meta.contributors,
         // The minute-precision form must not truncate seconds or relabel an
         // unchanged feed timestamp as a manually edited date.
         publishedAt: meta.publishedAt === toLocalInput(draft.candidate.publishedAt) ? draft.candidate.publishedAt : fromLocalInput(meta.publishedAt),
@@ -151,6 +153,7 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
             <label className="text-xs">URL<Input value={meta.url} onChange={e => set('url', e.target.value)} className="mt-1 h-8" data-testid="input-import-url" /></label>
             <label className="text-xs">Byline<Input value={meta.byline} onChange={e => set('byline', e.target.value)} className="mt-1 h-8" data-testid="input-import-byline" /></label>
             <label className="text-xs">Published<Input type="datetime-local" value={meta.publishedAt} onChange={e => set('publishedAt', e.target.value)} className="mt-1 h-8" data-testid="input-import-published" /></label>
+            <label className="sm:col-span-2 text-xs">Contributing reporters<textarea value={meta.contributors} onChange={e => set('contributors', e.target.value)} rows={2} className="mt-1 block w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm" data-testid="input-import-contributors" /></label>
             <label className="text-xs">Type
               <select value={meta.sourceType} onChange={e => set('sourceType', e.target.value as Meta['sourceType'])} className="mt-1 block h-8 w-full rounded-md border border-input bg-background px-2 text-sm" data-testid="select-import-type">
                 <option value="article">Article</option><option value="x">X post</option>

@@ -40,6 +40,11 @@ export function prefersIncomingContent(existing: ArticleContent, incoming: Artic
   const newLength = incoming.fullText?.length ?? incoming.fullTextLength ?? 0;
   if (!newLength) return false;
   if (!oldLength || !!incoming.fullTextComplete && !!(incoming.fullText || incoming.fullTextHash)) return true;
+  // A previously confirmed copy may still contain page controls/recommendations.
+  // Bounded publisher-copy cleanup can repair that while retaining the raw copy.
+  if (!existing.contentNormalization && incoming.contentNormalization &&
+    /^publisher-copy:(?:axios|washington-post)$/.test(incoming.contentNormalization.method) &&
+    incoming.contentNormalization.sourceCharacters >= oldLength) return true;
   if (existing.fullTextComplete) return false;
   // A cleaned article can be shorter than an unclean page copy without losing
   // source material. Completeness is separate; the raw capture stays immutable.
