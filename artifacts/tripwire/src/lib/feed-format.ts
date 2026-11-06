@@ -16,7 +16,8 @@ export function feedPublication(value?: string, now = new Date()) {
 
 /** Shortening is presentation-only; full names and roles remain on article credits. */
 export function feedByline(credits: ArticleCredit[]) {
-  const distinct = [...new Map(credits.filter(c => c.name.trim()).map(c => [nameKey(c.name), c.name.trim()])).values()];
+  // Photography is credited in the detail pane, not presented as a reporting byline.
+  const distinct = [...new Map(credits.filter(c => c.name.trim() && c.role !== 'photography').map(c => [nameKey(c.name), c.name.trim()])).values()];
   if (distinct.length < 2) return distinct[0] ?? '';
   return distinct.map(name => {
     const withoutSuffix = name.replace(/,?\s+(?:Jr\.?|Sr\.?|II|III|IV)\s*$/i, '');

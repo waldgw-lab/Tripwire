@@ -43,7 +43,7 @@ export function prefersIncomingContent(existing: ArticleContent, incoming: Artic
   // A previously confirmed copy may still contain page controls/recommendations.
   // Bounded publisher-copy cleanup can repair that while retaining the raw copy.
   if (!existing.contentNormalization && incoming.contentNormalization &&
-    /^publisher-copy:(?:axios|washington-post)$/.test(incoming.contentNormalization.method) &&
+    /^publisher-copy:(?:axios|washington-post|cnn|nytimes)$/.test(incoming.contentNormalization.method) &&
     incoming.contentNormalization.sourceCharacters >= oldLength) return true;
   if (existing.fullTextComplete) return false;
   // A cleaned article can be shorter than an unclean page copy without losing

@@ -6,7 +6,7 @@ import { AnalyzeImportBody, AnalyzeImportResponse, CommitImportBody, CommitImpor
 import { recordsFor, writeRecord, type RecordData } from "../lib/tripwire-store";
 import { privateFile, uploadUrl } from "../lib/tripwire-files";
 import { fetchPublicDocument } from "../lib/tripwire-fetch";
-import { canonicalUrl, documentCandidate, htmlCandidate, importCapture, matchImport, textCandidate } from "../lib/tripwire-import";
+import { canonicalUrl, documentCandidate, htmlCandidate, importCapture, matchImport, resolveImportMatch, textCandidate } from "../lib/tripwire-import";
 import { publisherUrl } from "../lib/tripwire-intake";
 import { publicationUpdate } from "../lib/tripwire-publication";
 import { mergeCaptures, captureContent, prefersIncomingContent, type Capture } from "../lib/tripwire-content";
@@ -40,7 +40,7 @@ router.post("/tripwire/imports/uploads", async (req, res) => {
   }
 });
 
-export async function analyzeImport(userId: string, input: unknown) {
+export async function analyzeImport(userId: string, input: unknown, options: { allowMatchReview?: boolean } = {}) {
     const body = AnalyzeImportBody.parse(input);
     let text = body.text?.trim() ?? "";
     let sourceUrl = body.url?.trim();
@@ -99,10 +99,10 @@ export async function analyzeImport(userId: string, input: unknown) {
       capture = importCapture(candidate, source, { raw: body.text ?? text });
     }
     if (candidate.publishedAt) candidate = { ...candidate, publicationSource: source === "url" ? "publisher" : "manual", publicationSourceUrl: candidate.url };
-    const matched = matchImport(candidate, records);
+    const matched = resolveImportMatch(candidate, records, target, options.allowMatchReview);
     if (matched.ambiguous && !target) throw new IntakeError("More than one existing item matches. Open the intended article and enrich it there.");
-    if (target && matched.record && matched.record.id !== target.id) throw new IntakeError("This content matches a different article. Import it from the Dashboard rather than overwriting this item.");
-    const existing = target ?? matched.record;
+    if (matched.conflict && !options.allowMatchReview) throw new IntakeError("This content matches a different article. Open the matching item to enrich it.");
+    const existing = matched.existing;
     if (existing && !candidate.contentNormalization && source !== "url" && capture.raw) {
       const cleaned = textCandidate(capture.raw, candidate.url, existing.outlet);
       if (cleaned.contentNormalization) {
@@ -128,7 +128,7 @@ export async function analyzeImport(userId: string, input: unknown) {
     candidate.retainedContent = [capture];
     const archivedCandidate = await archiveArticle(candidate);
     await db.insert(tripwireRecords).values({ id: `draft:${draftId}`, owner: userId, kind: "import-draft", data: { candidate: archivedCandidate, articleId, matchedId: existing?.id, capture: archivedCandidate.retainedContent?.[0], source } });
-    return AnalyzeImportResponse.parse({ draftId, candidate, matchedId: existing?.id, matchReason: target ? "Selected article" : matched.reason, warnings, characterCount: candidate.fullText?.length ?? 0, source });
+    return AnalyzeImportResponse.parse({ draftId, candidate, matchedId: existing?.id, matchReason: matched.conflict ? "Matching another existing article" : target ? "Selected article" : matched.reason, warnings, characterCount: candidate.fullText?.length ?? 0, source });
 }
 
 router.post("/tripwire/imports/analyze", async (req, res) => {
@@ -140,7 +140,7 @@ router.post("/tripwire/imports/analyze", async (req, res) => {
   if (++bucket.count > 12) { res.status(429).json({ error: "Please wait a minute before analyzing more imports" }); return; }
   inFlight.add(userId);
   try {
-    res.json(await analyzeImport(userId, req.body));
+    res.json(await analyzeImport(userId, req.body, { allowMatchReview: true }));
   } catch (error) {
     req.log.warn({ err: error instanceof Error ? error.message : "Intake error" }, "Import analysis failed");
     res.status(error instanceof IntakeError ? error.status : 400).json({ error: error instanceof Error ? error.message : "Could not analyze this content" });

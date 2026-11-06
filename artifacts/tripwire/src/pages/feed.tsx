@@ -177,7 +177,7 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
             className="tw-rise fixed inset-0 z-50 bg-card lg:static lg:z-auto lg:border-l lg:border-border lg:bg-card/85 lg:backdrop-blur-sm"
           >
             <div className="h-full lg:sticky lg:top-0 lg:h-[100dvh]">
-              <ArticleReader article={selected} impact={impacts.get(selected.id) ?? impactRating(selected, watches)} onClose={() => setOpen(null)}
+              <ArticleReader article={selected} impact={impacts.get(selected.id) ?? impactRating(selected, watches)} onClose={() => setOpen(null)} onOpenArticle={setOpen}
                 signedIn={!!isSignedIn} onToggleFlag={() => toggleFlag(selected)} flagPending={flag.isPending} />
             </div>
           </aside>

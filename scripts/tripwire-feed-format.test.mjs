@@ -3,6 +3,13 @@ import assert from 'node:assert/strict';
 import { feedPublication, feedByline, impactTextColor } from '../artifacts/tripwire/src/lib/feed-format.ts';
 
 const now = new Date('2026-11-05T15:00:00Z');
+test('photography credits stay separate from compact reporting bylines', () => {
+  assert.equal(feedByline([
+    { name: 'Hannah Rabinowitz', role: 'author' },
+    { name: 'Evan Perez', role: 'author' },
+    { name: 'Brendan McDermid', role: 'photography' },
+  ]), 'Rabinowitz, Perez');
+});
 test('current-year feed date omits year and clock is colonless Eastern time', () => {
   assert.deepEqual(feedPublication('2026-11-05T14:18:33Z', now), { date: '05 NOV', time: '0918', label: '05 NOV · 0918' });
 });

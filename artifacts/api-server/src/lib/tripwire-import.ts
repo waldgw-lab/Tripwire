@@ -47,6 +47,13 @@ export function matchImport<T extends RecordData & { id: string }>(candidate: Pi
   return byTitle.length === 1 ? { record: byTitle[0], reason: "Matching headline and publisher" } : byTitle.length > 1 ? { ambiguous: true } : {};
 }
 
+/** Interactive previews may offer another exact match; unattended jobs may not retarget. */
+export function resolveImportMatch<T extends RecordData & { id: string }>(candidate: Pick<RecordData, "title" | "url" | "outlet">, records: T[], target?: T, allowMatchReview = false) {
+  const matched = matchImport(candidate, records);
+  const conflict = !!target && !!matched.record && matched.record.id !== target.id;
+  return { ...matched, conflict, existing: conflict && allowMatchReview ? matched.record : target ?? matched.record };
+}
+
 export async function documentText(bytes: Buffer, filename: string) {
   if (bytes.length > 10485760) throw new Error("Files must be 10 MB or smaller");
   let text: string;

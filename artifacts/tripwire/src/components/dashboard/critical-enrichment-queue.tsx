@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getQuickEnrichmentText, getGetQuickEnrichmentQueryKey, useGetQuickEnrichment, useQueueQuickEnrichment, useRetryQuickEnrichment,
@@ -9,7 +8,7 @@ import {
 import { ChevronDown, ChevronRight, Loader2, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ErrorState } from '@/components/bits';
-import { errText, fmtDate, useInvalidateWorkspace } from '@/lib/workspace';
+import { errText, fmtDate, useInvalidateWorkspace, useWorkspace } from '@/lib/workspace';
 
 const MIN = 250;
 const MAX = 1_000_000;
@@ -17,7 +16,7 @@ const draftKey = (id: string) => `tw-qe-draft:${id}`;
 const readDraft = (id: string) => { try { return sessionStorage.getItem(draftKey(id)) ?? ''; } catch { return ''; } };
 const writeDraft = (id: string, v: string) => { try { if (v) sessionStorage.setItem(draftKey(id), v); else sessionStorage.removeItem(draftKey(id)); } catch { /* storage unavailable */ } };
 
-type Row = { articleId: string; title: string; outlet?: string; ingestedAt?: string; summary?: string; job?: QuickEnrichmentJob };
+type Row = { articleId: string; title: string; url?: string | null; outlet?: string; ingestedAt?: string; summary?: string; job?: QuickEnrichmentJob };
 
 const statusTone: Record<string, string> = {
   queued: 'border-border text-muted-foreground',
@@ -87,6 +86,7 @@ function QueueRow({ row }: { row: Row }) {
   };
 
   const panelId = `qe-panel-${articleId}`;
+  const articleUrl = row.url && /^https?:\/\//i.test(row.url) ? row.url : undefined;
   return (
     <li className="border-t border-border/60 first:border-t-0" data-testid={`row-quick-enrich-${articleId}`}>
       <div className="flex items-center gap-2 px-3 py-2">
@@ -97,7 +97,9 @@ function QueueRow({ row }: { row: Row }) {
           {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
         </button>
         <div className="min-w-0 flex-1">
-          <Link href={`/feed?article=${articleId}`} className="block truncate text-sm font-medium hover:underline underline-offset-4" data-testid={`link-quick-enrich-article-${articleId}`}>{row.title}</Link>
+          {articleUrl ? (
+            <a href={articleUrl} target="_blank" rel="noopener noreferrer" className="block truncate text-sm font-medium hover:underline underline-offset-4" data-testid={`link-quick-enrich-article-${articleId}`}>{row.title}</a>
+          ) : <span className="block truncate text-sm font-medium">{row.title}</span>}
           <div className="truncate font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
             {[row.outlet, row.ingestedAt ? fmtDate(row.ingestedAt, true) : null].filter(Boolean).join(' · ')}
           </div>
@@ -144,6 +146,7 @@ function QueueRow({ row }: { row: Row }) {
 }
 
 export function CriticalEnrichmentQueue() {
+  const { data: workspace } = useWorkspace();
   const { data, isLoading, isError, refetch, isFetching } = useGetQuickEnrichment({
     query: {
       refetchInterval: (q) => (q.state.data?.jobs ?? []).some(j => j.status === 'queued' || j.status === 'running') ? 2_000 : 15_000,
@@ -164,18 +167,19 @@ export function CriticalEnrichmentQueue() {
   }, [savedKey]);
 
   const rows = useMemo<Row[]>(() => {
+    const articles = new Map((workspace?.records ?? []).map(r => [r.id, r]));
     const latest = new Map<string, QuickEnrichmentJob>();
     for (const j of data?.jobs ?? []) {
       const cur = latest.get(j.articleId);
       if (!cur || j.updatedAt > cur.updatedAt) latest.set(j.articleId, j);
     }
     const out: Row[] = (data?.items ?? []).map((r: TrackedRecord) => ({
-      articleId: r.id, title: r.title, outlet: r.outlet, ingestedAt: r.discoveredAt ?? r.createdAt, summary: r.summary, job: latest.get(r.id),
+      articleId: r.id, title: r.title, url: r.url, outlet: r.outlet, ingestedAt: r.discoveredAt ?? r.createdAt, summary: r.summary, job: latest.get(r.id),
     }));
     const have = new Set(out.map(r => r.articleId));
-    for (const j of latest.values()) if (!have.has(j.articleId)) out.push({ articleId: j.articleId, title: j.title, outlet: j.outlet, job: j });
+    for (const j of latest.values()) if (!have.has(j.articleId)) out.push({ articleId: j.articleId, title: j.title, url: articles.get(j.articleId)?.url, outlet: j.outlet, job: j });
     return out;
-  }, [data]);
+  }, [data, workspace]);
 
   const counts = rows.reduce((c, r) => { const s = r.job?.status; if (s) c[s] = (c[s] ?? 0) + 1; return c; }, {} as Record<string, number>);
 

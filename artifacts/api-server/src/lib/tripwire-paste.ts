@@ -1,5 +1,6 @@
 import { parseByline, type ParsedCredit } from "./tripwire-bylines";
 import { washingtonPostCopy } from "./tripwire-washington-post";
+import { cnnCopy, newYorkTimesCopy } from "./tripwire-news-copy";
 
 export type ContentNormalization = { method: string; sourceCharacters: number; articleCharacters: number };
 const decode = (s: string) => s.replace(/&(?:amp|nbsp|quot|apos|lt|gt);/g, m => ({ "&amp;": "&", "&nbsp;": " ", "&quot;": '"', "&apos;": "'", "&lt;": "<", "&gt;": ">" }[m] ?? m));
@@ -40,6 +41,15 @@ export function parsePublisherCopy(raw: string, sourceUrl?: string, outletHint?:
     section: undefined as string | undefined, contentNormalization: undefined as ContentNormalization | undefined };
   let host = "";
   try { host = new URL(sourceUrl ?? pasteSourceUrl(raw) ?? "").hostname; } catch { /* A publisher-identified paste may have no URL. */ }
+  const unidentifiedHost = !host || host === "news.google.com";
+  if (/(^|\.)cnn\.com$/i.test(host) || unidentifiedHost && (outletHint === "CNN" || /\]\(https:\/\/(?:www\.)?cnn\.com\/profiles\//i.test(lines.slice(0, 20).join("\n")))) {
+    const cnn = cnnCopy(raw);
+    return cnn ? { ...fallback, ...cnn } : fallback;
+  }
+  if (/(^|\.)nytimes\.com$/i.test(host) || unidentifiedHost && (outletHint === "The New York Times" || lines.slice(0, 15).some(l => /^\[The New York Times\]\(https:\/\/(?:www\.)?nytimes\.com\/?\)/.test(l)))) {
+    const nyt = newYorkTimesCopy(raw);
+    return nyt ? { ...fallback, ...nyt } : fallback;
+  }
   if (/(^|\.)washingtonpost\.com$/i.test(host) ||
     (!host || host === "news.google.com") && (outletHint === "The Washington Post" || /(?:Try )?Ask The Post AI/.test(raw))) {
     const post = washingtonPostCopy(raw);

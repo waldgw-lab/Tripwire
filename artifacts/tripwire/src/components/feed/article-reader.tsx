@@ -57,9 +57,10 @@ function ContentBody({ articleId, captureId, revision, complete, showComplete, o
   );
 }
 
-export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleFlag, flagPending }: {
+export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleFlag, flagPending, onOpenArticle }: {
   article: TrackedRecord; impact: { value: Impact; reason: string }; onClose: () => void;
   signedIn: boolean; onToggleFlag: () => void; flagPending: boolean;
+  onOpenArticle?: (id: string) => void;
 }) {
   const captures = a.retainedContent ?? [];
   const hasMain = hasMainText(a);
@@ -86,7 +87,7 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
   const status = contentStatus(a);
   const tags = articleTags(a);
   const outlet = a.sourceType === 'x' ? (a.outlet ?? 'X') : (a.outlet ?? '—');
-  const attributions = [...new Map(credits.filter(c => c.attribution).map(c => [c.attribution, c])).values()];
+  const attributions = [...new Map(credits.filter(c => c.attribution && c.attribution.trim() !== a.byline?.trim()).map(c => [c.attribution, c])).values()];
   const contributors = credits.filter(c => c.role === 'contributor');
   const bylineCredits = credits.filter(c => c.role !== 'contributor');
 
@@ -128,7 +129,7 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
             className="mb-2 inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-xs hover:border-foreground" data-testid="button-toggle-importer">
             {importOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />} Add / update content
           </button>
-          {importOpen && <div id={`article-importer-${a.id}`}><Importer key={a.id} targetId={a.id} targetTitle={a.title} compact /></div>}
+          {importOpen && <div id={`article-importer-${a.id}`}><Importer key={a.id} targetId={a.id} targetTitle={a.title} compact onCommitted={record => { if (record.id !== a.id) onOpenArticle?.(record.id); }} /></div>}
         </div>
 
         <dl className="mt-5 grid gap-4 rounded-md border border-border/70 bg-background/70 p-4">

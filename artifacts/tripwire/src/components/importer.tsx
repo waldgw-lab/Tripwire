@@ -24,6 +24,7 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [draft, setDraft] = useState<ImportDraft | null>(null);
+  const [reviewedMatch, setReviewedMatch] = useState(false);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [done, setDone] = useState<TrackedRecord | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -33,6 +34,8 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
   const invalidate = useInvalidateWorkspace();
   const busy = uploading || analyze.isPending;
   const urlMode = !file && isUrl(text);
+  const differentMatch = !!targetId && !!draft?.matchedId && draft.matchedId !== targetId;
+  const needsMatchReview = differentMatch && !reviewedMatch;
 
   const pickFile = (f: File | undefined) => {
     setError(null);
@@ -43,7 +46,7 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
   };
 
   const run = async () => {
-    setError(null); setDone(null);
+    setError(null); setDone(null); setReviewedMatch(false);
     try {
       let body: { text?: string; url?: string; uploadId?: string; targetId?: string };
       if (file) {
@@ -72,7 +75,7 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
   };
 
   const confirm = () => {
-    if (!draft || !meta) return;
+    if (!draft || !meta || needsMatchReview) return;
     setError(null);
     commit.mutate({
       data: {
@@ -96,13 +99,13 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
   };
 
   const set = <K extends keyof Meta>(k: K, v: Meta[K]) => setMeta(m => (m ? { ...m, [k]: v } : m));
-  const matchedTarget = targetId ?? draft?.matchedId;
+  const matchedTarget = draft?.matchedId ?? targetId;
 
   return (
     <section className={cn('rounded-xl border border-border bg-card/85 backdrop-blur-sm', compact ? 'p-3' : 'p-4 md:p-5')} data-testid="panel-importer">
       {targetId && (
         <p className="mb-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground" data-testid="text-import-target">
-          Enriching: {targetTitle ?? 'this article'}
+          Enriching: {differentMatch && reviewedMatch ? draft?.candidate.title : targetTitle ?? 'this article'}
         </p>
       )}
       {!draft && (
@@ -134,7 +137,18 @@ export function Importer({ targetId, targetTitle, onCommitted, compact }: {
         </>
       )}
 
-      {draft && meta && (
+      {draft && meta && needsMatchReview && (
+        <div className="space-y-3 rounded-md border border-border p-3" data-testid="panel-import-match-conflict">
+          <p className="text-xs text-muted-foreground">This content matches another existing item:</p>
+          <p className="text-sm font-medium" data-testid="text-import-matching-title">{draft.candidate.title}</p>
+          <p className="text-xs text-muted-foreground">Your paste is retained. The currently selected item will not be changed.</p>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button onClick={() => { setDraft(null); setMeta(null); }} className="h-8 rounded-md border border-border px-3 text-xs" data-testid="button-import-match-back">Back</button>
+            <button onClick={() => setReviewedMatch(true)} className="h-8 rounded-md bg-primary px-3 text-xs text-primary-foreground" data-testid="button-import-review-match">Review matching item</button>
+          </div>
+        </div>
+      )}
+      {draft && meta && !needsMatchReview && (
         <div className="space-y-3" data-testid="panel-import-preview">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Preview · {draft.source} · {draft.characterCount.toLocaleString()} chars</h3>

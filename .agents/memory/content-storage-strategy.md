@@ -21,6 +21,12 @@ Treat a structurally bounded, cleaned publisher copy as a better canonical artic
 
 **How to apply:** Keep the unmodified source and earlier interpretations accessible, use conservative publisher-specific boundaries, and do not equate successful cleanup with confirmed article completeness. Ordinary shorter excerpts must still not displace fuller content.
 
+Keep verified publisher publication times when a pasted copy provides only relative age or a yearless, zoneless display time.
+
+**Why:** A copied “35 min ago” refers to when the user copied the page, not when a later import or re-extraction runs. An abbreviated month/day and time cannot safely supply a year or timezone.
+
+**How to apply:** Improve article text and credits without replacing more precise existing time evidence. Do not fabricate missing time components from the current clock or a URL date alone.
+
 Publisher recommendations may occur inside an article, not just after it.
 
 **Why:** A Washington Post paste inserted ten “Most Read” cards before the article resumed with additional European and Asian reporting. Cutting everything after the module would have removed substantive content.

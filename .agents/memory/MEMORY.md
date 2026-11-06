@@ -3,3 +3,4 @@
 - [Content storage strategy](content-storage-strategy.md) — prefer PostgreSQL for searchable article text and immutable source versions; reuse retained HTML when extraction improves.
 - [Enrichment priorities](enrichment-priorities.md) — Critical before High; Low keeps easy feed content; the manual queue uses the last 12 hours of ingestion.
 - [Testing visibility](testing-visibility.md) — keep synthetic news fixtures out of the user's shared feed, even during temporary browser verification.
+- [Article identity](article-identity.md) — verify identity by source URL; require explicit review before redirecting a manual import to another known record.
