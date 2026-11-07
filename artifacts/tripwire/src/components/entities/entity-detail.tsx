@@ -69,6 +69,7 @@ export function EntityDetailPane({ id, onClose }: { id: string; onClose: () => v
           : <button className={btnCls} onClick={act({ action: 'archive' })} data-testid="button-entity-archive">Archive</button>}
         <button className={btnCls} onClick={act({ action: e.pinned ? 'unpin' : 'pin' })} data-testid="button-entity-pin">{e.pinned ? <><PinOff className="h-3 w-3" /> Unpin</> : <><Pin className="h-3 w-3" /> Pin</>}</button>
         <button className={btnCls} onClick={act({ action: 'rename' })} data-testid="button-entity-rename">Rename</button>
+        <button className={btnCls} onClick={act({ action: 'organize' })} data-testid="button-entity-organize">Organization</button>
         <button className={btnCls} onClick={act({ action: 'reassess' })} data-testid="button-entity-reassess">Reassess</button>
         <button className={btnCls} onClick={act({ action: 'merge' })} data-testid="button-entity-merge">Merge</button>
         {e.redirectId && <button className={btnCls} onClick={act({ action: 'unmerge', targetId: e.redirectId })} data-testid="button-entity-unmerge">Unmerge</button>}

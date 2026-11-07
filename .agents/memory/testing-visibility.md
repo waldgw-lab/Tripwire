@@ -8,3 +8,14 @@ Do not seed synthetic article fixtures into the user's shared feed for routine b
 **Why:** Temporary queue-testing records appeared as Critical Axios items with unknown publication dates in the user's feed before cleanup, causing understandable concern about ingestion quality.
 
 **How to apply:** Plan fixture isolation before testing. When a persistent integration test is genuinely necessary, use an isolated workspace/data boundary; cleanup alone does not prevent a fixture from appearing while the test runs. Verify absence from the feed and enrichment queue after cleanup.
+
+Tests that change monitoring authorization or budget controls require a separate
+database or schema with no fallback to shared tables, not merely a different
+article owner.
+
+**Why:** Live background workers can observe temporary permission changes before
+a test restores them. Cleanup cannot undo actions taken during that interval.
+
+**How to apply:** Skip control-state integration tests when isolation is absent;
+exercise routine article persistence in isolated owners and UI saves with
+browser-scoped responses instead of modifying shared reporting.

@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import { parsePublisherCopy } from '../artifacts/api-server/src/lib/tripwire-paste.ts';
 import { prefersIncomingContent } from '../artifacts/api-server/src/lib/tripwire-content.ts';
 
-const cnn = fs.readFileSync('attached_assets/Pasted-US-attorney-overseeing-Trump-s-grand-conspiracy-probe-i_1793980740124.txt', 'utf8');
-const nyt = fs.readFileSync('attached_assets/Pasted-U-S-Attorney-Who-Oversaw-Centerpiece-of-Trump-s-Revenge_1793980693108.txt', 'utf8');
+const cnn = fs.readFileSync(new URL('../attached_assets/Pasted-US-attorney-overseeing-Trump-s-grand-conspiracy-probe-i_1793980740124.txt', import.meta.url), 'utf8');
+const nyt = fs.readFileSync(new URL('../attached_assets/Pasted-U-S-Attorney-Who-Oversaw-Centerpiece-of-Trump-s-Revenge_1793980693108.txt', import.meta.url), 'utf8');
 
 test('CNN linked byline names are deduplicated and photography stays separate', () => {
   const copy = parsePublisherCopy(cnn);

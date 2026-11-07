@@ -8,6 +8,16 @@ Monitor consequential reporting on decisions, advice, leadership confidence, ins
 
 **How to apply:** Use the supplied focus hierarchy when extending monitoring and analysis. The attachment is research scope, not independently verified claims or a current office-holder registry.
 
+Claims should keep current, ongoing developments at the top, rather than leading
+with background statistics or the order in which records were saved.
+
+**Why:** The user explicitly requested current reporting about possible leadership
+changes and White House staffing as examples of what should lead Claims.
+
+**How to apply:** Prioritize recent article-linked reporting using publication
+dates; preserve tentative wording and denials. Examples supplied by the user are
+monitoring topics, not confirmation that an appointment or dismissal occurred.
+
 Evaluate anonymous source descriptions against each article's actual sourcing. Similar descriptions do not establish either source identity or independent confirmation.
 
 **Why:** The user explicitly requires earliest verified origin → outlet's own sourcing or evidence → independently reported additions → republications/commentary.

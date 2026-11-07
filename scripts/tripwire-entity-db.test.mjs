@@ -12,6 +12,15 @@ import { addEvidence, decide, recordDevelopment } from '../artifacts/api-server/
 import { AddEntityEvidenceBody } from '@workspace/api-zod';
 
 test('durable entity provenance, decisions, worker concurrency and recovery (no provider/network)', async t => {
+  const isolation = await db.execute(sql`select current_schema() as schema, current_setting('search_path') as path`);
+  const { schema, path } = isolation.rows[0];
+  // This suite deliberately changes authorization and budgets. It must never
+  // run against the app's live workspace, even if fixture cleanup succeeds.
+  if (typeof schema !== 'string' || !schema.startsWith('tripwire_entity_test_') ||
+      path !== schema && path !== `"${schema}"`) {
+    await pool.end();
+    return t.skip('Requires a dedicated tripwire_entity_test_* schema with no public search-path fallback');
+  }
   const run=`fixture-${randomUUID()}`;
   const original=await settings();
   const created={entities:[],captures:[],jobs:[],hashes:[],watches:[]};

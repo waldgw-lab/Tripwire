@@ -55,7 +55,11 @@ export const GetClaimCoverageSummariesResponseItem = zod.object({
   "claimId": zod.string(),
   "attributions": zod.number().int(),
   "firstDate": zod.string().nullable(),
-  "lastDate": zod.string().nullable()
+  "lastDate": zod.string().nullable(),
+  "ongoing": zod.boolean().optional(),
+  "latestReportAt": zod.string().nullish(),
+  "developmentType": zod.string().nullish(),
+  "developmentReason": zod.string().nullish()
 })
 export const GetClaimCoverageSummariesResponse = zod.array(GetClaimCoverageSummariesResponseItem)
 
@@ -539,7 +543,8 @@ export const decideEntityBodyDimensionsMaxOne = 4;
 
 
 export const DecideEntityBody = zod.object({
-  "action": zod.enum(['monitor', 'archive', 'reactivate', 'pin', 'unpin', 'resolve', 'reject', 'merge', 'unmerge', 'correct', 'reassess', 'rename']),
+  "action": zod.enum(['monitor', 'archive', 'reactivate', 'pin', 'unpin', 'resolve', 'reject', 'merge', 'unmerge', 'correct', 'reassess', 'rename', 'organize']),
+  "organizationId": zod.string().nullish(),
   "name": zod.string().min(1).max(decideEntityBodyNameMax).optional(),
   "rationale": zod.string().min(decideEntityBodyRationaleMin).max(decideEntityBodyRationaleMax),
   "state": zod.enum(['Active', 'Watch', 'Archived', 'Discovered']).optional(),

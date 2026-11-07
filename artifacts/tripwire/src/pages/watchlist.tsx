@@ -9,6 +9,7 @@ import { buildCoverage, filterTree, haystack, linkStanding, useAllEntities, type
 import { CreateEntityDialog } from '@/components/entities/dialogs';
 import { EntityDetailPane } from '@/components/entities/entity-detail';
 import { AutomationPanel } from '@/components/entities/automation-panel';
+import { WatchEditor } from '@/components/editors';
 import { toneCls } from '@/components/entities/coverage-context';
 import { Mono, Tag, inputCls, primaryCls } from '@/components/entities/ui';
 
@@ -38,6 +39,8 @@ export default function WatchlistPage() {
   const [creating, setCreating] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [refOpen, setRefOpen] = useState(false); const [opsOpen, setOpsOpen] = useState(false);
+  const [reference, setReference] = useState<TrackedRecord | null>(null);
+  const [referenceOpen, setReferenceOpen] = useState(false);
 
   useEffect(() => { const h = () => setOpenState(readId()); window.addEventListener('popstate', h); return () => window.removeEventListener('popstate', h); }, []);
 
@@ -123,9 +126,10 @@ export default function WatchlistPage() {
           <button onClick={() => setRefOpen(v => !v)} aria-expanded={refOpen} className="flex w-full items-center gap-2 px-3 py-2 text-left" data-testid="button-toggle-source-patterns">
             {refOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             <span className="font-display text-base font-semibold uppercase tracking-wide">Source patterns and reference watches</span>
-            <Mono>{dq ? `${visibleRefs.length} of ${refs.length}` : refs.length} · read-only · not participants</Mono>
+            <Mono>{dq ? `${visibleRefs.length} of ${refs.length}` : refs.length} · not participants</Mono>
           </button>
           {refOpen && <div className="border-t border-border px-3 py-3">
+            <button className={`${primaryCls} mb-3`} onClick={() => { setReference(null); setReferenceOpen(true); }} data-testid="button-add-source-pattern">Add source pattern</button>
             {ws.isLoading ? <RowsSkeleton n={3} /> : ws.isError ? <ErrorState onRetry={() => ws.refetch()} /> : !visibleRefs.length ? <p className="text-xs text-muted-foreground">No reference watches{dq ? ' match' : ''}.</p> :
               <ul className="grid gap-2 md:grid-cols-2">{visibleRefs.map((w: TrackedRecord) => <li key={w.id} className={cn('rounded-md border border-border bg-card px-3 py-2', w.enabled === false && 'opacity-50')} data-testid={`card-reference-${w.id}`}>
                 <Mono>{w.watchType} · tier {w.tier ?? 3}{w.enabled === false ? ' · disabled' : ''}</Mono>
@@ -133,6 +137,7 @@ export default function WatchlistPage() {
                 {w.organization && <p className="text-xs">{w.organization}</p>}
                 {w.summary && <p className="mt-1 text-xs text-muted-foreground">{w.summary}</p>}
                 {!!w.aliases?.length && <p className="mt-1 font-mono text-[10px] text-muted-foreground">{w.aliases.join(' · ')}</p>}
+                <button className="mt-2 text-xs underline" onClick={() => { setReference(w); setReferenceOpen(true); }} data-testid={`button-edit-source-pattern-${w.id}`}>Edit pattern</button>
               </li>)}</ul>}
           </div>}
         </section>
@@ -150,5 +155,6 @@ export default function WatchlistPage() {
       </>}
     </div>
     <CreateEntityDialog open={creating} onOpenChange={setCreating} organizations={orgOptions} onCreated={setOpen} />
+    <WatchEditor open={referenceOpen} onOpenChange={setReferenceOpen} record={reference} initialWatchType="attribution" allowedTypes={REF_TYPES} />
   </div>;
 }

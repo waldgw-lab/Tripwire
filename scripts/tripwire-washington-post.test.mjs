@@ -5,7 +5,7 @@ import { textCandidate, documentCandidate } from '../artifacts/api-server/src/li
 import { reviewedContributors } from '../artifacts/api-server/src/lib/tripwire-bylines.ts';
 import { prefersIncomingContent, mergeArticleContent, captureContent } from '../artifacts/api-server/src/lib/tripwire-content.ts';
 
-const raw = readFileSync('attached_assets/Pasted-Trump-s-foes-abroad-question-whether-midterm-loss-will-_1793976276415.txt', 'utf8');
+const raw = readFileSync(new URL('../attached_assets/Pasted-Trump-s-foes-abroad-question-whether-midterm-loss-will-_1793976276415.txt', import.meta.url), 'utf8');
 const article = textCandidate(raw);
 const names = ['Steve Hendrix', 'Natalia Abbakumova', 'Suzan Haidamous', 'Mohamad El Chamaa', 'Rudy Lu', 'Greg Miller'];
 test('Washington Post paste identifies publisher, complete byline and original EST time', () => {
@@ -34,12 +34,12 @@ test('unknown recommendation boundaries are retained rather than clipping follow
   assert.match(copy.fullText, /Those differences have come/);
 });
 test('struck-up DOCX uses the same analyzer and produces the same article paragraphs', async () => {
-  const doc = await documentCandidate(readFileSync('attached_assets/Text_to_clean_up_1793976735748.docx'), 'cleanup.docx');
+  const doc = await documentCandidate(readFileSync(new URL('../attached_assets/Text_to_clean_up_1793976735748.docx', import.meta.url)), 'cleanup.docx');
   assert.equal(doc.candidate.fullText, article.fullText);
   assert.deepEqual(doc.candidate.credits, article.credits);
 });
 test('print PDF retains paragraph layout, separates credits and omits reader-comment summaries', async () => {
-  const doc = await documentCandidate(readFileSync('attached_assets/Trump’s_foes_abroad_question_if_midterm_loss_will_weaken_or_em_1793976867271.pdf'), 'article.pdf');
+  const doc = await documentCandidate(readFileSync(new URL('../attached_assets/Trump’s_foes_abroad_question_if_midterm_loss_will_weaken_or_em_1793976867271.pdf', import.meta.url)), 'article.pdf');
   assert.equal(doc.candidate.outlet, 'The Washington Post');
   assert.equal(doc.candidate.title, article.title);
   assert.deepEqual(doc.candidate.journalists, article.journalists);

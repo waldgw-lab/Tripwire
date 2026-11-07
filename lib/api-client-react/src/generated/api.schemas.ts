@@ -1073,6 +1073,7 @@ export const EntityActionAction = {
   correct: 'correct',
   reassess: 'reassess',
   rename: 'rename',
+  organize: 'organize',
 } as const;
 
 export type EntityActionState = typeof EntityActionState[keyof typeof EntityActionState];
@@ -1098,6 +1099,8 @@ export type EntityActionDimensions = {[key: string]: number};
 
 export interface EntityAction {
   action: EntityActionAction;
+  /** @nullable */
+  organizationId?: string | null;
   /**
      * @minLength 1
      * @maxLength 200
@@ -1547,6 +1550,13 @@ export type GetClaimCoverageSummaries200Item = {
   firstDate: string | null;
   /** @nullable */
   lastDate: string | null;
+  ongoing?: boolean;
+  /** @nullable */
+  latestReportAt?: string | null;
+  /** @nullable */
+  developmentType?: string | null;
+  /** @nullable */
+  developmentReason?: string | null;
 };
 
 export type GetReportingProvenanceParams = {

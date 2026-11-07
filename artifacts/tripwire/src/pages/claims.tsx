@@ -9,6 +9,7 @@ import { Disclosure, ProvenancePanel, TONE } from '@/components/provenance/prove
 import { OutletBrand } from '@/components/outlet-brand';
 import { ClaimProcessingStatus } from '@/components/provenance/claim-processing';
 import { STAGES, byKind, fmtDate, useWorkspace } from '@/lib/workspace';
+import { orderClaims } from '@/lib/claim-order';
 
 const isImportNote = (s?: string) => !!s && /supplied analysis|unreviewed claim-family/i.test(s);
 
@@ -26,9 +27,10 @@ function dateRange(first: string | null, last: string | null) {
 export default function ClaimsPage() {
   const { canEdit: isSignedIn } = useWorkspaceAccess();
   const { data, isLoading, isError, refetch } = useWorkspace();
-  const sumQ = useGetClaimCoverageSummaries({ query: { queryKey: getGetClaimCoverageSummariesQueryKey(), staleTime: 60_000, refetchInterval: 180_000, retry: 1 } });
+  const sumQ = useGetClaimCoverageSummaries({ query: { queryKey: getGetClaimCoverageSummariesQueryKey(), staleTime: 15_000, refetchInterval: 30_000, retry: 1 } });
   const summaryById = useMemo(() => new Map((sumQ.data ?? []).map((s) => [s.claimId, s])), [sumQ.data]);
-  const claims = useMemo(() => byKind(data?.records, 'claim').sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)), [data]);
+  const claims = useMemo(() => orderClaims(byKind(data?.records, 'claim'), summaryById), [data, summaryById]);
+  const ongoingCount = claims.filter(c => summaryById.get(c.id)?.ongoing).length;
   const articles = useMemo(() => byKind(data?.records, 'article'), [data]);
   const articleById = useMemo(() => new Map(articles.map((a) => [a.id, a])), [articles]);
   const [sel, setSel] = useState<string | null>(null);
@@ -52,13 +54,16 @@ export default function ClaimsPage() {
         <div className="grid flex-1 md:grid-cols-[320px_minmax(0,1fr)]">
           <ul className="border-b border-border md:border-b-0 md:border-r">
             {sumQ.isError && <li className="flex items-center justify-between px-5 py-2 text-[11px] text-muted-foreground" data-testid="text-summary-error">Coverage summaries unavailable <button className="underline" onClick={() => sumQ.refetch()}>Retry</button></li>}
-            {claims.map((c) => {
+            {claims.map((c, index) => {
               const sm = summaryById.get(c.id);
               const active = current?.id === c.id;
               return (
                 <li key={c.id}>
+                  {index === 0 && ongoingCount > 0 && <div className="border-b border-border px-5 py-2 font-mono text-[10px] uppercase tracking-wide" data-testid="heading-ongoing-claims">Ongoing developments · {ongoingCount}<p className="mt-1 normal-case tracking-normal text-muted-foreground">Leadership first · latest reporting within each topic</p></div>}
+                  {index === ongoingCount && ongoingCount > 0 && <div className="border-y border-border px-5 py-2 font-mono text-[10px] uppercase tracking-wide" data-testid="heading-other-claims">Other claims · latest reporting first</div>}
                   <button onClick={() => setSel(c.id)} data-testid={`button-claim-${c.id}`}
                     className={cn('w-full border-l-2 px-5 py-3 text-left transition-colors', active ? 'border-[hsl(212_24%_42%)] bg-[hsl(212_20%_96%)]' : 'border-transparent hover:bg-card/60')}>
+                    {sm?.ongoing && <span className="mb-1 block font-mono text-[9px] uppercase text-muted-foreground" title={sm.developmentReason ?? undefined}>{sm.developmentType}</span>}
                     <p className="line-clamp-2 font-serif text-[15px] leading-snug">{c.title}</p>
                     <p className="mt-1 flex flex-wrap items-center gap-x-1.5 font-mono text-[10px] text-muted-foreground" data-testid={`text-claim-coverage-${c.id}`}>
                       {sumQ.isLoading ? <span className="inline-block h-2.5 w-28 animate-pulse rounded bg-muted" />

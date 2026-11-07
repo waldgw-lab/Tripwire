@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CLASSIFICATIONS, DIMENSIONS, ENTITY_TYPES, errorText, fmtWhen, shortHash, useInvalidateEntities } from '@/lib/entities';
 import { ErrorLine, Mono, btnCls, inputCls, primaryCls } from './ui';
+import { useAllEntities } from '@/lib/coverage-tree';
 
 const Lbl = ({ t, children }: { t: string; children: React.ReactNode }) => <label className="block space-y-1"><Mono>{t}</Mono>{children}</label>;
 
@@ -41,6 +42,8 @@ export function CreateEntityDialog({ open, onOpenChange, organizations, onCreate
 export type ActionPreset = Pick<EntityAction, 'action'> & Partial<EntityAction>;
 
 export function EntityActionDialog({ preset, detail, onClose }: { preset: ActionPreset | null; detail: EntityDetail; onClose: () => void }) {
+  const organizations = useAllEntities();
+  const [organizationId, setOrganizationId] = useState('');
   const decide = useDecideEntity();
   const invalidate = useInvalidateEntities();
   const e = detail.entity;
@@ -54,7 +57,8 @@ export function EntityActionDialog({ preset, detail, onClose }: { preset: Action
     setRationale(''); setErr(''); setEvidenceIds([]); setTargetId(preset.targetId ?? ''); setCls(e.classification); setPriority(String(e.priority));
     setState(preset.state === 'Active' || preset.state === 'Watch' ? preset.state : e.state === 'Active' ? 'Active' : 'Watch'); setName(e.name); setDims(Object.fromEntries(DIMENSIONS.map(d => [d, ''])));
     setUnresolved(e.unresolved);
-  }, [preset, e.classification, e.priority, e.state, e.name]); // eslint-disable-line react-hooks/exhaustive-deps
+    setOrganizationId(e.organizationId ?? '');
+  }, [preset, e.classification, e.priority, e.state, e.name, e.organizationId]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!preset) return null;
   const a = preset.action;
   const monitor = a === 'monitor'; const merge = a === 'merge'; const reassess = a === 'reassess' || monitor;
@@ -69,6 +73,7 @@ export function EntityActionDialog({ preset, detail, onClose }: { preset: Action
     if (merge && !targetId.trim()) return setErr('Target entity ID required.');
     const dimensions = Object.fromEntries(Object.entries(dims).filter(([, v]) => v !== '').map(([k, v]) => [k, Number(v)]));
     const data: EntityAction = { ...preset, rationale: rationale.trim(),
+      ...(a === 'organize' ? { organizationId: organizationId || null } : {}),
       ...(monitor || a === 'reactivate' || a === 'reassess' ? { state, evidenceIds } : {}), ...(merge ? { targetId: targetId.trim(), evidenceIds } : {}), ...(rename ? { name: name.trim() } : {}),
       ...(reassess ? { classification: cls, priority: Number(priority), unresolved, ...(Object.keys(dimensions).length ? { dimensions } : {}) } : {}),
       ...(a === 'correct' && evidenceIds.length ? { evidenceIds } : {}) };
@@ -77,6 +82,10 @@ export function EntityActionDialog({ preset, detail, onClose }: { preset: Action
   return <Dialog open onOpenChange={o => !o && onClose()}><DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
     <DialogHeader><DialogTitle className="font-display text-2xl uppercase">{a} · {e.name}</DialogTitle></DialogHeader>
     <form onSubmit={submit} className="space-y-3">
+      {a === 'organize' && <Lbl t="Organization"><select value={organizationId} onChange={x => setOrganizationId(x.target.value)} className={inputCls} disabled={organizations.isLoading || organizations.isError} data-testid="select-entity-organization">
+        <option value="">No organization</option>
+        {organizations.data?.filter(o => o.type === 'organization' && o.id !== e.id && !o.redirectId).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+      </select><p className="text-xs text-muted-foreground">Organizational context only; this does not verify employment or role occupancy.</p>{organizations.isError && <button type="button" className={btnCls} onClick={() => organizations.refetch()}>Retry organizations</button>}</Lbl>}
       {rename && <Lbl t="New display name"><input required maxLength={200} value={name} onChange={x => setName(x.target.value)} className={inputCls} data-testid="input-rename-name" /></Lbl>}
       {needsState && <Lbl t="Monitoring state"><div className="flex gap-1">{(['Active', 'Watch'] as const).map(s => <button type="button" key={s} onClick={() => setState(s)} className={state === s ? primaryCls : btnCls} data-testid={`button-state-${s}`}>{s}</button>)}</div></Lbl>}
       {reassess && <div className="grid grid-cols-2 gap-2">
@@ -93,7 +102,7 @@ export function EntityActionDialog({ preset, detail, onClose }: { preset: Action
       </div>}
       <Lbl t="Rationale"><textarea required minLength={5} maxLength={2000} rows={3} value={rationale} onChange={x => setRationale(x.target.value)} className={`${inputCls} h-auto py-1.5`} data-testid="input-action-rationale" /></Lbl>
       <ErrorLine error={err} />
-      <div className="flex justify-end gap-2"><button type="button" onClick={onClose} className={btnCls}>Cancel</button><button type="submit" disabled={decide.isPending} className={primaryCls} data-testid="button-action-submit">{decide.isPending ? 'Recording' : 'Record decision'}</button></div>
+      <div className="flex justify-end gap-2"><button type="button" onClick={onClose} className={btnCls}>Cancel</button><button type="submit" disabled={decide.isPending || a === 'organize' && !organizations.data} className={primaryCls} data-testid="button-action-submit">{decide.isPending ? 'Recording' : 'Record decision'}</button></div>
     </form>
   </DialogContent></Dialog>;
 }

@@ -79,6 +79,10 @@ paths:
                     attributions: { type: integer }
                     firstDate: { type: ["string", "null"] }
                     lastDate: { type: ["string", "null"] }
+                    ongoing: { type: boolean }
+                    latestReportAt: { type: ["string", "null"] }
+                    developmentType: { type: ["string", "null"] }
+                    developmentReason: { type: ["string", "null"] }
   /tripwire/provenance:
     get:
       operationId: getReportingProvenance
@@ -910,7 +914,8 @@ components:
       type: object
       required: [action, rationale]
       properties:
-        action: { type: string, enum: [monitor, archive, reactivate, pin, unpin, resolve, reject, merge, unmerge, correct, reassess, rename] }
+        action: { type: string, enum: [monitor, archive, reactivate, pin, unpin, resolve, reject, merge, unmerge, correct, reassess, rename, organize] }
+        organizationId: { type: ["string", "null"] }
         name: { type: string, minLength: 1, maxLength: 200 }
         rationale: { type: string, minLength: 5, maxLength: 2000 }
         state: { type: string, enum: [Active, Watch, Archived, Discovered] }

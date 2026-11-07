@@ -12,4 +12,11 @@ export type GetClaimCoverageSummaries200Item = {
   firstDate: string | null;
   /** @nullable */
   lastDate: string | null;
+  ongoing?: boolean;
+  /** @nullable */
+  latestReportAt?: string | null;
+  /** @nullable */
+  developmentType?: string | null;
+  /** @nullable */
+  developmentReason?: string | null;
 };

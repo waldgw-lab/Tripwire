@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "tsx --tsconfig ../artifacts/tripwire/tsconfig.json --test ./*.test.mjs",
     "hello": "tsx ./src/hello.ts",
     "source-search:inventory": "python ./source-search-inventory.py",
     "source-search:backfill": "tsx ./source-search-backfill.mjs",

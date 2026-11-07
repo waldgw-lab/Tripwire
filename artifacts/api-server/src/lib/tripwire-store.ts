@@ -61,11 +61,12 @@ export async function recordsFor(userId?: string | null, includeContent = true) 
   return includeContent ? hydrateArticles(records) : records;
 }
 
-export async function writeRecord(userId: string, data: RecordData, protectMetadata = false, analystEdit = false, trustedHeadlines = false) {
+type WriteTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export async function writeRecord(userId: string, data: RecordData, protectMetadata = false, analystEdit = false, trustedHeadlines = false, transaction?: WriteTransaction) {
   const baseId = data.id ?? crypto.randomUUID();
   // Per-user shadow copies allow edits/bookmarks without mutating shared feed metadata.
   const id = `${userId}:${baseId}`;
-  return db.transaction(async tx => {
+  const write = async (tx: WriteTransaction) => {
   await articleLock(tx, userId);
   const correctionEvents: { field: "impact" | "topic"; before: ReturnType<typeof classificationSnapshot> }[] = [];
   let original: RecordData | undefined;
@@ -142,7 +143,8 @@ export async function writeRecord(userId: string, data: RecordData, protectMetad
   const [row] = await tx.insert(tripwireRecords).values({id, owner: userId, kind: data.kind, data: {...data, baseId}, updatedAt: now})
     .onConflictDoUpdate({target: tripwireRecords.id, set: {data: {...data, baseId}, kind: data.kind, updatedAt: now}}).returning();
   return {...data, id: baseId, createdAt: row!.createdAt.toISOString(), updatedAt: now.toISOString()};
-  });
+  };
+  return transaction ? write(transaction) : db.transaction(write);
 }
 
 export async function removeRecord(userId: string, id: string) {

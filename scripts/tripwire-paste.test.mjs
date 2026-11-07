@@ -5,7 +5,7 @@ import { parsePublisherCopy, pasteSourceUrl, publicationFromCopy, reconcileCredi
 import { mentionsTerm, mentionedEntities, inferArticleTopic } from "../artifacts/api-server/src/lib/tripwire-signals.ts";
 import { mergeArticleContent, captureContent, prefersIncomingContent } from "../artifacts/api-server/src/lib/tripwire-content.ts";
 
-const raw = readFileSync("attached_assets/Pasted--Vance-takes-a-step-toward-2028-in-MAGA-power-play-http_1793898898748.txt", "utf8");
+const raw = readFileSync(new URL("../attached_assets/Pasted--Vance-takes-a-step-toward-2028-in-MAGA-power-play-http_1793898898748.txt", import.meta.url), "utf8");
 const parsed = parsePublisherCopy(raw);
 test("Axios paste: exact headline, canonical source and all three primary bylines", () => {
   assert.equal(parsed.title, "Vance takes a step toward 2028 in MAGA power play");

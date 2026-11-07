@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { articleLock } from "../lib/tripwire-feedback";
 import { workspaceIdentity } from "../lib/tripwire-access";
 import { db, tripwireRecords } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
@@ -157,6 +158,8 @@ export async function commitImport(userId: string, input: unknown) {
     const url = body.url?.trim() ? canonicalUrl(body.url) : undefined;
     if (body.publishedAt && isNaN(Date.parse(body.publishedAt))) throw new IntakeError("Enter a valid publication date");
     const record = await db.transaction(async tx => {
+      // Identity matching and the article/draft writes share one transaction.
+      await articleLock(tx, userId);
       const [draft] = await tx.select().from(tripwireRecords).where(and(eq(tripwireRecords.id, `draft:${body.draftId}`), eq(tripwireRecords.owner, userId), eq(tripwireRecords.kind, "import-draft"))).for("update");
       if (!draft) throw new IntakeError("Import preview not found", 404);
       const records = await recordsFor(userId);
@@ -206,7 +209,7 @@ export async function commitImport(userId: string, input: unknown) {
         entities: keepBody ? existing?.entities : candidate.entities ?? existing?.entities,
         retainedContent, contentRetained: true, retainedCharacters: Math.max(...retainedContent.map(c => c.text?.length ?? c.textLength ?? 0)) };
       data.verifiedHeadlines = mergeHeadlines(data, existing?.verifiedHeadlines, candidate.verifiedHeadlines);
-      const saved = await writeRecord(userId, data, false, false, true);
+      const saved = await writeRecord(userId, data, false, false, true, tx);
       await tx.update(tripwireRecords).set({ data: { ...draft.data, committedId: saved.id }, updatedAt: new Date() }).where(and(eq(tripwireRecords.id, draft.id), eq(tripwireRecords.owner, userId)));
       return saved;
     });

@@ -1,4 +1,5 @@
 #!/bin/bash
 set -e
 pnpm install --frozen-lockfile
-pnpm --filter @workspace/db run push
+node lib/db/migrate-entities.mjs
+pnpm --filter @workspace/api-spec run codegen

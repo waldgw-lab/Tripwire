@@ -111,7 +111,7 @@ router.use((err: unknown, _req: import("express").Request, res: import("express"
   // Never reflect database/provider errors, SQL, prompts or content.
   const message = err instanceof Error ? err.message : "";
   const known = /^(Entity not found|Capture not found|Choose |Candidate |Monitoring requires|Supporting evidence|Broken source|The quotation|Occupancy|A nomination|Role end|Correction|Independent sourcing|Both event|Identity merge|Merge requires|People cannot|Assertion not found|An alias|Use namespace|Unknown policy|Immediate requires|Development not found|Job is not|Authorize capture|Published private|Reviewed reporting|Always-on worker|Explicit autonomous|Extraction provider)/;
-  if (known.test(message)) res.status(/not found/.test(message) ? 404 : 400).json({ error: message });
+  if (known.test(message) || message === "Organization links cannot contain a cycle") res.status(/not found/.test(message) ? 404 : 400).json({ error: message });
   else if (err && typeof err === "object" && "issues" in err) res.status(400).json({ error: "Invalid entity request" });
   else res.status(503).json({ error: "Entity operation unavailable. Retained history is unchanged." });
 });

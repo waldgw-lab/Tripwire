@@ -11,6 +11,8 @@ import type { EntityActionState } from './entityActionState';
 
 export interface EntityAction {
   action: EntityActionAction;
+  /** @nullable */
+  organizationId?: string | null;
   /**
      * @minLength 1
      * @maxLength 200

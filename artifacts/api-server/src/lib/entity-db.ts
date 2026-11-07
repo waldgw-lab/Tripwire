@@ -65,7 +65,8 @@ export async function migrateWatches() {
       const parents = watches.filter(p => p.watchType === "organization" && p.title === w.organization && p.id !== w.id);
       if (parents.length !== 1) continue;
       const id = key(W, "legacy", w.id);
-      await tx.update(entities).set({ organizationId: key(W, "legacy", parents[0]!.id) }).where(and(eq(entities.id, id), sql`${entities.organizationId} is null`));
+      await tx.update(entities).set({ organizationId: key(W, "legacy", parents[0]!.id) }).where(and(eq(entities.id, id), sql`${entities.organizationId} is null`,
+        sql`not exists (select 1 from ${decisions} where ${decisions.entityId} = ${id} and ${decisions.workspace} = ${W} and ${decisions.action} = 'organize')`));
     }
   });
 }

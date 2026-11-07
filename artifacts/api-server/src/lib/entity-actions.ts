@@ -5,6 +5,7 @@ import { entities, evidence, assertions, candidates, lineage, developments, obse
   W, uid, key, scoped, settings, requireEntity, logDecision, evidenceRows, type Tx } from "./entity-db";
 import { dimensions, exactEvidence, triage } from "./entity-policy";
 import { readContent } from "./tripwire-content-storage";
+import { validateOrganizationParent } from "./entity-organization";
 
 type EvidenceInput = ReturnType<typeof AddEntityEvidenceBody.parse>;
 type ActionInput = ReturnType<typeof DecideEntityBody.parse>;
@@ -134,6 +135,11 @@ export async function decide(id: string, input: ActionInput) {
       change.redirectId = target.id;
     }
     if (input.action === "unmerge") change.redirectId = null;
+    if (input.action === "organize") {
+      if (input.organizationId === undefined) throw new Error("Choose an organization or explicitly clear it");
+      await validateOrganizationParent(id, input.organizationId, parentId => requireEntity(parentId, tx));
+      change.organizationId = input.organizationId;
+    }
     if (input.action === "correct") {
       if (!input.assertionId) throw new Error("Choose the assertion to retract; add corrected evidence as a superseding assertion");
       const [old] = await tx.select().from(assertions).where(and(scoped(assertions), eq(assertions.subjectId, id), eq(assertions.id, input.assertionId))).for("update");

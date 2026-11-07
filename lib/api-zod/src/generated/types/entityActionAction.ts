@@ -21,4 +21,5 @@ export const EntityActionAction = {
   correct: 'correct',
   reassess: 'reassess',
   rename: 'rename',
+  organize: 'organize',
 } as const;
