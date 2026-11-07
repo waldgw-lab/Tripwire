@@ -46,6 +46,25 @@ export const RecordInputKind = {
   outlet: 'outlet',
 } as const;
 
+export type VerifiedHeadlineSource = typeof VerifiedHeadlineSource[keyof typeof VerifiedHeadlineSource];
+
+
+export const VerifiedHeadlineSource = {
+  'publisher-page': 'publisher-page',
+  'publisher-rss': 'publisher-rss',
+  'publisher-sitemap': 'publisher-sitemap',
+} as const;
+
+export interface VerifiedHeadline {
+  title: string;
+  outlet: string;
+  articleUrl: string;
+  sourceUrl: string;
+  observedAt: string;
+  source: VerifiedHeadlineSource;
+  captureId: string;
+}
+
 export type ArticleCreditRole = typeof ArticleCreditRole[keyof typeof ArticleCreditRole];
 
 
@@ -346,6 +365,8 @@ export interface RecordInput {
   kind: RecordInputKind;
   /** @minLength 1 */
   title: string;
+  /** Server-observed publisher headlines; client edits cannot establish verified identity. */
+  verifiedHeadlines?: VerifiedHeadline[];
   url?: string;
   outlet?: string;
   journalists?: string[];

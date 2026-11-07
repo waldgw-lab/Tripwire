@@ -4,6 +4,7 @@ import type { RecordData } from "./tripwire-store";
 import { archiveArticle } from "./tripwire-content-storage";
 import { mergeArticleContent } from "./tripwire-content";
 import { publicationUpdate } from "./tripwire-publication";
+import { publisherIdentityUpdate } from "./tripwire-headlines";
 
 export type FeedbackTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export const CORRECTION_REASONS = ["Overrated", "Underrated", "Wrong topic", "Incidental mention", "Incorrect entity match", "Other"];
@@ -26,6 +27,7 @@ export async function currentArticle(tx: FeedbackTx, owner: string, id: string) 
   const own = row.data as RecordData;
   const base = shared?.data as RecordData | undefined;
   const data = { ...own, ...mergeArticleContent(own, base ?? {}),
+    ...publisherIdentityUpdate(own, base),
     ...publicationUpdate(own, base ?? {}), id, kind: "article" as const };
   return { data, hidden: row.data.hidden === true, createdAt: (shared ?? row).createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() };
 }

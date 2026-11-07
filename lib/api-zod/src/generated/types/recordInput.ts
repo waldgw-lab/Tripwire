@@ -25,12 +25,15 @@ import type { RecordInputTopicMode } from './recordInputTopicMode';
 import type { RecordInputTopicOverrideOrigin } from './recordInputTopicOverrideOrigin';
 import type { RecordInputWatchType } from './recordInputWatchType';
 import type { Retrieval } from './retrieval';
+import type { VerifiedHeadline } from './verifiedHeadline';
 
 export interface RecordInput {
   id?: string;
   kind: RecordInputKind;
   /** @minLength 1 */
   title: string;
+  /** Server-observed publisher headlines; client edits cannot establish verified identity. */
+  verifiedHeadlines?: VerifiedHeadline[];
   url?: string;
   outlet?: string;
   journalists?: string[];

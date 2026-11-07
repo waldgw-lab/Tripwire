@@ -4,6 +4,7 @@ import { recordsFor, writeRecord, type RecordData } from "./tripwire-store";
 import { WORKSPACE_OWNER } from "./tripwire-access";
 import { fetchPublicDocument } from "./tripwire-fetch";
 import { htmlCandidate, htmlClassification, inferOutlet } from "./tripwire-import";
+import { mergeHeadlines, observeHeadline } from "./tripwire-headlines";
 import { captureContent, mergeArticleContent } from "./tripwire-content";
 import { classifyContent, mergeClassification } from "./tripwire-classification";
 import { logger } from "./logger";
@@ -93,12 +94,14 @@ export async function retrieveItem(article: Item, cachedPage?: { raw: string; ur
     const next = new Date(Date.now() + (mergedClassification.contentFormat === "live-updates" ? 15 * 60_000 : 7 * DAY)).toISOString();
     await writeRecord(WORKSPACE_OWNER, {
       ...existing, ...content, ...mergedClassification,
+      verifiedHeadlines: mergeHeadlines(existing, existing.verifiedHeadlines,
+        candidate.publisherHeadline ? observeHeadline({ ...candidate, title: candidate.publisherHeadline }, capture, "publisher-page") : []),
       ...(!existing.summary && candidate.summary ? { summary: candidate.summary } : {}),
       ...(existing.byline || !candidate.byline ? {} : { byline: candidate.byline, credits: candidate.credits, journalists: candidate.journalists }),
       ...publicationUpdate(existing, { publishedAt: candidate.publishedAt, publicationSource: "publisher", publicationSourceUrl: fetched.url }),
       retrieval: { status: "retrieved", method, lastAttempt: now, nextAttemptAt: next, characters: candidate.fullText?.length ?? 0, rawCharacters: raw.length,
         attempts, message: `${cachedPage ? "Re-extracted" : "Retained"} ${(candidate.fullText?.length ?? 0).toLocaleString()} text characters and ${raw.length.toLocaleString()} source characters` },
-    }, true);
+    }, true, false, true);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Retrieval failed";
     const blocked = /HTTP (401|402|403|429)|robots|access page|subscription|account/.test(message);

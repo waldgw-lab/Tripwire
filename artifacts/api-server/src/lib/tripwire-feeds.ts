@@ -16,6 +16,7 @@ import { checkRobots } from "./tripwire-retrieval";
 import { publicationUpdate } from "./tripwire-publication";
 import { assessArticle } from "./tripwire-impact-policy";
 import { appendFeedback, classificationSnapshot, canonicalArticleUrl } from "./tripwire-feedback";
+import { canonicalUrl, mergeHeadlines, observeHeadline } from "./tripwire-headlines";
 
 const locks = new Set<string>();
 const cooldown = new Map<string, number>();
@@ -115,7 +116,8 @@ export async function refreshFeeds(_userId?: string | null) {
             const existingDiscovery = discovered.length === 1 ? discovered[0] : undefined;
             // Don't create a Google duplicate of an already-known publisher item.
             if (discovery && existingDiscovery && !existingDiscovery.discoveryOnly) continue;
-            const id = existingDiscovery?.discoveryOnly ? existingDiscovery.id : stableId(discovery ? `discovery:${outlet.title}:${titleKey(title)}` : `article:${url.href}`);
+            const sameUrl = records.find(r => r.kind === "article" && !r.discoveryOnly && canonicalArticleUrl(r.url) === canonicalArticleUrl(url.href));
+            const id = sameUrl?.id ?? (existingDiscovery?.discoveryOnly ? existingDiscovery.id : stableId(discovery ? `discovery:${outlet.title}:${titleKey(title)}` : `article:${canonicalUrl(url.href)}`));
             if (dismissedIds.has(id) || dismissedUrls.has(canonicalArticleUrl(url.href))) continue;
             const entities = mentionedEntities(text, watches);
             const published = item.isoDate ?? item.pubDate;
@@ -125,7 +127,13 @@ export async function refreshFeeds(_userId?: string | null) {
             const journalists = credits.filter(c => c.role === "author").map(c => c.name);
             const topic = inferArticleTopic(title, retained.fullText ?? "");
             const classification = classifyContent({ url: url.href, title, labels: item.categories ?? [] });
+            // Keep the exact feed item as provenance even when it has no excerpt.
+            const headlineCapture = !discovery ? captureContent("", `headline:${source.kind}`, { raw: item.raw ?? JSON.stringify(item), sourceUrl: source.url, capturedAt: refreshedAt }) : undefined;
+            if (headlineCapture) retained.retainedContent.push(headlineCapture);
+            const verifiedHeadlines = headlineCapture ? observeHeadline({ title, url: url.href, outlet: outlet.title }, headlineCapture,
+              source.kind === "sitemap" ? "publisher-sitemap" : "publisher-rss", source.url) : [];
             const data = await archiveArticle({kind: "article", title, url: url.href, outlet: outlet.title, journalists, ...(creator ? {byline: creator, credits} : {}), ...publication, summary: discovery ? undefined : strip(item.contentSnippet ?? "").slice(0, 450), entities, topic, sentiment: "unassessed", reportingType: "unassessed", sourceType: "article", saved: false,
+              verifiedHeadlines,
               intakeMethod: source.kind, intakeUrl: source.url, discoveryOnly: discovery, discoveredAt: refreshedAt,
               ...retained, fullTextComplete: false, ...classification} as RecordData);
             const result = await db.insert(tripwireRecords).values({id: owner === "public" ? id : `${owner}:${id}`, owner, kind: "article", data: owner === "public" ? data : {...data, baseId: id}}).onConflictDoNothing().returning({id: tripwireRecords.id});
@@ -141,6 +149,7 @@ export async function refreshFeeds(_userId?: string | null) {
                 const merged = mergeArticleContent(current.data as { fullText?: string; fullTextComplete?: boolean; retainedContent?: Capture[] }, retained);
                 const promotion = current.data.discoveryOnly && !discovery ? { ...data, saved: current.data.saved, flagged: current.data.flagged } : {};
                 const archived = await archiveArticle({ ...currentData, ...promotion, ...merged,
+                  verifiedHeadlines: mergeHeadlines({ ...currentData, ...promotion }, currentData.verifiedHeadlines, data.verifiedHeadlines),
                   publishedAt: currentData.publishedAt, publicationSource: currentData.publicationSource, publicationSourceUrl: currentData.publicationSourceUrl,
                   ...publicationUpdate(currentData, data), ...mergeClassification(currentData, classification) } as RecordData);
                 if (JSON.stringify(currentData.automaticAssessment) !== JSON.stringify(archived.automaticAssessment)) {

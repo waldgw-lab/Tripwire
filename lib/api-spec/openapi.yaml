@@ -839,6 +839,17 @@ components:
         page: { type: integer }
         pageSize: { type: integer }
         reasons: { type: array, items: { type: string } }
+    VerifiedHeadline:
+      type: object
+      required: [title, outlet, articleUrl, sourceUrl, observedAt, source, captureId]
+      properties:
+        title: { type: string }
+        outlet: { type: string }
+        articleUrl: { type: string }
+        sourceUrl: { type: string }
+        observedAt: { type: string }
+        source: { type: string, enum: [publisher-page, publisher-rss, publisher-sitemap] }
+        captureId: { type: string }
     RecordInput:
       type: object
       required: [kind, title]
@@ -846,6 +857,10 @@ components:
         id: { type: string }
         kind: { type: string, enum: [article, claim, watch, outlet] }
         title: { type: string, minLength: 1 }
+        verifiedHeadlines:
+          type: array
+          description: Server-observed publisher headlines; client edits cannot establish verified identity.
+          items: { $ref: "#/components/schemas/VerifiedHeadline" }
         url: { type: string }
         outlet: { type: string }
         journalists: { type: array, items: { type: string } }

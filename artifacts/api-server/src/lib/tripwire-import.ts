@@ -8,6 +8,8 @@ import type { RecordData } from "./tripwire-store";
 import { classifyContent } from "./tripwire-classification";
 import { parsePublisherCopy, pasteSourceUrl } from "./tripwire-paste";
 import { inferArticleTopic } from "./tripwire-signals";
+import { canonicalUrl, headlineKey, mergeHeadlines } from "./tripwire-headlines";
+export { canonicalUrl } from "./tripwire-headlines";
 
 const publishers: [string, string][] = [
   ["washingtonpost.com", "The Washington Post"], ["nytimes.com", "The New York Times"], ["axios.com", "Axios"],
@@ -15,15 +17,6 @@ const publishers: [string, string][] = [
   ["reuters.com", "Reuters"], ["abcnews.go.com", "ABC"], ["cnn.com", "CNN"], ["washingtonexaminer.com", "Washington Examiner"],
   ["dailymail.co.uk", "Daily Mail"], ["dailymail.com", "Daily Mail"], ["nbcnews.com", "NBC"],
 ];
-export function canonicalUrl(raw?: string) {
-  if (!raw?.trim()) return undefined;
-  const url = new URL(raw.trim());
-  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new Error("Use an http or https source URL");
-  for (const key of [...url.searchParams.keys()]) if (/^(utm_|fbclid|gclid)/i.test(key)) url.searchParams.delete(key);
-  url.hash = ""; url.hostname = url.hostname.replace(/^www\./, "");
-  url.pathname = url.pathname.replace(/\/+$/, "") || "/";
-  return url.href;
-}
 export function inferOutlet(url?: string, text = "") {
   if (url) {
     const hostname = new URL(url).hostname;
@@ -39,10 +32,15 @@ export function matchImport<T extends RecordData & { id: string }>(candidate: Pi
   const byUrl = url ? articles.filter(r => safeUrl(r.url) === url) : [];
   if (byUrl.length === 1) return { record: byUrl[0], reason: "Matching source URL" };
   if (byUrl.length > 1) return { ambiguous: true };
-  const titleKey = (value: string) => value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
-  const title = titleKey(candidate.title);
+  // An unfamiliar URL must not collapse a separate article with a reused headline.
+  if (url) return {};
+  const title = headlineKey(candidate.title);
   if (title.length < 8) return {};
-  const byTitle = articles.filter(r => titleKey(r.title) === title && (!candidate.outlet || r.outlet?.toLowerCase() === candidate.outlet.toLowerCase()));
+  const byTitle = articles.filter(r => {
+    const publisherMatches = !!candidate.outlet && r.outlet?.toLowerCase() === candidate.outlet.toLowerCase();
+    return (headlineKey(r.title) === title && (!candidate.outlet || publisherMatches)) ||
+      publisherMatches && mergeHeadlines(r, r.verifiedHeadlines).some(h => headlineKey(h.title) === title);
+  });
   return byTitle.length === 1 ? { record: byTitle[0], reason: "Matching headline and publisher" } : byTitle.length > 1 ? { ambiguous: true } : {};
 }
 
@@ -163,6 +161,7 @@ export function htmlCandidate(html: string, sourceUrl: string) {
   const credits = byline ? parseByline(byline) : undefined;
   const classification = classificationFromDocument(document, sourceUrl, title);
   return { ...candidate, ...classification, title, outlet, byline, credits, journalists: credits?.filter(c => c.role === "author").map(c => c.name),
+    publisherHeadline: typeof ld?.headline === "string" ? ld.headline : isVideo && typeof ld?.name === "string" ? ld.name : meta("og:title"),
     extractionMethod: isVideo ? "video description" : mailParagraphs ? "publisher article paragraphs" : typeof ld?.articleBody === "string" ? "structured article body" : "article extraction",
     contentNormalization: { method: isVideo ? "html:video-description" : "html:article-extraction", sourceCharacters: html.length, articleCharacters: text.length },
     publishedAt: published && !isNaN(Date.parse(published)) ? new Date(published).toISOString() : undefined,

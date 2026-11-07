@@ -8,6 +8,7 @@ import { archiveArticle, hydrateArticles } from "./tripwire-content-storage";
 import { mergeClassification } from "./tripwire-classification";
 import { publicationUpdate } from "./tripwire-publication";
 import { articleLock, currentArticle, FeedbackError, canonicalArticleUrl, classificationSnapshot, appendFeedback, CORRECTION_REASONS } from "./tripwire-feedback";
+import { mergeHeadlines, publisherIdentityUpdate } from "./tripwire-headlines";
 
 export type RecordData = typeof SaveRecordBody._output;
 export async function seedConfig() {
@@ -43,12 +44,7 @@ export async function recordsFor(userId?: string | null, includeContent = true) 
     }
     if (r.kind === "article") {
       if (base && r.owner !== "public") Object.assign(data, publicationUpdate(data, base.data));
-      if (data.discoveryOnly && base?.data.discoveryOnly === false) {
-        Object.assign(data, { discoveryOnly: false, url: base.data.url, intakeMethod: base.data.intakeMethod,
-          intakeUrl: base.data.intakeUrl,
-          byline: data.byline ?? base.data.byline, credits: data.credits ?? base.data.credits,
-          journalists: (data.journalists as unknown[] | undefined)?.length ? data.journalists : base.data.journalists });
-      }
+      Object.assign(data, publisherIdentityUpdate(data as RecordData, base?.data as RecordData | undefined));
       const content = mergeArticleContent((r.owner !== "public" ? data : base?.data ?? {}) as { fullText?: string; retainedContent?: Capture[]; fullTextComplete?: boolean },
         (r.owner !== "public" ? base?.data ?? {} : data) as { fullText?: string; retainedContent?: Capture[]; fullTextComplete?: boolean });
       Object.assign(data, content, { flagged: data.flagged ?? data.saved ?? false });
@@ -65,7 +61,7 @@ export async function recordsFor(userId?: string | null, includeContent = true) 
   return includeContent ? hydrateArticles(records) : records;
 }
 
-export async function writeRecord(userId: string, data: RecordData, protectMetadata = false, analystEdit = false) {
+export async function writeRecord(userId: string, data: RecordData, protectMetadata = false, analystEdit = false, trustedHeadlines = false) {
   const baseId = data.id ?? crypto.randomUUID();
   // Per-user shadow copies allow edits/bookmarks without mutating shared feed metadata.
   const id = `${userId}:${baseId}`;
@@ -74,12 +70,14 @@ export async function writeRecord(userId: string, data: RecordData, protectMetad
   const correctionEvents: { field: "impact" | "topic"; before: ReturnType<typeof classificationSnapshot> }[] = [];
   let original: RecordData | undefined;
   if (data.kind === "article") {
+    const incomingHeadlines = trustedHeadlines ? data.verifiedHeadlines : undefined;
     const canonical = canonicalArticleUrl(data.url);
     const hiddenRows = await tx.select().from(tripwireRecords).where(and(eq(tripwireRecords.owner, userId), eq(tripwireRecords.kind, "article"), sql`${tripwireRecords.data}->>'hidden' = 'true'`));
     if (hiddenRows.some(row => row.id === id || canonical && canonicalArticleUrl(String(row.data.url ?? "")) === canonical)) {
       throw new FeedbackError(409, "This article is dismissed. Restore it from Dashboard feedback before updating it.");
     }
     try { original = (await currentArticle(tx, userId, baseId)).data; } catch (error) { if (!(error instanceof FeedbackError && error.status === 404)) throw error; }
+    data = { ...data, verifiedHeadlines: mergeHeadlines(data, original?.verifiedHeadlines, incomingHeadlines) };
     if (original) {
       const incoming = data;
       data = { ...original, ...data, ...mergeArticleContent(original, data), automaticAssessment: original.automaticAssessment, impact: original.impact, topic: original.topic,
@@ -113,7 +111,8 @@ export async function writeRecord(userId: string, data: RecordData, protectMetad
     const [existing] = await tx.select().from(tripwireRecords).where(and(eq(tripwireRecords.id, id), eq(tripwireRecords.owner, userId)));
     if (existing) {
       if (protectMetadata) {
-        const current = existing.data as RecordData;
+        // Use the current shared projection, not the pre-promotion raw shadow.
+        const current = original ?? existing.data as RecordData;
         const incoming = data;
         data = { ...incoming, ...current, ...mergeArticleContent(current, incoming), ...mergeClassification(current, incoming), retrieval: incoming.retrieval,
           ...(current.summary || !incoming.summary ? {} : { summary: incoming.summary }),
@@ -125,6 +124,7 @@ export async function writeRecord(userId: string, data: RecordData, protectMetad
       data = { ...data, ...preserved, ...mergeClassification(existing.data, data) };
       if (!protectMetadata && existing.data.retrieval) data.retrieval = existing.data.retrieval as RecordData["retrieval"];
     }
+    data.verifiedHeadlines = mergeHeadlines(data, original?.verifiedHeadlines, incomingHeadlines);
   }
   data = await archiveArticle(data);
   for (const event of correctionEvents) {

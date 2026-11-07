@@ -15,6 +15,7 @@ import { archiveArticle, hydrateArticles } from "../lib/tripwire-content-storage
 import { mergeClassification } from "../lib/tripwire-classification";
 import { reconcileCredits } from "../lib/tripwire-paste";
 import { mentionedEntities } from "../lib/tripwire-signals";
+import { mergeHeadlines, observeHeadline } from "../lib/tripwire-headlines";
 
 const router: IRouter = Router();
 const inFlight = new Set<string>();
@@ -90,8 +91,10 @@ export async function analyzeImport(userId: string, input: unknown, options: { a
         capture = importCapture(candidate, source, { raw: extracted, fileName: filename, uploadId: id });
       } else {
         const raw = response.bytes.toString("utf8");
-        candidate = /html/i.test(response.contentType) || /<!doctype html|<html[\s>]/i.test(raw) ? htmlCandidate(raw, response.url) : textCandidate(raw, response.url);
+        const page = /html/i.test(response.contentType) || /<!doctype html|<html[\s>]/i.test(raw) ? htmlCandidate(raw, response.url) : undefined;
+        candidate = page ?? textCandidate(raw, response.url);
         capture = importCapture(candidate, source, { raw });
+        if (page?.publisherHeadline) candidate.verifiedHeadlines = observeHeadline({ ...candidate, title: page.publisherHeadline }, capture, "publisher-page");
       }
     } else {
       source = "paste";
@@ -100,7 +103,7 @@ export async function analyzeImport(userId: string, input: unknown, options: { a
     }
     if (candidate.publishedAt) candidate = { ...candidate, publicationSource: source === "url" ? "publisher" : "manual", publicationSourceUrl: candidate.url };
     const matched = resolveImportMatch(candidate, records, target, options.allowMatchReview);
-    if (matched.ambiguous && !target) throw new IntakeError("More than one existing item matches. Open the intended article and enrich it there.");
+    if (matched.ambiguous) throw new IntakeError("More than one existing item matches. Supply the intended article's source URL to review its identity.");
     if (matched.conflict && !options.allowMatchReview) throw new IntakeError("This content matches a different article. Open the matching item to enrich it.");
     const existing = matched.existing;
     if (existing && !candidate.contentNormalization && source !== "url" && capture.raw) {
@@ -116,6 +119,7 @@ export async function analyzeImport(userId: string, input: unknown, options: { a
       candidate = { ...candidate, ...reconcileCredits(existing, candidate), title: existing.title, url: candidate.url ?? existing.url, outlet: existing.outlet ?? candidate.outlet,
         publishedAt: existing.publishedAt, publicationSource: existing.publicationSource, publicationSourceUrl: existing.publicationSourceUrl,
         ...publicationUpdate(existing, candidate), sourceType: existing.sourceType ?? candidate.sourceType };
+      candidate.verifiedHeadlines = mergeHeadlines(candidate, existing.verifiedHeadlines, candidate.verifiedHeadlines);
     }
     candidate.entities = mentionedEntities(`${candidate.title}\n${candidate.fullText ?? ""}`, records.filter(r => r.kind === "watch"));
     if (!candidate.outlet) warnings.push("Publisher was not identified; set it before saving.");
@@ -175,7 +179,7 @@ export async function commitImport(userId: string, input: unknown) {
       } else {
         if (match.ambiguous) throw new IntakeError("Multiple articles match these details. Open the intended item and enrich it there.", 409);
         if (existing && match.record && match.record.id !== existing.id) throw new IntakeError("These details identify another article. Analyze it separately.", 409);
-        existing ??= match.record;
+        if (!existing && match.record) throw new IntakeError("An existing article now matches these details. Analyze again to review the matching item.", 409);
       }
       const keepBody = !!existing?.fullText && !prefersIncomingContent(existing, { ...candidate, fullTextComplete: body.fullTextComplete ?? false });
       const oldCapture = existing?.fullText ? [captureContent(existing.fullText, "previous article text")] : [];
@@ -201,7 +205,8 @@ export async function commitImport(userId: string, input: unknown) {
         topic: keepBody ? existing?.topic : candidate.topic ?? existing?.topic,
         entities: keepBody ? existing?.entities : candidate.entities ?? existing?.entities,
         retainedContent, contentRetained: true, retainedCharacters: Math.max(...retainedContent.map(c => c.text?.length ?? c.textLength ?? 0)) };
-      const saved = await writeRecord(userId, data);
+      data.verifiedHeadlines = mergeHeadlines(data, existing?.verifiedHeadlines, candidate.verifiedHeadlines);
+      const saved = await writeRecord(userId, data, false, false, true);
       await tx.update(tripwireRecords).set({ data: { ...draft.data, committedId: saved.id }, updatedAt: new Date() }).where(and(eq(tripwireRecords.id, draft.id), eq(tripwireRecords.owner, userId)));
       return saved;
     });

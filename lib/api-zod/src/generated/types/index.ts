@@ -133,5 +133,7 @@ export * from './retrievalReportStorage';
 export * from './searchArticleContentParams';
 export * from './stats';
 export * from './trackedRecord';
+export * from './verifiedHeadline';
+export * from './verifiedHeadlineSource';
 export * from './workspace';
 export * from './workspaceAccess';
