@@ -8,6 +8,8 @@ import { Importer } from '@/components/importer';
 import { contentStatus, hasMainText, publicationET, type Impact } from '@/lib/article-signals';
 import { articleCredits } from '@/lib/media-coverage';
 import { OutletBrand } from '@/components/outlet-brand';
+import { ProvenancePanel } from '@/components/provenance/provenance-panel';
+import { ProcessArticleButton } from '@/components/provenance/claim-processing';
 import { DevelopmentsPanel } from './developments';
 import { ContentDot, ImpactWord, articleTags } from './feed-meta';
 
@@ -134,6 +136,7 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
             className="mb-2 inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-xs hover:border-foreground" data-testid="button-toggle-importer">
             {importOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />} Add / update content
           </button>
+          {a.kind === 'article' && hasMain && signedIn && <ProcessArticleButton key={`proc-${a.id}`} articleId={a.id} />}
           {importOpen && <div id={`article-importer-${a.id}`}><Importer key={a.id} targetId={a.id} targetTitle={a.title} compact onCommitted={record => { if (record.id !== a.id) onOpenArticle?.(record.id); }} /></div>}
         </div>}
 
@@ -231,6 +234,7 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
         )}
 
         <DevelopmentsPanel key={a.id} articleId={a.id} compact />
+        {a.kind === 'article' && <ProvenancePanel key={`prov-${a.id}`} params={{ articleId: a.id }} editable={signedIn && !feedbackId} connect={{ articleId: a.id }} heading="Passages and source lineage" />}
 
         {captures.length > 0 && (
           <div className="mt-6 flex flex-wrap items-center gap-2" data-testid="select-reader-capture">

@@ -14,3 +14,17 @@ mtime_ms = 1793983489572
 storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:dae58884-dd5a-454f-8d38-e08fbf5c372a/cd135116-96e5-4b1b-aead-5d2cb34f8baf/203eb42f-70d3-4902-96e5-98d429d70ce3"
 storage_version_token = "1793983678384345"
 content_type = "text/csv"
+
+[[outputs]]
+id = "_iotzimtUOMRrge0Dhk-S"
+uri = "file://generated-artifacts/source-search/reconciliation.html"
+type = "html"
+title = "Source backfill reconciliation and handoff"
+description = "Development totals, retained exceptions, supplied-versus-reviewed distinctions, worked example, verification and guarded rollback procedure. No full-text archives included."
+logical_id = "487ba96e-79db-44cf-bf52-1795aa3b0faf"
+content_hash = "sha256:c5eaf830c1148e269711f6636dddcd450372bfeab41ad7a8998921758db8e089"
+size = 10860
+mtime_ms = 1793989689153
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:dae58884-dd5a-454f-8d38-e08fbf5c372a/487ba96e-79db-44cf-bf52-1795aa3b0faf/e4b9dc49-9a07-49dc-92a2-4aa49a699610"
+storage_version_token = "1793989696220667"
+content_type = "text/html"

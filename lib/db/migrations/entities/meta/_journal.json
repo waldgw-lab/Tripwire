@@ -15,6 +15,34 @@
       "when": 1793980589364,
       "tag": "0001_pilot_token_allowance",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793991000000,
+      "tag": "0002_reporting_provenance",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793992000000,
+      "tag": "0003_development_claim_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794100000000,
+      "tag": "0004_live_claims",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794101000000,
+      "tag": "0005_claim_capture_intake",
+      "breakpoints": true
     }
   ]
 }

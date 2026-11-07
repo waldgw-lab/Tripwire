@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Link } from 'wouter';
 import type { TrackedRecord } from '@workspace/api-client-react';
 import { ArrowUpRight, ChevronDown, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -50,7 +51,10 @@ function CoverageRow({ item, profile, showOutlet, openKey, isOpen, toggle }: {
       {a.fullText?.trim() ? <div className="max-h-80 overflow-y-auto whitespace-pre-line font-serif text-[15px] leading-relaxed">{a.fullText}</div>
         : a.summary?.trim() ? <p className="font-serif text-[15px] leading-relaxed">{a.summary}</p>
         : <p className="font-mono text-[11px] text-muted-foreground">No text retained.</p>}
-      {a.url && <a href={a.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-mono text-[11px] hover:underline" data-testid={`link-source-${a.id}`}>Source <ArrowUpRight className="h-3 w-3" /></a>}
+      <div className="flex flex-wrap items-center gap-4">
+        <Link href={`/?article=${encodeURIComponent(a.id)}`} className="font-mono text-[11px] underline" data-testid={`link-reader-${a.id}`}>Open reader and source lineage</Link>
+        {a.url && <a href={a.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-mono text-[11px] hover:underline" data-testid={`link-source-${a.id}`}>Source <ArrowUpRight className="h-3 w-3" /></a>}
+      </div>
     </div>}
   </li>;
 }

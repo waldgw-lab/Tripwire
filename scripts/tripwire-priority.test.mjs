@@ -8,6 +8,12 @@ const article = (id, fields = {}) => ({ id, kind: 'article', title: id, createdA
 const watch = { id: 'watch', kind: 'watch', title: 'Donald Trump', aliases: ['Trump'], watchType: 'position', tier: 1, enabled: true };
 const watches = [watch];
 
+test('offline source archives never activate automatic retrieval; explicit requests remain possible', () => {
+  const archived = article('archive', { sourceSearch: { supplied: true }, impact: 'critical', title: 'Donald Trump' });
+  assert.equal(automaticRetrievalAllowed(archived, watches), false);
+  assert.equal(automaticRetrievalAllowed({ ...archived, retrieval: { manualRequested: true } }, watches), true);
+});
+
 test('retrieval impact agrees with the feed for overrides, original reporting, watchlist and accountability', () => {
   const samples = [
     { title: 'Trump responds' }, { title: 'Donald Trump responds', impact: 'low' },

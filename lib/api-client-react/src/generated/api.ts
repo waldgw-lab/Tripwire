@@ -30,6 +30,7 @@ import type {
   ArticleFeedbackPage,
   AutomationAction,
   AutomationHealth,
+  ClaimDirectionInput,
   ContentSearch,
   DevelopmentAction,
   EnqueueEnrichment200,
@@ -44,9 +45,12 @@ import type {
   FlagRequest,
   GetArticleContentParams,
   GetArticleFeedbackParams,
+  GetClaimCoverageSummaries200Item,
+  GetClaimProcessing200,
   GetEntityAutomationParams,
   GetEntityParams,
   GetQuickEnrichmentText200,
+  GetReportingProvenanceParams,
   HealthStatus,
   ImportAnalyzeRequest,
   ImportCommitRequest,
@@ -57,12 +61,17 @@ import type {
   ListEntitiesParams,
   ListEntityCaptures200,
   ListEntityCapturesParams,
+  ProcessArticleClaims200,
   QuickEnrichmentInput,
   QuickEnrichmentJob,
   QuickEnrichmentQueue,
   RecordInput,
   RefreshResult,
   RegistryEntity,
+  ReportingLinkResult,
+  ReportingPassageInput,
+  ReportingProvenance,
+  ReportingReviewInput,
   RequestImportUpload200,
   RetrievalReport,
   SearchArticleContentParams,
@@ -96,6 +105,612 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetClaimProcessingUrl = () => {
+
+
+
+
+  return `/api/tripwire/claims/processing`
+}
+
+export const getClaimProcessing = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetClaimProcessing200> => {
+
+  return customFetch<GetClaimProcessing200>(getGetClaimProcessingUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetClaimProcessingQueryKey = () => {
+    return [
+    `/api/tripwire/claims/processing`
+    ] as const;
+    }
+
+
+export const getGetClaimProcessingQueryOptions = <TData = Awaited<ReturnType<typeof getClaimProcessing>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClaimProcessing>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetClaimProcessingQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClaimProcessing>>> = ({ signal }) => getClaimProcessing({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClaimProcessing>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetClaimProcessingQueryResult = NonNullable<Awaited<ReturnType<typeof getClaimProcessing>>>
+export type GetClaimProcessingQueryError = ErrorType<unknown>
+
+
+export function useGetClaimProcessing<TData = Awaited<ReturnType<typeof getClaimProcessing>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClaimProcessing>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getClaimProcessing>>,
+          TError,
+          Awaited<ReturnType<typeof getClaimProcessing>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetClaimProcessing<TData = Awaited<ReturnType<typeof getClaimProcessing>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClaimProcessing>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getClaimProcessing>>,
+          TError,
+          Awaited<ReturnType<typeof getClaimProcessing>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetClaimProcessing<TData = Awaited<ReturnType<typeof getClaimProcessing>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClaimProcessing>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetClaimProcessing<TData = Awaited<ReturnType<typeof getClaimProcessing>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClaimProcessing>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetClaimProcessingQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getProcessArticleClaimsUrl = (articleId: string,) => {
+
+
+
+
+  return `/api/tripwire/claims/processing/${articleId}`
+}
+
+export const processArticleClaims = async (articleId: string, options?: Parameters<typeof customFetch>[1]): Promise<ProcessArticleClaims200> => {
+
+  return customFetch<ProcessArticleClaims200>(getProcessArticleClaimsUrl(articleId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getProcessArticleClaimsMutationKey = () => ['processArticleClaims'] as const;
+
+export const getProcessArticleClaimsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof processArticleClaims>>, TError,ProcessArticleClaimsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof processArticleClaims>>, TError,ProcessArticleClaimsMutationVariables, TContext> => {
+
+const mutationKey = getProcessArticleClaimsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof processArticleClaims>>, ProcessArticleClaimsMutationVariables> = (props) => {
+          const {articleId} = props ?? {};
+
+          return  processArticleClaims(articleId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ProcessArticleClaimsMutationResult = NonNullable<Awaited<ReturnType<typeof processArticleClaims>>>
+
+    export type ProcessArticleClaimsMutationError = ErrorType<unknown>
+    export type ProcessArticleClaimsMutationVariables = {articleId: string}
+
+    export const useProcessArticleClaims = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof processArticleClaims>>, TError,ProcessArticleClaimsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof processArticleClaims>>,
+        TError,
+        ProcessArticleClaimsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getProcessArticleClaimsMutationOptions(options), queryClient);
+    }
+
+export const getCorrectClaimDirectionUrl = () => {
+
+
+
+
+  return `/api/tripwire/provenance/direction`
+}
+
+export const correctClaimDirection = async (claimDirectionInput: ClaimDirectionInput, options?: Parameters<typeof customFetch>[1]): Promise<ReportingLinkResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ReportingLinkResult>(getCorrectClaimDirectionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(claimDirectionInput)
+  }
+);}
+
+
+
+
+
+export const getCorrectClaimDirectionMutationKey = () => ['correctClaimDirection'] as const;
+
+export const getCorrectClaimDirectionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof correctClaimDirection>>, TError,CorrectClaimDirectionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof correctClaimDirection>>, TError,CorrectClaimDirectionMutationVariables, TContext> => {
+
+const mutationKey = getCorrectClaimDirectionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof correctClaimDirection>>, CorrectClaimDirectionMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  correctClaimDirection(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CorrectClaimDirectionMutationResult = NonNullable<Awaited<ReturnType<typeof correctClaimDirection>>>
+    export type CorrectClaimDirectionMutationBody = BodyType<ClaimDirectionInput>
+    export type CorrectClaimDirectionMutationError = ErrorType<unknown>
+    export type CorrectClaimDirectionMutationVariables = {data: BodyType<ClaimDirectionInput>}
+
+    export const useCorrectClaimDirection = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof correctClaimDirection>>, TError,CorrectClaimDirectionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof correctClaimDirection>>,
+        TError,
+        CorrectClaimDirectionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCorrectClaimDirectionMutationOptions(options), queryClient);
+    }
+
+export const getGetClaimCoverageSummariesUrl = () => {
+
+
+
+
+  return `/api/tripwire/provenance/summaries`
+}
+
+export const getClaimCoverageSummaries = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetClaimCoverageSummaries200Item[]> => {
+
+  return customFetch<GetClaimCoverageSummaries200Item[]>(getGetClaimCoverageSummariesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetClaimCoverageSummariesQueryKey = () => {
+    return [
+    `/api/tripwire/provenance/summaries`
+    ] as const;
+    }
+
+
+export const getGetClaimCoverageSummariesQueryOptions = <TData = Awaited<ReturnType<typeof getClaimCoverageSummaries>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClaimCoverageSummaries>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetClaimCoverageSummariesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClaimCoverageSummaries>>> = ({ signal }) => getClaimCoverageSummaries({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClaimCoverageSummaries>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetClaimCoverageSummariesQueryResult = NonNullable<Awaited<ReturnType<typeof getClaimCoverageSummaries>>>
+export type GetClaimCoverageSummariesQueryError = ErrorType<unknown>
+
+
+export function useGetClaimCoverageSummaries<TData = Awaited<ReturnType<typeof getClaimCoverageSummaries>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClaimCoverageSummaries>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getClaimCoverageSummaries>>,
+          TError,
+          Awaited<ReturnType<typeof getClaimCoverageSummaries>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetClaimCoverageSummaries<TData = Awaited<ReturnType<typeof getClaimCoverageSummaries>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClaimCoverageSummaries>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getClaimCoverageSummaries>>,
+          TError,
+          Awaited<ReturnType<typeof getClaimCoverageSummaries>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetClaimCoverageSummaries<TData = Awaited<ReturnType<typeof getClaimCoverageSummaries>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClaimCoverageSummaries>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetClaimCoverageSummaries<TData = Awaited<ReturnType<typeof getClaimCoverageSummaries>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClaimCoverageSummaries>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetClaimCoverageSummariesQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetReportingProvenanceUrl = (params?: GetReportingProvenanceParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/tripwire/provenance?${stringifiedParams}` : `/api/tripwire/provenance`
+}
+
+export const getReportingProvenance = async (params?: GetReportingProvenanceParams, options?: Parameters<typeof customFetch>[1]): Promise<ReportingProvenance> => {
+
+  return customFetch<ReportingProvenance>(getGetReportingProvenanceUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReportingProvenanceQueryKey = (params?: GetReportingProvenanceParams,) => {
+    return [
+    `/api/tripwire/provenance`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetReportingProvenanceQueryOptions = <TData = Awaited<ReturnType<typeof getReportingProvenance>>, TError = ErrorType<unknown>>(params?: GetReportingProvenanceParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReportingProvenance>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReportingProvenanceQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReportingProvenance>>> = ({ signal }) => getReportingProvenance(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReportingProvenance>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetReportingProvenanceQueryResult = NonNullable<Awaited<ReturnType<typeof getReportingProvenance>>>
+export type GetReportingProvenanceQueryError = ErrorType<unknown>
+
+
+export function useGetReportingProvenance<TData = Awaited<ReturnType<typeof getReportingProvenance>>, TError = ErrorType<unknown>>(
+ params: undefined |  GetReportingProvenanceParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReportingProvenance>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReportingProvenance>>,
+          TError,
+          Awaited<ReturnType<typeof getReportingProvenance>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetReportingProvenance<TData = Awaited<ReturnType<typeof getReportingProvenance>>, TError = ErrorType<unknown>>(
+ params?: GetReportingProvenanceParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReportingProvenance>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReportingProvenance>>,
+          TError,
+          Awaited<ReturnType<typeof getReportingProvenance>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetReportingProvenance<TData = Awaited<ReturnType<typeof getReportingProvenance>>, TError = ErrorType<unknown>>(
+ params?: GetReportingProvenanceParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReportingProvenance>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetReportingProvenance<TData = Awaited<ReturnType<typeof getReportingProvenance>>, TError = ErrorType<unknown>>(
+ params?: GetReportingProvenanceParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReportingProvenance>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetReportingProvenanceQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getConnectReportingPassageUrl = () => {
+
+
+
+
+  return `/api/tripwire/provenance`
+}
+
+export const connectReportingPassage = async (reportingPassageInput: ReportingPassageInput, options?: Parameters<typeof customFetch>[1]): Promise<ReportingLinkResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ReportingLinkResult>(getConnectReportingPassageUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reportingPassageInput)
+  }
+);}
+
+
+
+
+
+export const getConnectReportingPassageMutationKey = () => ['connectReportingPassage'] as const;
+
+export const getConnectReportingPassageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof connectReportingPassage>>, TError,ConnectReportingPassageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof connectReportingPassage>>, TError,ConnectReportingPassageMutationVariables, TContext> => {
+
+const mutationKey = getConnectReportingPassageMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof connectReportingPassage>>, ConnectReportingPassageMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  connectReportingPassage(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConnectReportingPassageMutationResult = NonNullable<Awaited<ReturnType<typeof connectReportingPassage>>>
+    export type ConnectReportingPassageMutationBody = BodyType<ReportingPassageInput>
+    export type ConnectReportingPassageMutationError = ErrorType<unknown>
+    export type ConnectReportingPassageMutationVariables = {data: BodyType<ReportingPassageInput>}
+
+    export const useConnectReportingPassage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof connectReportingPassage>>, TError,ConnectReportingPassageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof connectReportingPassage>>,
+        TError,
+        ConnectReportingPassageMutationVariables,
+        TContext
+      > => {
+      return useMutation(getConnectReportingPassageMutationOptions(options), queryClient);
+    }
+
+export const getReviewReportingLineageUrl = () => {
+
+
+
+
+  return `/api/tripwire/provenance/reviews`
+}
+
+export const reviewReportingLineage = async (reportingReviewInput: ReportingReviewInput, options?: Parameters<typeof customFetch>[1]): Promise<ReportingLinkResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ReportingLinkResult>(getReviewReportingLineageUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reportingReviewInput)
+  }
+);}
+
+
+
+
+
+export const getReviewReportingLineageMutationKey = () => ['reviewReportingLineage'] as const;
+
+export const getReviewReportingLineageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewReportingLineage>>, TError,ReviewReportingLineageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewReportingLineage>>, TError,ReviewReportingLineageMutationVariables, TContext> => {
+
+const mutationKey = getReviewReportingLineageMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewReportingLineage>>, ReviewReportingLineageMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  reviewReportingLineage(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewReportingLineageMutationResult = NonNullable<Awaited<ReturnType<typeof reviewReportingLineage>>>
+    export type ReviewReportingLineageMutationBody = BodyType<ReportingReviewInput>
+    export type ReviewReportingLineageMutationError = ErrorType<unknown>
+    export type ReviewReportingLineageMutationVariables = {data: BodyType<ReportingReviewInput>}
+
+    export const useReviewReportingLineage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewReportingLineage>>, TError,ReviewReportingLineageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reviewReportingLineage>>,
+        TError,
+        ReviewReportingLineageMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReviewReportingLineageMutationOptions(options), queryClient);
+    }
 
 export const getListEntitiesUrl = (params?: ListEntitiesParams,) => {
   const normalizedParams = new URLSearchParams();

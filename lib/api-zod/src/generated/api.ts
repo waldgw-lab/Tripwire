@@ -7,6 +7,234 @@
 import * as zod from 'zod';
 
 
+export const GetClaimProcessingResponse = zod.object({
+  "policy": zod.string(),
+  "pending": zod.number().int(),
+  "failed": zod.number().int(),
+  "recent": zod.array(zod.object({
+  "articleId": zod.string(),
+  "title": zod.string(),
+  "status": zod.string(),
+  "claims": zod.number().int(),
+  "error": zod.string().nullable(),
+  "updatedAt": zod.string()
+}))
+})
+
+
+export const ProcessArticleClaimsParams = zod.object({
+  "articleId": zod.coerce.string()
+})
+
+export const ProcessArticleClaimsResponse = zod.object({
+  "queued": zod.boolean()
+})
+
+
+export const correctClaimDirectionBodySubjectMax = 200;
+
+export const correctClaimDirectionBodyRationaleMin = 5;
+export const correctClaimDirectionBodyRationaleMax = 2000;
+
+
+
+export const CorrectClaimDirectionBody = zod.object({
+  "claimObservationId": zod.string(),
+  "subject": zod.string().min(1).max(correctClaimDirectionBodySubjectMax),
+  "direction": zod.enum(['positive', 'negative', 'neutral', 'mixed', 'unassessed']),
+  "rationale": zod.string().min(correctClaimDirectionBodyRationaleMin).max(correctClaimDirectionBodyRationaleMax),
+  "supersedesId": zod.string().nullish()
+})
+
+export const CorrectClaimDirectionResponse = zod.object({
+  "id": zod.string()
+})
+
+
+export const GetClaimCoverageSummariesResponseItem = zod.object({
+  "claimId": zod.string(),
+  "attributions": zod.number().int(),
+  "firstDate": zod.string().nullable(),
+  "lastDate": zod.string().nullable()
+})
+export const GetClaimCoverageSummariesResponse = zod.array(GetClaimCoverageSummariesResponseItem)
+
+
+export const getReportingProvenanceQueryOffsetDefault = 0;
+export const getReportingProvenanceQueryOffsetMin = 0;
+
+
+
+export const GetReportingProvenanceQueryParams = zod.object({
+  "articleId": zod.coerce.string().optional(),
+  "claimId": zod.coerce.string().optional(),
+  "evidenceId": zod.coerce.string().optional(),
+  "eventId": zod.coerce.string().optional(),
+  "offset": zod.coerce.number().int().min(getReportingProvenanceQueryOffsetMin).default(getReportingProvenanceQueryOffsetDefault)
+})
+
+export const GetReportingProvenanceResponse = zod.object({
+  "claims": zod.array(zod.object({
+  "direction": zod.enum(['positive', 'negative', 'neutral', 'mixed', 'unassessed']).optional(),
+  "directionSubject": zod.string().nullish(),
+  "directionReason": zod.string().nullish(),
+  "directionOrigin": zod.enum(['automatic', 'analyst', 'unassessed']).optional(),
+  "directionCorrectionId": zod.string().nullish(),
+  "evidenceVersions": zod.array(zod.object({
+  "captureId": zod.string(),
+  "evidenceId": zod.string()
+})).optional(),
+  "id": zod.string(),
+  "claimId": zod.string(),
+  "familyId": zod.string(),
+  "proposition": zod.string(),
+  "articleId": zod.string(),
+  "title": zod.string(),
+  "outlet": zod.string().nullish(),
+  "url": zod.string().nullish(),
+  "publishedAt": zod.string().nullish(),
+  "suppliedDate": zod.string().nullish(),
+  "eventId": zod.string().nullish(),
+  "evidenceId": zod.string().nullish(),
+  "excerpt": zod.string().nullish(),
+  "start": zod.number().int().nullish(),
+  "end": zod.number().int().nullish(),
+  "captureId": zod.string().nullish(),
+  "supplied": zod.boolean(),
+  "externalId": zod.string().nullish(),
+  "sourceIds": zod.array(zod.string()),
+  "reviews": zod.array(zod.object({
+  "id": zod.string(),
+  "relation": zod.string(),
+  "rationale": zod.string(),
+  "createdAt": zod.string(),
+  "pathKey": zod.string().nullish(),
+  "targetClaimId": zod.string().nullish(),
+  "supersedesId": zod.string().nullish(),
+  "evidenceId": zod.string().nullish()
+}))
+})),
+  "sources": zod.array(zod.object({
+  "id": zod.string(),
+  "articleId": zod.string(),
+  "descriptor": zod.string(),
+  "sourceType": zod.string(),
+  "anonymity": zod.string(),
+  "supplied": zod.boolean(),
+  "minimumHumans": zod.number().int().nullable(),
+  "externalId": zod.string().nullish(),
+  "familyHypothesis": zod.string().nullish(),
+  "evidenceId": zod.string().nullish(),
+  "excerpt": zod.string().nullish(),
+  "captureId": zod.string().nullish()
+})),
+  "matches": zod.array(zod.object({
+  "id": zod.string(),
+  "sourceA": zod.string(),
+  "sourceB": zod.string(),
+  "hypothesis": zod.string(),
+  "rationale": zod.string(),
+  "conflicts": zod.string(),
+  "supplied": zod.boolean(),
+  "reviews": zod.array(zod.object({
+  "id": zod.string(),
+  "relation": zod.string(),
+  "rationale": zod.string(),
+  "createdAt": zod.string(),
+  "pathKey": zod.string().nullish(),
+  "targetClaimId": zod.string().nullish(),
+  "supersedesId": zod.string().nullish(),
+  "evidenceId": zod.string().nullish()
+}))
+})),
+  "context": zod.array(zod.object({
+  "sheet": zod.string(),
+  "row": zod.string(),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "resolution": zod.record(zod.string(), zod.unknown())
+})),
+  "counts": zod.object({
+  "articles": zod.number().int(),
+  "occurrences": zod.number().int(),
+  "minimumAnonymousHumans": zod.number().int().nullable(),
+  "suppliedMinimumAnonymousHumans": zod.number().int().nullish(),
+  "provisionalSourceRecords": zod.number().int().nullable(),
+  "independentPaths": zod.number().int().nullable()
+}),
+  "total": zod.number().int(),
+  "offset": zod.number().int()
+})
+
+
+
+
+
+
+
+export const connectReportingPassageBodyExcerptMax = 20000;
+
+export const connectReportingPassageBodyStartMin = 0;
+
+
+export const connectReportingPassageBodyDescriptorMax = 2000;
+
+export const connectReportingPassageBodyPropositionMin = 3;
+export const connectReportingPassageBodyPropositionMax = 2000;
+
+export const connectReportingPassageBodyEventIdMax = 200;
+
+export const connectReportingPassageBodyEntityEventIdMax = 200;
+
+export const connectReportingPassageBodySourceIdsMax = 20;
+
+export const connectReportingPassageBodyAnonymityDefault = `Unknown`;
+
+export const ConnectReportingPassageBody = zod.object({
+  "articleId": zod.string().min(1),
+  "claimId": zod.string().min(1),
+  "captureId": zod.string().min(1),
+  "evidenceId": zod.string().min(1).optional(),
+  "developmentId": zod.string().min(1).optional(),
+  "excerpt": zod.string().min(1).max(connectReportingPassageBodyExcerptMax),
+  "start": zod.number().int().min(connectReportingPassageBodyStartMin),
+  "end": zod.number().int().min(1),
+  "descriptor": zod.string().min(1).max(connectReportingPassageBodyDescriptorMax),
+  "proposition": zod.string().min(connectReportingPassageBodyPropositionMin).max(connectReportingPassageBodyPropositionMax),
+  "eventId": zod.string().max(connectReportingPassageBodyEventIdMax).nullish(),
+  "entityEventId": zod.string().max(connectReportingPassageBodyEntityEventIdMax).nullish(),
+  "sourceIds": zod.array(zod.string()).max(connectReportingPassageBodySourceIdsMax).optional(),
+  "anonymity": zod.enum(['Named', 'Unnamed', 'Unknown']).default(connectReportingPassageBodyAnonymityDefault)
+})
+
+export const ConnectReportingPassageResponse = zod.object({
+  "id": zod.string()
+})
+
+
+export const reviewReportingLineageBodyPathKeyMin = 3;
+export const reviewReportingLineageBodyPathKeyMax = 200;
+
+export const reviewReportingLineageBodyRationaleMin = 5;
+export const reviewReportingLineageBodyRationaleMax = 4000;
+
+
+
+export const ReviewReportingLineageBody = zod.object({
+  "claimObservationId": zod.string().optional(),
+  "sourceMatchId": zod.string().optional(),
+  "targetClaimId": zod.string().nullish(),
+  "supersedesId": zod.string().nullish(),
+  "evidenceId": zod.string().nullish(),
+  "pathKey": zod.string().min(reviewReportingLineageBodyPathKeyMin).max(reviewReportingLineageBodyPathKeyMax).nullish(),
+  "relation": zod.enum(['new-reporting', 'added-evidence', 'derivative', 'opinion-propagation', 'disputes', 'unknown', 'same-environment', 'distinct-environments', 'unresolved']),
+  "rationale": zod.string().min(reviewReportingLineageBodyRationaleMin).max(reviewReportingLineageBodyRationaleMax)
+})
+
+export const ReviewReportingLineageResponse = zod.object({
+  "id": zod.string()
+})
+
+
 export const listEntitiesQueryQMax = 200;
 
 export const listEntitiesQueryOffsetDefault = 0;

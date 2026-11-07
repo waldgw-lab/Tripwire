@@ -4,6 +4,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils';
 import { DISPOSITIONS, POLL_MS, errorText, fmtWhen, useInvalidateEntities } from '@/lib/entities';
 import { ErrorLine, Mono, Tag, btnCls, inputCls, primaryCls } from '@/components/entities/ui';
+import { ProvenancePanel } from '@/components/provenance/provenance-panel';
 
 /** Repeated observations collapse; material, conflicting and correction observations stay visible. */
 function splitObservations(d: EntityDevelopment) {
@@ -39,6 +40,9 @@ function DevelopmentItem({ d }: { d: EntityDevelopment }) {
       <ul className="space-y-1.5">{visible.map(o => <li key={o.id} className="border-l-2 border-foreground/70 pl-2">
         <p className="whitespace-pre-wrap font-serif">{o.excerpt}</p>
         <Mono>{o.capture?.publisher ?? o.capture?.source ?? 'capture'} · {o.attribution} · {o.certainty}{o.lineage ? ` · ${o.lineage.relation}` : ''}</Mono>
+        {o.capture && <details className="mt-1"><summary className="cursor-pointer text-[11px] underline">Claim linkage and source review</summary>
+          <ProvenancePanel params={{ evidenceId: o.id }} editable connect={{ articleId: o.capture.articleId, evidenceId: o.id, developmentId: d.id }} />
+        </details>}
       </li>)}</ul>
       <Mono>Event {d.eventKey} · claim {d.claimKey} · p{d.policyVersion}</Mono>
       {mode ? <div className="space-y-1.5">

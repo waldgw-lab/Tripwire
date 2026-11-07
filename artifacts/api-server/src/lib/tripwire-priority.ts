@@ -32,6 +32,9 @@ export function criticalIntakeItems<T extends RecordData & { createdAt: string }
 
 export function automaticRetrievalAllowed(article: RecordData, watches: RecordData[]) {
   if (article.retrieval?.manualRequested) return true;
+  // Offline corpus backfills are not instructions to fetch historical publishers.
+  // An explicit analyst retrieval request still follows the ordinary access rules.
+  if ("sourceSearch" in article) return false;
   if (article.fullTextComplete && article.contentFormat !== "live-updates") return false;
   return recordImpact(article, watches) !== "low";
 }

@@ -4,6 +4,279 @@
  * Api
  * OpenAPI spec version: 1.0.0
  */
+export type ClaimDirectionInputDirection = typeof ClaimDirectionInputDirection[keyof typeof ClaimDirectionInputDirection];
+
+
+export const ClaimDirectionInputDirection = {
+  positive: 'positive',
+  negative: 'negative',
+  neutral: 'neutral',
+  mixed: 'mixed',
+  unassessed: 'unassessed',
+} as const;
+
+export interface ClaimDirectionInput {
+  claimObservationId: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  subject: string;
+  direction: ClaimDirectionInputDirection;
+  /**
+     * @minLength 5
+     * @maxLength 2000
+     */
+  rationale: string;
+  /** @nullable */
+  supersedesId?: string | null;
+}
+
+export interface ReportingLinkResult {
+  id: string;
+}
+
+export type ReportingPassageInputAnonymity = typeof ReportingPassageInputAnonymity[keyof typeof ReportingPassageInputAnonymity];
+
+
+export const ReportingPassageInputAnonymity = {
+  Named: 'Named',
+  Unnamed: 'Unnamed',
+  Unknown: 'Unknown',
+} as const;
+
+export interface ReportingPassageInput {
+  /** @minLength 1 */
+  articleId: string;
+  /** @minLength 1 */
+  claimId: string;
+  /** @minLength 1 */
+  captureId: string;
+  /** @minLength 1 */
+  evidenceId?: string;
+  /** @minLength 1 */
+  developmentId?: string;
+  /**
+     * @minLength 1
+     * @maxLength 20000
+     */
+  excerpt: string;
+  /** @minimum 0 */
+  start: number;
+  /** @minimum 1 */
+  end: number;
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  descriptor: string;
+  /**
+     * @minLength 3
+     * @maxLength 2000
+     */
+  proposition: string;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  eventId?: string | null;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  entityEventId?: string | null;
+  /** @maxItems 20 */
+  sourceIds?: string[];
+  anonymity?: ReportingPassageInputAnonymity;
+}
+
+export type ReportingReviewInputRelation = typeof ReportingReviewInputRelation[keyof typeof ReportingReviewInputRelation];
+
+
+export const ReportingReviewInputRelation = {
+  'new-reporting': 'new-reporting',
+  'added-evidence': 'added-evidence',
+  derivative: 'derivative',
+  'opinion-propagation': 'opinion-propagation',
+  disputes: 'disputes',
+  unknown: 'unknown',
+  'same-environment': 'same-environment',
+  'distinct-environments': 'distinct-environments',
+  unresolved: 'unresolved',
+} as const;
+
+export interface ReportingReviewInput {
+  claimObservationId?: string;
+  sourceMatchId?: string;
+  /** @nullable */
+  targetClaimId?: string | null;
+  /** @nullable */
+  supersedesId?: string | null;
+  /** @nullable */
+  evidenceId?: string | null;
+  /**
+     * @minLength 3
+     * @maxLength 200
+     * @nullable
+     */
+  pathKey?: string | null;
+  relation: ReportingReviewInputRelation;
+  /**
+     * @minLength 5
+     * @maxLength 4000
+     */
+  rationale: string;
+}
+
+export type ReportingClaimDirection = typeof ReportingClaimDirection[keyof typeof ReportingClaimDirection];
+
+
+export const ReportingClaimDirection = {
+  positive: 'positive',
+  negative: 'negative',
+  neutral: 'neutral',
+  mixed: 'mixed',
+  unassessed: 'unassessed',
+} as const;
+
+export type ReportingClaimDirectionOrigin = typeof ReportingClaimDirectionOrigin[keyof typeof ReportingClaimDirectionOrigin];
+
+
+export const ReportingClaimDirectionOrigin = {
+  automatic: 'automatic',
+  analyst: 'analyst',
+  unassessed: 'unassessed',
+} as const;
+
+export interface ReportingReview {
+  id: string;
+  relation: string;
+  rationale: string;
+  createdAt: string;
+  /** @nullable */
+  pathKey?: string | null;
+  /** @nullable */
+  targetClaimId?: string | null;
+  /** @nullable */
+  supersedesId?: string | null;
+  /** @nullable */
+  evidenceId?: string | null;
+}
+
+export type ReportingClaimEvidenceVersionsItem = {
+  captureId: string;
+  evidenceId: string;
+};
+
+export interface ReportingClaim {
+  direction?: ReportingClaimDirection;
+  /** @nullable */
+  directionSubject?: string | null;
+  /** @nullable */
+  directionReason?: string | null;
+  directionOrigin?: ReportingClaimDirectionOrigin;
+  /** @nullable */
+  directionCorrectionId?: string | null;
+  evidenceVersions?: ReportingClaimEvidenceVersionsItem[];
+  id: string;
+  claimId: string;
+  familyId: string;
+  proposition: string;
+  articleId: string;
+  title: string;
+  /** @nullable */
+  outlet?: string | null;
+  /** @nullable */
+  url?: string | null;
+  /** @nullable */
+  publishedAt?: string | null;
+  /** @nullable */
+  suppliedDate?: string | null;
+  /** @nullable */
+  eventId?: string | null;
+  /** @nullable */
+  evidenceId?: string | null;
+  /** @nullable */
+  excerpt?: string | null;
+  /** @nullable */
+  start?: number | null;
+  /** @nullable */
+  end?: number | null;
+  /** @nullable */
+  captureId?: string | null;
+  supplied: boolean;
+  /** @nullable */
+  externalId?: string | null;
+  sourceIds: string[];
+  reviews: ReportingReview[];
+}
+
+export interface ReportingSource {
+  id: string;
+  articleId: string;
+  descriptor: string;
+  sourceType: string;
+  anonymity: string;
+  supplied: boolean;
+  /** @nullable */
+  minimumHumans: number | null;
+  /** @nullable */
+  externalId?: string | null;
+  /** @nullable */
+  familyHypothesis?: string | null;
+  /** @nullable */
+  evidenceId?: string | null;
+  /** @nullable */
+  excerpt?: string | null;
+  /** @nullable */
+  captureId?: string | null;
+}
+
+export interface ReportingMatch {
+  id: string;
+  sourceA: string;
+  sourceB: string;
+  hypothesis: string;
+  rationale: string;
+  conflicts: string;
+  supplied: boolean;
+  reviews: ReportingReview[];
+}
+
+export type ReportingContextData = { [key: string]: unknown };
+
+export type ReportingContextResolution = { [key: string]: unknown };
+
+export interface ReportingContext {
+  sheet: string;
+  row: string;
+  data: ReportingContextData;
+  resolution: ReportingContextResolution;
+}
+
+export interface ReportingCounts {
+  articles: number;
+  occurrences: number;
+  /** @nullable */
+  minimumAnonymousHumans: number | null;
+  /** @nullable */
+  suppliedMinimumAnonymousHumans?: number | null;
+  /** @nullable */
+  provisionalSourceRecords: number | null;
+  /** @nullable */
+  independentPaths: number | null;
+}
+
+export interface ReportingProvenance {
+  claims: ReportingClaim[];
+  sources: ReportingSource[];
+  matches: ReportingMatch[];
+  context: ReportingContext[];
+  counts: ReportingCounts;
+  total: number;
+  offset: number;
+}
+
 export interface QuickEnrichmentInput {
   /** @minLength 1 */
   articleId: string;
@@ -1245,6 +1518,47 @@ export interface RefreshResult {
   failures: string[];
   refreshedAt: string;
 }
+
+export type GetClaimProcessing200RecentItem = {
+  articleId: string;
+  title: string;
+  status: string;
+  claims: number;
+  /** @nullable */
+  error: string | null;
+  updatedAt: string;
+};
+
+export type GetClaimProcessing200 = {
+  policy: string;
+  pending: number;
+  failed: number;
+  recent: GetClaimProcessing200RecentItem[];
+};
+
+export type ProcessArticleClaims200 = {
+  queued: boolean;
+};
+
+export type GetClaimCoverageSummaries200Item = {
+  claimId: string;
+  attributions: number;
+  /** @nullable */
+  firstDate: string | null;
+  /** @nullable */
+  lastDate: string | null;
+};
+
+export type GetReportingProvenanceParams = {
+articleId?: string;
+claimId?: string;
+evidenceId?: string;
+eventId?: string;
+/**
+ * @minimum 0
+ */
+offset?: number;
+};
 
 export type ListEntitiesParams = {
 /**

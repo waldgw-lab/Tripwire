@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
+    "source-search:inventory": "python ./source-search-inventory.py",
+    "source-search:backfill": "tsx ./source-search-backfill.mjs",
+    "source-search:test": "tsx --test ./source-search.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

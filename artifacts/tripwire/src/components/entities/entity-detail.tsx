@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ProvenancePanel } from '@/components/provenance/provenance-panel';
 import { getGetEntityQueryKey, useGetEntity, type EntityEvidence } from '@workspace/api-client-react';
 import { ChevronLeft, ChevronRight, Pin, PinOff, Plus } from 'lucide-react';
 import { POLL_MS, fmtWhen, shortHash } from '@/lib/entities';
@@ -8,6 +9,7 @@ import { CoverageContextSection } from './coverage-context';
 
 function EvidenceCard({ v }: { v: EntityEvidence }) {
   const c = v.capture;
+  const [lineage, setLineage] = useState(false);
   return <li className="rounded-md border border-border bg-background/70 p-3" data-testid={`card-evidence-${v.id}`}>
     {/* React escapes text content; passage is rendered verbatim */}
     <blockquote className="whitespace-pre-wrap border-l-2 border-foreground pl-3 font-serif text-sm">{v.excerpt}</blockquote>
@@ -26,7 +28,11 @@ function EvidenceCard({ v }: { v: EntityEvidence }) {
       <div><Mono>Version</Mono><dd className="font-mono">x{v.extractorVersion} / p{v.policyVersion}</dd></div>
       {v.lineage && <div className="col-span-2 sm:col-span-3"><Mono>Lineage</Mono><dd>{v.lineage.relation}{v.lineage.originKey ? ` · origin ${v.lineage.originKey}` : ''} · {v.lineage.independentlyReported ? 'independently reported' : 'not independent'} · {v.lineage.rationale}</dd></div>}
     </dl>
-    {c?.url && <a href={c.url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-[11px] underline underline-offset-2">Source</a>}
+    <div className="mt-2 flex gap-3 text-[11px]">
+      {c?.url && <a href={c.url} target="_blank" rel="noreferrer" className="underline underline-offset-2">Source</a>}
+      <button className="underline underline-offset-2" onClick={() => setLineage(x => !x)} aria-expanded={lineage} data-testid={`button-evidence-provenance-${v.id}`}>{lineage ? 'Hide reporting lineage' : 'Reporting lineage'}</button>
+    </div>
+    {lineage && <ProvenancePanel params={{ evidenceId: v.id }} editable connect={c ? { articleId: c.articleId, evidenceId: v.id } : undefined} heading="Reporting lineage for this evidence" />}
   </li>;
 }
 

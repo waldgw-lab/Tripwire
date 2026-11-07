@@ -171,3 +171,13 @@ export function useRestore() {
     },
   });
 }
+
+/** Invalidates workspace, claim coverage summaries, provenance and entity queries after claim changes. */
+export function useInvalidateClaims() {
+  const qc = useQueryClient();
+  const ws = useInvalidate();
+  return () => Promise.all([
+    qc.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === 'string' && (q.queryKey[0].startsWith('/api/tripwire/provenance') || q.queryKey[0].startsWith('/api/tripwire/entit') || q.queryKey[0].startsWith('/api/tripwire/claims/processing')) }),
+    ws(),
+  ]);
+}

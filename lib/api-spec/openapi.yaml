@@ -5,6 +5,122 @@ info:
 servers:
   - url: /api
 paths:
+  /tripwire/claims/processing:
+    get:
+      operationId: getClaimProcessing
+      responses:
+        "200":
+          description: Local retained-text claim processing, no publisher requests or paid models
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [policy, pending, failed, recent]
+                properties:
+                  policy: { type: string }
+                  pending: { type: integer }
+                  failed: { type: integer }
+                  recent:
+                    type: array
+                    items:
+                      type: object
+                      required: [articleId, title, status, claims, error, updatedAt]
+                      properties:
+                        articleId: { type: string }
+                        title: { type: string }
+                        status: { type: string }
+                        claims: { type: integer }
+                        error: { type: ["string", "null"] }
+                        updatedAt: { type: string }
+  /tripwire/claims/processing/{articleId}:
+    post:
+      operationId: processArticleClaims
+      parameters:
+        - { name: articleId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Queue retained article text, or safely retry an existing job
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [queued]
+                properties:
+                  queued: { type: boolean }
+  /tripwire/provenance/direction:
+    post:
+      operationId: correctClaimDirection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClaimDirectionInput" }
+      responses:
+        "200":
+          description: Append a directional correction without changing evidence or truth/independence decisions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReportingLinkResult" }
+  /tripwire/provenance/summaries:
+    get:
+      operationId: getClaimCoverageSummaries
+      responses:
+        "200":
+          description: Complete date ranges and article-attribution totals for claim previews, independent of detail pagination
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [claimId, attributions, firstDate, lastDate]
+                  properties:
+                    claimId: { type: string }
+                    attributions: { type: integer }
+                    firstDate: { type: ["string", "null"] }
+                    lastDate: { type: ["string", "null"] }
+  /tripwire/provenance:
+    get:
+      operationId: getReportingProvenance
+      parameters:
+        - { name: articleId, in: query, schema: { type: string } }
+        - { name: claimId, in: query, schema: { type: string } }
+        - { name: evidenceId, in: query, schema: { type: string } }
+        - { name: eventId, in: query, schema: { type: string } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        "200":
+          description: Integrated article sourcing, supplied analysis and reviewed chronological lineage
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReportingProvenance" }
+    post:
+      operationId: connectReportingPassage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReportingPassageInput" }
+      responses:
+        "200":
+          description: Evidence-backed article claim connected to existing Claims
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReportingLinkResult" }
+  /tripwire/provenance/reviews:
+    post:
+      operationId: reviewReportingLineage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReportingReviewInput" }
+      responses:
+        "200":
+          description: Append-only lineage assessment or correction
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReportingLinkResult" }
   /tripwire/entities:
     get:
       operationId: listEntities
@@ -431,6 +547,156 @@ paths:
               schema: { type: string, format: binary }
 components:
   schemas:
+    ClaimDirectionInput:
+      type: object
+      required: [claimObservationId, subject, direction, rationale]
+      properties:
+        claimObservationId: { type: string }
+        subject: { type: string, minLength: 1, maxLength: 200 }
+        direction: { type: string, enum: [positive, negative, neutral, mixed, unassessed] }
+        rationale: { type: string, minLength: 5, maxLength: 2000 }
+        supersedesId: { type: ["string", "null"] }
+    ReportingLinkResult:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string }
+    ReportingPassageInput:
+      type: object
+      required: [articleId, claimId, captureId, excerpt, start, end, descriptor, proposition]
+      properties:
+        articleId: { type: string, minLength: 1 }
+        claimId: { type: string, minLength: 1 }
+        captureId: { type: string, minLength: 1 }
+        evidenceId: { type: string, minLength: 1 }
+        developmentId: { type: string, minLength: 1 }
+        excerpt: { type: string, minLength: 1, maxLength: 20000 }
+        start: { type: integer, minimum: 0 }
+        end: { type: integer, minimum: 1 }
+        descriptor: { type: string, minLength: 1, maxLength: 2000 }
+        proposition: { type: string, minLength: 3, maxLength: 2000 }
+        eventId: { type: ["string", "null"], maxLength: 200 }
+        entityEventId: { type: ["string", "null"], maxLength: 200 }
+        sourceIds: { type: array, maxItems: 20, items: { type: string } }
+        anonymity: { type: string, enum: [Named, Unnamed, Unknown], default: Unknown }
+    ReportingReviewInput:
+      type: object
+      required: [relation, rationale]
+      properties:
+        claimObservationId: { type: string }
+        sourceMatchId: { type: string }
+        targetClaimId: { type: ["string", "null"] }
+        supersedesId: { type: ["string", "null"] }
+        evidenceId: { type: ["string", "null"] }
+        pathKey: { type: ["string", "null"], minLength: 3, maxLength: 200 }
+        relation: { type: string, enum: [new-reporting, added-evidence, derivative, opinion-propagation, disputes, unknown, same-environment, distinct-environments, unresolved] }
+        rationale: { type: string, minLength: 5, maxLength: 4000 }
+    ReportingProvenance:
+      type: object
+      required: [claims, sources, matches, context, counts, total, offset]
+      properties:
+        claims: { type: array, items: { $ref: "#/components/schemas/ReportingClaim" } }
+        sources: { type: array, items: { $ref: "#/components/schemas/ReportingSource" } }
+        matches: { type: array, items: { $ref: "#/components/schemas/ReportingMatch" } }
+        context: { type: array, items: { $ref: "#/components/schemas/ReportingContext" } }
+        counts: { $ref: "#/components/schemas/ReportingCounts" }
+        total: { type: integer }
+        offset: { type: integer }
+    ReportingCounts:
+      type: object
+      required: [articles, occurrences, minimumAnonymousHumans, provisionalSourceRecords, independentPaths]
+      properties:
+        articles: { type: integer }
+        occurrences: { type: integer }
+        minimumAnonymousHumans: { type: ["integer", "null"] }
+        suppliedMinimumAnonymousHumans: { type: ["integer", "null"] }
+        provisionalSourceRecords: { type: ["integer", "null"] }
+        independentPaths: { type: ["integer", "null"] }
+    ReportingReview:
+      type: object
+      required: [id, relation, rationale, createdAt]
+      properties:
+        id: { type: string }
+        relation: { type: string }
+        rationale: { type: string }
+        createdAt: { type: string }
+        pathKey: { type: ["string", "null"] }
+        targetClaimId: { type: ["string", "null"] }
+        supersedesId: { type: ["string", "null"] }
+        evidenceId: { type: ["string", "null"] }
+    ReportingClaim:
+      type: object
+      required: [id, claimId, familyId, proposition, articleId, title, supplied, sourceIds, reviews]
+      properties:
+        direction: { type: string, enum: [positive, negative, neutral, mixed, unassessed] }
+        directionSubject: { type: ["string", "null"] }
+        directionReason: { type: ["string", "null"] }
+        directionOrigin: { type: string, enum: [automatic, analyst, unassessed] }
+        directionCorrectionId: { type: ["string", "null"] }
+        evidenceVersions:
+          type: array
+          items:
+            type: object
+            required: [captureId, evidenceId]
+            properties:
+              captureId: { type: string }
+              evidenceId: { type: string }
+        id: { type: string }
+        claimId: { type: string }
+        familyId: { type: string }
+        proposition: { type: string }
+        articleId: { type: string }
+        title: { type: string }
+        outlet: { type: ["string", "null"] }
+        url: { type: ["string", "null"] }
+        publishedAt: { type: ["string", "null"] }
+        suppliedDate: { type: ["string", "null"] }
+        eventId: { type: ["string", "null"] }
+        evidenceId: { type: ["string", "null"] }
+        excerpt: { type: ["string", "null"] }
+        start: { type: ["integer", "null"] }
+        end: { type: ["integer", "null"] }
+        captureId: { type: ["string", "null"] }
+        supplied: { type: boolean }
+        externalId: { type: ["string", "null"] }
+        sourceIds: { type: array, items: { type: string } }
+        reviews: { type: array, items: { $ref: "#/components/schemas/ReportingReview" } }
+    ReportingSource:
+      type: object
+      required: [id, articleId, descriptor, sourceType, anonymity, supplied, minimumHumans]
+      properties:
+        id: { type: string }
+        articleId: { type: string }
+        descriptor: { type: string }
+        sourceType: { type: string }
+        anonymity: { type: string }
+        supplied: { type: boolean }
+        minimumHumans: { type: ["integer", "null"] }
+        externalId: { type: ["string", "null"] }
+        familyHypothesis: { type: ["string", "null"] }
+        evidenceId: { type: ["string", "null"] }
+        excerpt: { type: ["string", "null"] }
+        captureId: { type: ["string", "null"] }
+    ReportingMatch:
+      type: object
+      required: [id, sourceA, sourceB, hypothesis, rationale, conflicts, supplied, reviews]
+      properties:
+        id: { type: string }
+        sourceA: { type: string }
+        sourceB: { type: string }
+        hypothesis: { type: string }
+        rationale: { type: string }
+        conflicts: { type: string }
+        supplied: { type: boolean }
+        reviews: { type: array, items: { $ref: "#/components/schemas/ReportingReview" } }
+    ReportingContext:
+      type: object
+      required: [sheet, row, data, resolution]
+      properties:
+        sheet: { type: string }
+        row: { type: string }
+        data: { type: object, additionalProperties: true }
+        resolution: { type: object, additionalProperties: true }
     QuickEnrichmentInput:
       type: object
       required: [articleId, text, requestId]
