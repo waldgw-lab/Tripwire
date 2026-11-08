@@ -25,3 +25,15 @@ Historical headline identity must come from observed publisher metadata, never f
 **Why:** Publishers revise headlines, but they also reuse headlines for separate clips on different days. Treating every pasted title as an alias would turn a correction into unverified identity evidence and could mix distinct reporting.
 
 **How to apply:** Keep source provenance and canonical article identity with observations. Combine current-title and historical-title matches before deciding uniqueness; ambiguous evidence must stop for review rather than being resolved by list order or unattended target selection.
+
+Identity serialization must not borrow a second database connection while
+holding the workspace lock.
+
+**Why:** When simultaneous intakes occupy the pool waiting for that lock, the
+lock holder can stall on its own out-of-transaction content read or write.
+Correct locking alone does not prevent this connection-exhaustion deadlock.
+
+**How to apply:** Pass the transaction through identity lookup, selective
+content hydration, article persistence and draft completion. Exercise concurrent
+intakes with a deliberately small connection pool, not just normal single-save
+tests. A late match requires renewed review, never silent retargeting.

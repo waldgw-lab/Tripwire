@@ -62,3 +62,14 @@ it must not silently undo the newer choice when the refresh finishes.
 **How to apply:** Submit fresh publisher content rather than a pre-fetch
 workspace snapshot, preserve source history, and check durability with a stale
 writer replay—not just an immediate successful import response.
+
+Identical retained text is permission to share deterministic extraction work,
+not to merge the provenance of the articles that contain it.
+
+**Why:** Different publisher responses can contain the same article wording.
+The user requires each original source, capture time and article attribution to
+remain separate, with no inferred identity, source role or independence reuse.
+
+**How to apply:** Treat reuse as a computational optimization only. Do not
+normalize whitespace or punctuation to authorize reuse; exact offsets belong
+to the exact retained text under the same rule policy.

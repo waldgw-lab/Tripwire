@@ -162,12 +162,13 @@ export async function commitImport(userId: string, input: unknown) {
       await articleLock(tx, userId);
       const [draft] = await tx.select().from(tripwireRecords).where(and(eq(tripwireRecords.id, `draft:${body.draftId}`), eq(tripwireRecords.owner, userId), eq(tripwireRecords.kind, "import-draft"))).for("update");
       if (!draft) throw new IntakeError("Import preview not found", 404);
-      const records = await recordsFor(userId);
+      // Identity needs metadata only. Loading every article body here would
+      // hold the workspace lock while hydrating the entire archive.
+      const records = await recordsFor(userId, false, tx);
       const previous = draft.data.committedId ? records.find(r => r.id === draft.data.committedId) : undefined;
-      if (previous) return previous;
+      if (previous) return (await hydrateArticles([previous], tx))[0];
       if (draft.data.committedId) throw new IntakeError("This import was already saved and its article has since been removed", 409);
       if (Date.now() - draft.createdAt.getTime() > 24 * 3600000) throw new IntakeError("This preview has expired. Analyze the content again.", 409);
-      const [candidate] = await hydrateArticles([draft.data.candidate as RecordData]);
       let existing = draft.data.matchedId ? records.find(r => r.id === draft.data.matchedId && r.kind === "article") : undefined;
       if (draft.data.matchedId && !existing) throw new IntakeError("The matching article was removed. Analyze again.", 409);
       const finalMetadata = { title: body.title.trim(), outlet: body.outlet?.trim() || undefined, url };
@@ -184,6 +185,8 @@ export async function commitImport(userId: string, input: unknown) {
         if (existing && match.record && match.record.id !== existing.id) throw new IntakeError("These details identify another article. Analyze it separately.", 409);
         if (!existing && match.record) throw new IntakeError("An existing article now matches these details. Analyze again to review the matching item.", 409);
       }
+      const [candidate] = await hydrateArticles([draft.data.candidate as RecordData], tx);
+      if (existing) [existing] = await hydrateArticles([existing], tx);
       const keepBody = !!existing?.fullText && !prefersIncomingContent(existing, { ...candidate, fullTextComplete: body.fullTextComplete ?? false });
       const oldCapture = existing?.fullText ? [captureContent(existing.fullText, "previous article text")] : [];
       const retainedContent = mergeCaptures(existing?.retainedContent, oldCapture, candidate.retainedContent);

@@ -5,33 +5,36 @@ import type { RecordData } from "./tripwire-store";
 import type { Capture } from "./tripwire-content";
 import { assessArticle } from "./tripwire-impact-policy";
 
-export async function storeContent(text: string, raw?: string) {
+type ContentReader = Pick<typeof db, "select">;
+type ContentStore = Pick<typeof db, "select" | "insert">;
+
+export async function storeContent(text: string, raw?: string, database: ContentStore = db) {
   const actualRaw = raw ?? text;
   const hash = createHash("sha256").update(JSON.stringify([text, actualRaw])).digest("hex");
-  await db.insert(tripwireContent).values({ hash, text, raw: actualRaw === text ? null : actualRaw }).onConflictDoNothing();
+  await database.insert(tripwireContent).values({ hash, text, raw: actualRaw === text ? null : actualRaw }).onConflictDoNothing();
   return hash;
 }
-export async function readContent(hash: string) {
-  const [body] = await db.select({ text: tripwireContent.text, raw: tripwireContent.raw }).from(tripwireContent).where(eq(tripwireContent.hash, hash));
+export async function readContent(hash: string, database: ContentReader = db) {
+  const [body] = await database.select({ text: tripwireContent.text, raw: tripwireContent.raw }).from(tripwireContent).where(eq(tripwireContent.hash, hash));
   if (!body) throw new Error("Retained content is missing from storage");
   return { text: body.text, raw: body.raw ?? body.text, characters: body.text.length, rawCharacters: (body.raw ?? body.text).length };
 }
-export async function archiveArticle<T extends RecordData>(article: T): Promise<T> {
+export async function archiveArticle<T extends RecordData>(article: T, database: ContentStore = db): Promise<T> {
   if (article.kind !== "article") return article;
   const retainedContent: Capture[] = [];
   let fullTextHash = article.fullText ? undefined : article.fullTextHash;
   for (const capture of article.retainedContent ?? []) {
     if (capture.text === undefined) { retainedContent.push(capture); continue; }
     const { text, raw, ...meta } = capture;
-    const bodyHash = await storeContent(text, raw);
+    const bodyHash = await storeContent(text, raw, database);
     retainedContent.push({ ...meta, bodyHash, textLength: text.length, rawLength: (raw ?? text).length });
     if (text === article.fullText) fullTextHash = bodyHash;
   }
   if (article.fullText && !fullTextHash) {
-    fullTextHash = await storeContent(article.fullText);
+    fullTextHash = await storeContent(article.fullText, undefined, database);
   }
   const { fullText, ...metadata } = article;
-  const body = fullText ?? (fullTextHash ? (await readContent(fullTextHash)).text : "");
+  const body = fullText ?? (fullTextHash ? (await readContent(fullTextHash, database)).text : "");
   const automaticAssessment = assessArticle({ ...article, fullText: body, fullTextHash });
   // Legacy explicit impact is retained as an analyst override, never overwritten
   // by a new automatic policy. Topics become explicit overrides on correction.
@@ -45,10 +48,10 @@ export async function archiveArticle<T extends RecordData>(article: T): Promise<
     topic: topicMode === "manual" ? article.topic : automaticAssessment.topic,
   } as T;
 }
-export async function hydrateArticles<T extends RecordData>(records: T[]): Promise<T[]> {
+export async function hydrateArticles<T extends RecordData>(records: T[], database: ContentReader = db): Promise<T[]> {
   const hashes = [...new Set(records.flatMap(r => [r.fullTextHash, ...r.retainedContent?.map(c => c.bodyHash) ?? []]).filter((h): h is string => !!h))];
   if (!hashes.length) return records;
-  const bodies = await db.select({ hash: tripwireContent.hash, text: tripwireContent.text, raw: tripwireContent.raw }).from(tripwireContent).where(inArray(tripwireContent.hash, hashes));
+  const bodies = await database.select({ hash: tripwireContent.hash, text: tripwireContent.text, raw: tripwireContent.raw }).from(tripwireContent).where(inArray(tripwireContent.hash, hashes));
   const map = new Map(bodies.map(b => [b.hash, b]));
   return records.map(r => ({
     ...r,

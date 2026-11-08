@@ -14,6 +14,8 @@ export class FeedbackError extends Error {
 }
 export async function articleLock(tx: FeedbackTx, owner: string) {
   // All workspace article mutations share this lock, including first shadows.
+  // Identity checks must run AFTER this lock and use this same transaction,
+  // through the final article/draft write. Never borrow another pool connection.
   // Serializing the short writes also protects canonical-URL dismissal checks.
   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`articles:${owner}`}))`);
 }
@@ -55,7 +57,7 @@ function validateReason(reason: string, notes: string | undefined, choices: stri
 }
 export async function saveArticleState(tx: FeedbackTx, owner: string, id: string, data: RecordData, hidden: boolean) {
   const now = new Date();
-  const archived = await archiveArticle(data);
+  const archived = await archiveArticle(data, tx);
   await tx.insert(tripwireRecords).values({ id: `${owner}:${id}`, owner, kind: "article", data: { ...archived, baseId: id, hidden }, updatedAt: now })
     .onConflictDoUpdate({ target: tripwireRecords.id, set: { data: { ...archived, baseId: id, hidden }, updatedAt: now } });
   return { ...archived, id, updatedAt: now.toISOString() };
@@ -81,7 +83,7 @@ export async function correctArticle(owner: string, id: string, input: {
     }
     if ((current.data.classificationRevision ?? 0) !== input.expectedRevision) throw new FeedbackError(409, "Classifications changed. Refresh and make a new decision.");
     const before = classificationSnapshot(current.data, input.field);
-    const assessed = await archiveArticle(current.data);
+    const assessed = await archiveArticle(current.data, tx);
     const value = input.mode === "auto" ? assessed.automaticAssessment![input.field] : input.value!.trim();
     if (before.mode === input.mode && before.raw === value) return { ...current.data, createdAt: current.createdAt, updatedAt: current.updatedAt };
     const next = { ...assessed, [input.field]: value, [`${input.field}Mode`]: input.mode,

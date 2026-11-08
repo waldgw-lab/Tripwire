@@ -1,6 +1,7 @@
 import { pool, type PoolClient } from "@workspace/db";
 import { randomUUID } from "node:crypto";
-import { CLAIM_POLICY, extractClaimChunk, propositionKey } from "./live-claim-rules";
+import { CLAIM_POLICY, propositionKey } from "./live-claim-rules";
+import { retainedClaimChunk } from "./live-claim-extraction-cache";
 import { sourceKey } from "./source-search-rules";
 import { WORKSPACE_OWNER as W } from "./tripwire-access";
 import { logger } from "./logger";
@@ -38,8 +39,14 @@ async function applyJob(client: PoolClient, job: Row) {
  const data=article.data;
  const retained=(await client.query("select text from tripwire_content where hash=$1",[job.hash])).rows[0];
  if(!retained)throw new Error("Retained body is unavailable; original article is unchanged");
- const {claims,nextCursor}=extractClaimChunk(retained.text,job.cursor);
- const capture=data.retainedContent?.find((c:Row)=>c.bodyHash===job.hash);
+ const {claims,nextCursor}=await retainedClaimChunk(client,job.hash,retained.text,job.cursor,job.policy);
+ const captures:Row[]=data.retainedContent?.filter((c:Row)=>c.bodyHash===job.hash)??[];
+ if(!captures.length)captures.push({});
+ const families=(await client.query(`select f.*,r.id record_id,r.data from tripwire_claim_families f left join tripwire_records r
+  on r.kind='claim' and r.owner=$1 and (r.id=f.claim_id or r.data->>'baseId'=f.claim_id)
+  where f.workspace=$1`,[W])).rows;
+ let added=0, count=0;
+ for(const capture of captures) {
  const originalCaptureId=capture?.id ?? `body:${job.hash}`;
  const captureId=sourceKey(W,job.article_id,originalCaptureId,job.hash);
  const date=typeof data.publishedAt==="string" && /T.*(?:Z|[+-]\d{2}:\d{2})$/.test(data.publishedAt)
@@ -48,10 +55,6 @@ async function applyJob(client: PoolClient, job: Row) {
   values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,false,$11,$12) on conflict do nothing`,
   [W,captureId,job.article_id,originalCaptureId,job.hash,capture?.source ?? "retained article",data.url??null,date,
    capture?.capturedAt ?? job.created_at,job.hash===data.fullTextHash && !!data.fullTextComplete,data.byline??null,data.outlet??null]);
- const families=(await client.query(`select f.*,r.id record_id,r.data from tripwire_claim_families f left join tripwire_records r
-  on r.kind='claim' and r.owner=$1 and (r.id=f.claim_id or r.data->>'baseId'=f.claim_id)
-  where f.workspace=$1`,[W])).rows;
- let added=0;
  for(const c of claims) {
   if(retained.text.slice(c.start,c.end)!==c.excerpt)throw new Error("Passage offsets do not match retained text");
   const candidates=families.filter(f=>propositionKey(f.proposition)===propositionKey(c.proposition));
@@ -93,7 +96,9 @@ async function applyJob(client: PoolClient, job: Row) {
   await client.query(`insert into tripwire_claim_sources(workspace,claim_id,source_id,article_id) values($1,$2,$3,$4) on conflict do nothing`,
    [W,claimId,sourceId,job.article_id]);
  }
- const count=(await client.query("select count(*)::int n from tripwire_claim_capture_links where workspace=$1 and capture_id=$2",[W,captureId])).rows[0].n;
+ // Multiple captures of this same body are evidence versions, not additional claims.
+ count=Math.max(count,(await client.query("select count(*)::int n from tripwire_claim_capture_links where workspace=$1 and capture_id=$2",[W,captureId])).rows[0].n);
+ }
  await client.query(`update tripwire_claim_jobs set status=$5,result_count=$6,cursor=$7,error=null,updated_at=now()
   where workspace=$1 and article_id=$2 and hash=$3 and policy=$4`,
   [W,job.article_id,job.hash,job.policy,nextCursor<retained.text.length?"pending":count?"complete":"no-claims",count,nextCursor]);

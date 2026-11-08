@@ -1,4 +1,7 @@
-/** Local, deterministic extraction. No network/model, fuzzy joining or truth/independence inference. */
+/** Local, deterministic extraction. No network/model, fuzzy joining or truth/independence inference.
+ * Bump CLAIM_POLICY whenever extraction/chunk boundaries or directional rules change:
+ * persisted chunks are reusable only under the exact same rule policy.
+ */
 export const CLAIM_POLICY = "local-reporting-v1";
 export const DIRECTIONS = ["positive", "negative", "neutral", "mixed", "unassessed"] as const;
 export type Direction = typeof DIRECTIONS[number];

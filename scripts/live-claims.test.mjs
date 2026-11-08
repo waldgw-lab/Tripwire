@@ -9,6 +9,8 @@ import {reportingProvenance} from '../artifacts/api-server/src/lib/reporting-pro
 import {claimCoverageSummaries} from '../artifacts/api-server/src/lib/reporting-summary.ts';
 import {correctDirection} from '../artifacts/api-server/src/lib/claim-direction.ts';
 import {recordsFor,writeRecord} from '../artifacts/api-server/src/lib/tripwire-store.ts';
+import {storeContent,readContent} from '../artifacts/api-server/src/lib/tripwire-content-storage.ts';
+import {CLAIM_POLICY} from '../artifacts/api-server/src/lib/live-claim-rules.ts';
 
 const text='Officials said the regional commanders strengthened air defenses after the attack.\nThe commanders failed to protect the northern supply route during the attack.';
 const hash=s=>createHash('sha256').update(JSON.stringify([s,s])).digest('hex');
@@ -50,7 +52,7 @@ test('real intake trigger, worker, versions, corrections, retries and summaries 
   await admin.query(`set search_path to "${schema}"`);
   await admin.query('create table tripwire_records (like public.tripwire_records including all)');
   await admin.query('create table tripwire_content (like public.tripwire_content including all)');
-  for(const file of ['0000_evidence_entities','0002_reporting_provenance','0003_development_claim_links','0004_live_claims','0005_claim_capture_intake']){
+  for(const file of ['0000_evidence_entities','0002_reporting_provenance','0003_development_claim_links','0004_live_claims','0005_claim_capture_intake','0006_claim_extraction_reuse']){
    const sql=await readFile(new URL(`../lib/db/migrations/entities/${file}.sql`,import.meta.url),'utf8');
    for(const part of sql.split('--> statement-breakpoint').filter(p=>p.trim()))await admin.query(part.replaceAll('"public".',`"${schema}".`));
   }
@@ -123,9 +125,11 @@ test('real intake trigger, worker, versions, corrections, retries and summaries 
   await admin.query(`create function stop_claim_test() returns trigger language plpgsql as $$ begin raise exception 'isolated interruption'; end $$`);
   await admin.query('create trigger stop_claim_test before insert on tripwire_attributed_claims for each row execute function stop_claim_test()');
   const before=(await admin.query('select count(*)::int n from tripwire_records')).rows[0].n;
+  const chunksBefore=(await admin.query('select count(*)::int n from tripwire_claim_extraction_chunks')).rows[0].n;
   await put('interrupted','The eastern unit strengthened defensive positions along the coastal border after the attack.');
   await runClaimTick();
   assert.equal((await admin.query('select count(*)::int n from tripwire_records')).rows[0].n,before+1,'no partial claim records survive');
+  assert.equal((await admin.query('select count(*)::int n from tripwire_claim_extraction_chunks')).rows[0].n,chunksBefore,'extraction output rolls back with failed evidence writes');
   await admin.query('drop trigger stop_claim_test on tripwire_attributed_claims');
   await queueArticleClaims('interrupted');await runClaimTick();
   assert.equal((await reportingProvenance({articleId:'interrupted'})).claims.length,1);
@@ -195,6 +199,91 @@ test('real intake trigger, worker, versions, corrections, retries and summaries 
   assert.equal(new Set([row.jobId,...row.history.map(h=>h.jobId)]).size,1+row.history.length);
   assert.equal((await queueArticleClaims('snapshot')).queued,false,'completed text does not silently rerun');
   assert.equal((await claimProcessing()).pending,0);
+  // Different originals with byte-identical text share extraction, never provenance.
+  // More than twenty claims also exercises persisted chunk cursors and restart/resume.
+  const shared=Array.from({length:45},(_,i)=>`Sector ${i} strengthened defensive positions along the southern frontier after the incident.`).join('\n');
+  const rawA=`<article class="original">${shared}</article>`,rawB=`<html><nav>New wrapper</nav><article>${shared}</article></html>`;
+  const ha=await storeContent(shared,rawA),hb=await storeContent(shared,rawB);
+  assert.notEqual(ha,hb);
+  const textHash=createHash('sha256').update(shared).digest('hex');
+  // An older policy's result cannot suppress extraction under the current rules.
+  await admin.query(`insert into tripwire_claim_extraction_chunks(text_hash,policy,cursor,content_hash,claims,next_cursor)
+   values($1,'old-test-policy',0,$2,'[]',0)`,[textHash,ha]);
+  const captureA={id:'original-a',bodyHash:ha,source:'publisher html',capturedAt:'2026-11-01T14:01:00Z'};
+  const captureB={id:'original-b',bodyHash:hb,source:'provided html',capturedAt:'2026-11-02T15:02:00Z'};
+  await put('reuse-a',null,{fullTextHash:ha,byline:'First Reporter',outlet:'First Outlet',retainedContent:[captureA]});
+  await put('reuse-b',null,{fullTextHash:hb,byline:'Second Reporter',outlet:'Second Outlet',publishedAt:'2026-11-02T14:00:00Z',retainedContent:[captureB]});
+  await Promise.all([runClaimTick(),runClaimTick()]);
+  const progress=(await admin.query("select article_id,cursor,status from tripwire_claim_jobs where article_id in ('reuse-a','reuse-b')")).rows;
+  assert.ok(progress.some(j=>j.cursor>0 && j.status==='pending'),'chunk checkpoints are durable before completion');
+  for(let n=0;n<12;n++)if(!await runClaimTick())break;
+  const cached=(await admin.query('select *,xmin::text revision from tripwire_claim_extraction_chunks where text_hash=$1 and policy=$2 order by cursor',[textHash,CLAIM_POLICY])).rows;
+  assert.equal(cached.length,3,'identical text across concurrent jobs extracts each chunk once');
+  assert.equal(cached[0].cursor,0);
+  assert.equal(cached.at(-1).next_cursor,shared.length);
+  assert.equal(cached.reduce((n,c)=>n+c.claims.length,0),45,'older-policy cache was ignored');
+  for(const c of cached)for(const claim of c.claims)assert.equal(shared.slice(claim.start,claim.end),claim.excerpt);
+  const capRows=(await admin.query("select * from tripwire_entity_captures where article_id in ('reuse-a','reuse-b') order by article_id")).rows;
+  assert.equal(capRows.length,2);
+  assert.notEqual(capRows[0].id,capRows[1].id);
+  assert.equal(capRows[0].hash,ha);assert.equal(capRows[1].hash,hb);
+  assert.equal(capRows[0].source,captureA.source);assert.equal(capRows[1].source,captureB.source);
+  assert.equal(capRows[0].captured_at.toISOString(),new Date(captureA.capturedAt).toISOString());
+  assert.equal(capRows[1].captured_at.toISOString(),new Date(captureB.capturedAt).toISOString());
+  assert.equal(capRows[1].published_at.toISOString(),'2026-11-02T14:00:00.000Z');
+  assert.equal(capRows[0].byline,'First Reporter');assert.equal(capRows[1].byline,'Second Reporter');
+  assert.equal(capRows[0].publisher,'First Outlet');assert.equal(capRows[1].publisher,'Second Outlet');
+  assert.ok(capRows.every(c=>c.authorized===false));
+  assert.equal((await readContent(ha)).raw,rawA);assert.equal((await readContent(hb)).raw,rawB);
+  for(const id of ['reuse-a','reuse-b']) {
+   const report=await reportingProvenance({articleId:id});
+   assert.equal(report.claims.length,30,'provenance is paginated');
+   assert.equal((await admin.query("select count(*)::int n from tripwire_attributed_claims where article_id=$1",[id])).rows[0].n,45);
+   assert.equal(report.counts.independentPaths,null);
+   assert.equal(report.counts.minimumAnonymousHumans,null);
+  }
+  const sources=(await admin.query("select * from tripwire_source_occurrences where article_id in ('reuse-a','reuse-b')")).rows;
+  assert.equal(sources.length,90);assert.equal(new Set(sources.map(s=>s.id)).size,90);
+  assert.ok(sources.every(s=>s.anonymity==='Unknown'));
+  // Replaying linkage for an additional capture of the SAME raw hash also reuses all chunks.
+  const captureC={...captureA,id:'original-c',capturedAt:'2026-11-03T16:03:00Z'};
+  await put('reuse-a',null,{fullTextHash:ha,byline:'First Reporter',retainedContent:[captureA,captureC]});
+  for(let n=0;n<6;n++)if(!await runClaimTick())break;
+  assert.equal((await admin.query("select count(*)::int n from tripwire_entity_captures where article_id='reuse-a'")).rows[0].n,2,'fallback metadata was not substituted for real captures');
+  const captureLinks=(await admin.query(`select c.capture_id,count(*)::int n from tripwire_claim_capture_links l
+   join tripwire_entity_captures c on c.workspace=l.workspace and c.id=l.capture_id
+   where c.article_id='reuse-a' group by c.capture_id`)).rows;
+  assert.equal(captureLinks.length,2);
+  assert.ok(captureLinks.filter(c=>['original-a','original-c'].includes(c.capture_id)).every(c=>c.n===45));
+  assert.deepEqual((await admin.query('select *,xmin::text revision from tripwire_claim_extraction_chunks where text_hash=$1 and policy=$2 order by cursor',[textHash,CLAIM_POLICY])).rows,cached,'replaying capture linkage does not rewrite extraction history');
+  assert.equal((await admin.query("select result_count from tripwire_claim_jobs where article_id='reuse-a'")).rows[0].result_count,45,'extra captures do not multiply claim counts');
+  // Distinct raw HTML versions within one article still get their own links.
+  await put('reuse-a',null,{fullTextHash:ha,retainedContent:[captureA,captureC,{...captureB,id:'original-d'}]});
+  for(let n=0;n<6;n++)if(!await runClaimTick())break;
+  assert.equal((await admin.query(`select count(*)::int n from tripwire_claim_capture_links l
+   join tripwire_entity_captures c on c.workspace=l.workspace and c.id=l.capture_id where c.article_id='reuse-a'`)).rows[0].n,135);
+  assert.equal((await admin.query("select count(*)::int n from tripwire_attributed_claims where article_id='reuse-a'")).rows[0].n,45);
+  assert.deepEqual((await admin.query('select *,xmin::text revision from tripwire_claim_extraction_chunks where text_hash=$1 and policy=$2 order by cursor',[textHash,CLAIM_POLICY])).rows,cached);
+  // One byte of whitespace changes offsets: no normalized-text or proposition reuse.
+  const shifted='\n'+shared;
+  const shiftedHash=await storeContent(shifted,`<article>${shifted}</article>`);
+  await put('reuse-shifted',null,{fullTextHash:shiftedHash});
+  for(let n=0;n<6;n++)if(!await runClaimTick())break;
+  const shiftedEvidence=(await admin.query(`select e.* from tripwire_entity_evidence e
+   join tripwire_entity_captures c on c.workspace=e.workspace and c.id=e.capture_id where c.article_id='reuse-shifted' order by e.start`)).rows;
+  assert.equal(shiftedEvidence.length,45);
+  assert.equal(shiftedEvidence[0].start,cached[0].claims[0].start+1);
+  for(const e of shiftedEvidence)assert.equal(shifted.slice(e.start,e.end),e.excerpt);
+  assert.equal((await admin.query('select count(*)::int n from tripwire_claim_extraction_chunks where text_hash=$1 and policy=$2',
+   [createHash('sha256').update(shifted).digest('hex'),CLAIM_POLICY])).rows[0].n,3);
+  assert.equal((await admin.query('select count(*)::int n from tripwire_provenance_reviews')).rows[0].n,0);
+  // Empty results are cached too; whitespace is preserved, not normalized.
+  const empty='No qualifying passage.';
+  const emptyA=await storeContent(empty,'<p>No qualifying passage.</p>'),emptyB=await storeContent(empty,'<div>No qualifying passage.</div>');
+  await put('empty-a',null,{fullTextHash:emptyA});await put('empty-b',null,{fullTextHash:emptyB});
+  await Promise.all([runClaimTick(),runClaimTick()]);
+  assert.equal((await admin.query("select count(*)::int n from tripwire_claim_jobs where article_id in ('empty-a','empty-b') and status='no-claims'")).rows[0].n,2);
+  assert.equal((await admin.query('select count(*)::int n from tripwire_claim_extraction_chunks where text_hash=$1',[createHash('sha256').update(empty).digest('hex')])).rows[0].n,1);
  } finally {
   if(setPath)pool.off('connect',setPath);
   await admin.query('set search_path to public');

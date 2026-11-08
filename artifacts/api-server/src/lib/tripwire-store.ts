@@ -28,8 +28,8 @@ export async function seedConfig() {
   }))).onConflictDoNothing();
 }
 
-export async function recordsFor(userId?: string | null, includeContent = true) {
-  const rows = await db.select().from(tripwireRecords).where(inArray(tripwireRecords.owner, userId ? ["public", userId] : ["public"]));
+export async function recordsFor(userId?: string | null, includeContent = true, database: Pick<typeof db, "select"> = db) {
+  const rows = await database.select().from(tripwireRecords).where(inArray(tripwireRecords.owner, userId ? ["public", userId] : ["public"]));
   const privateIds = new Set(rows.filter(r => r.owner !== "public").map(r => String(r.data.baseId ?? r.id)));
   const publicRows = new Map(rows.filter(r => r.owner === "public").map(r => [r.id, r]));
   const records = rows.filter(r => ["article", "claim", "watch", "outlet"].includes(r.kind) && (r.owner !== "public" || !privateIds.has(r.id)) && r.data.hidden !== true).map(r => {
@@ -58,7 +58,7 @@ export async function recordsFor(userId?: string | null, includeContent = true) 
     id: String(r.data.baseId ?? r.id), kind: r.kind, title: String(r.data.title),
     createdAt: (r.kind === "article" ? base?.createdAt ?? r.createdAt : r.createdAt).toISOString(), updatedAt: r.updatedAt.toISOString(),
   }); }) as (RecordData & {id: string; createdAt: string; updatedAt: string})[];
-  return includeContent ? hydrateArticles(records) : records;
+  return includeContent ? hydrateArticles(records, database) : records;
 }
 
 type WriteTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -127,7 +127,7 @@ export async function writeRecord(userId: string, data: RecordData, protectMetad
     }
     data.verifiedHeadlines = mergeHeadlines(data, original?.verifiedHeadlines, incomingHeadlines);
   }
-  data = await archiveArticle(data);
+  data = await archiveArticle(data, tx);
   for (const event of correctionEvents) {
     await appendFeedback(tx, userId, baseId, original!, { ...event, action: "correction", after: classificationSnapshot(data, event.field),
       reason: data.classificationReason!, notes: data.classificationNotes, requestId: `editor:${data.classificationRevision}:${event.field}` });
