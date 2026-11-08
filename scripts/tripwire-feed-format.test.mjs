@@ -39,6 +39,6 @@ test('multiple roles for one person do not duplicate the compact byline', () => 
   assert.equal(feedByline([{ name: 'Jane Doe', role: 'author' }, { name: 'Jane Doe', role: 'reporting' }]), 'Jane Doe');
   assert.equal(feedByline([]), '');
 });
-test('impact uses dark text colors without chip backgrounds', () => {
-  assert.deepEqual(impactTextColor, { critical: 'text-[#8b1e22]', high: 'text-[#98410f]', low: 'text-[#806400]' });
+test('impact matches the supplied red, orange and yellow reference without chip backgrounds', () => {
+  assert.deepEqual(impactTextColor, { critical: 'text-[#f20d0d]', high: 'text-[#f25e0d]', low: 'text-[#f2af0d]' });
 });

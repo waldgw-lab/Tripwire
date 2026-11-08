@@ -26,7 +26,7 @@ export function feedByline(credits: ArticleCredit[]) {
 }
 
 export const impactTextColor = {
-  critical: 'text-[#8b1e22]',
-  high: 'text-[#98410f]',
-  low: 'text-[#806400]',
+  critical: 'text-[#f20d0d]',
+  high: 'text-[#f25e0d]',
+  low: 'text-[#f2af0d]',
 } as const;

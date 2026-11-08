@@ -4,6 +4,11 @@ import { impactRating, contentStatus, publicationET } from '../artifacts/tripwir
 
 const primary = { title: 'Donald Trump', individual: 'Donald Trump', aliases: ['Trump'], watchType: 'position', tier: 1, enabled: true };
 const secondary = { title: 'Marco Rubio', aliases: ['Rubio'], watchType: 'position', tier: 2, enabled: true };
+test('content dots match the supplied red, yellow and green reference', () => {
+  assert.equal(contentStatus({ title: 'Example' }).color, 'bg-[#f20d0d]');
+  assert.equal(contentStatus({ title: 'Example', summary: 'Partial text' }).color, 'bg-[#f2af0d]');
+  assert.equal(contentStatus({ title: 'Example', fullText: 'Article text', fullTextComplete: true }).color, 'bg-[#4ca548]');
+});
 test('publication uses Eastern standard time and 24-hour hours', () => {
   assert.equal(publicationET('2026-11-05T14:18:33Z', new Date('2026-11-08T15:00:00Z')).label, '5 NOV · 09:18 ET');
 });

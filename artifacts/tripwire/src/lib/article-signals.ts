@@ -25,9 +25,9 @@ export function hasMainText(article: Pick<TrackedRecord, 'fullText' | 'fullTextH
 export function contentStatus(article: Pick<TrackedRecord, 'title' | 'summary' | 'fullText' | 'fullTextComplete' | 'fullTextHash' | 'fullTextLength' | 'retainedCharacters' | 'retainedContent'>) {
   const title = article.title.trim();
   const text = hasMainText(article) || (article.retainedCharacters ?? 0) > 0 || (article.retainedContent ?? []).some(c => (c.textLength ?? 0) > 0 || !!c.text?.trim());
-  if (title && text && article.fullTextComplete === true) return { value: 'complete', label: 'Headline and full article text retained', color: 'bg-emerald-600' } as const;
-  if (text || article.summary?.trim()) return { value: 'partial', label: 'Partial content: summary or incomplete article text retained', color: 'bg-amber-500' } as const;
-  return { value: 'minimal', label: 'Minimal content: headline and metadata only', color: 'bg-red-600' } as const;
+  if (title && text && article.fullTextComplete === true) return { value: 'complete', label: 'Headline and full article text retained', color: 'bg-[#4ca548]' } as const;
+  if (text || article.summary?.trim()) return { value: 'partial', label: 'Partial content: summary or incomplete article text retained', color: 'bg-[#f2af0d]' } as const;
+  return { value: 'minimal', label: 'Minimal content: headline and metadata only', color: 'bg-[#f20d0d]' } as const;
 }
 
 /** Never substitute intake time for an unknown publication time. America/New_York handles DST. */
