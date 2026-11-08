@@ -21,11 +21,20 @@ as tags in the item's details, not as duplicate topic groups in other areas.
 
 **Why:** The user does not want related items split across multiple category areas.
 
-**How to apply:** Assign the topic's home before filtering the overview, using
-distinct article coverage rather than the number of extracted statements. Show
-secondary context in Claims and the feed item's linked-claims details. A country
-alone is not a development: distinguish military, diplomatic and other scopes
-rather than collapsing unrelated reporting into one geographic group.
+**How to apply:** Assign the topic's home before filtering the overview. Show
+secondary context in Claims and the feed item's linked-claims details.
+
+Group first by article focus or larger category, then characterize that grouping
+by its developments. Do not let an individual development steer the grouping.
+
+**Why:** The user explicitly corrected the development-first recommendation.
+
+**How to apply:** Use the main focus of the linked articles rather than isolated
+claim verbs or incidental names to establish a group's home. Related developments
+such as impeachment efforts, possible removal and leadership confidence can
+describe the same focus group without splitting its articles into action-based
+groups. Keep claims beneath their reporting articles, with secondary categories
+and background context in the details.
 
 Measure subtopic coverage primarily by distinct reporting articles, and group
 each article's claims beneath that article rather than presenting a flat list.
