@@ -2,6 +2,7 @@ import { pool } from "@workspace/db";
 import { WORKSPACE_OWNER as W } from "./tripwire-access";
 import { suppliedDate } from "./source-search-rules";
 import { claimDevelopments } from "./claim-developments";
+import { organizeClaimCoverage } from "./claim-taxonomy";
 
 type RecordRow = { id: string; data: Record<string, any> };
 type Attribution = { claim_id: string; article_id: string };
@@ -44,5 +45,6 @@ export async function claimCoverageSummaries() {
   const attributed = (await pool.query(`select f.claim_id,c.article_id,c.proposition from tripwire_attributed_claims c
     join tripwire_claim_families f on f.workspace=c.workspace and f.id=c.family_id where c.workspace=$1`, [W])).rows;
   const developments = claimDevelopments(records, attributed);
-  return summariseClaimCoverage(records, attributed).map(summary => ({ ...summary, ...developments.get(summary.claimId) }));
+  const summaries = summariseClaimCoverage(records, attributed).map(summary => ({ ...summary, ...developments.get(summary.claimId) }));
+  return organizeClaimCoverage(records, attributed, summaries);
 }

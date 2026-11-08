@@ -7,7 +7,7 @@ const google = { publishedAt: '2026-11-06T14:24:12.000Z', publicationSource: 'go
 test('retained Google RSS timestamps are available for display with provenance', () => {
   const value = discoveryPublication(JSON.stringify({ pubDate: 'Fri, 06 Nov 2026 14:24:12 GMT' }), google.publicationSourceUrl);
   assert.deepEqual(value, google);
-  assert.equal(feedPublication(value.publishedAt, new Date('2026-11-06T15:00:00Z')).label, '06 NOV · 0924');
+  assert.equal(feedPublication(value.publishedAt, new Date('2026-11-06T15:00:00Z')).label, '6 NOV · 0924');
 });
 test('ET formatting follows daylight saving time for discovery timestamps', () => {
   const value = discoveryPublication(JSON.stringify({ isoDate: '2026-07-06T14:24:12Z' }));

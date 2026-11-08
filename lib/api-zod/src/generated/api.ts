@@ -51,6 +51,14 @@ export const CorrectClaimDirectionResponse = zod.object({
 })
 
 
+export const GetClaimCategoriesResponseItem = zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "description": zod.string()
+})
+export const GetClaimCategoriesResponse = zod.array(GetClaimCategoriesResponseItem)
+
+
 export const GetClaimCoverageSummariesResponseItem = zod.object({
   "claimId": zod.string(),
   "attributions": zod.number().int(),
@@ -59,7 +67,13 @@ export const GetClaimCoverageSummariesResponseItem = zod.object({
   "ongoing": zod.boolean().optional(),
   "latestReportAt": zod.string().nullish(),
   "developmentType": zod.string().nullish(),
-  "developmentReason": zod.string().nullish()
+  "developmentReason": zod.string().nullish(),
+  "categoryId": zod.string().optional(),
+  "primaryCategory": zod.string().optional(),
+  "topicId": zod.string().optional(),
+  "topicTitle": zod.string().optional(),
+  "classificationReason": zod.string().optional(),
+  "articleIds": zod.array(zod.string()).optional()
 })
 export const GetClaimCoverageSummariesResponse = zod.array(GetClaimCoverageSummariesResponseItem)
 

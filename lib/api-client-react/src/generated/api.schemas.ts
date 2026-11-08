@@ -4,6 +4,12 @@
  * Api
  * OpenAPI spec version: 1.0.0
  */
+export interface ClaimCategory {
+  id: string;
+  label: string;
+  description: string;
+}
+
 export type ClaimDirectionInputDirection = typeof ClaimDirectionInputDirection[keyof typeof ClaimDirectionInputDirection];
 
 
@@ -1557,6 +1563,12 @@ export type GetClaimCoverageSummaries200Item = {
   developmentType?: string | null;
   /** @nullable */
   developmentReason?: string | null;
+  categoryId?: string;
+  primaryCategory?: string;
+  topicId?: string;
+  topicTitle?: string;
+  classificationReason?: string;
+  articleIds?: string[];
 };
 
 export type GetReportingProvenanceParams = {

@@ -11,6 +11,7 @@ import { OutletBrand } from '@/components/outlet-brand';
 import { ProvenancePanel } from '@/components/provenance/provenance-panel';
 import { ProcessArticleButton } from '@/components/provenance/claim-processing';
 import { DevelopmentsPanel } from './developments';
+import { ArticleClaims } from './article-claims';
 import { ContentDot, ImpactWord, articleTags } from './feed-meta';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -139,6 +140,8 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
           {a.kind === 'article' && hasMain && signedIn && <ProcessArticleButton key={`proc-${a.id}`} articleId={a.id} />}
           {importOpen && <div id={`article-importer-${a.id}`}><Importer key={a.id} targetId={a.id} targetTitle={a.title} compact onCommitted={record => { if (record.id !== a.id) onOpenArticle?.(record.id); }} /></div>}
         </div>}
+
+        {a.kind === 'article' && !feedbackId && <ArticleClaims key={`claims-${a.id}`} articleId={a.id} />}
 
         <dl className="mt-5 grid gap-4 rounded-md border border-border/70 bg-background/70 p-4">
           <Field label="Byline">

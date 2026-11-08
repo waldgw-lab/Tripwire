@@ -71,3 +71,46 @@ test('bounded cleanup repairs a confirmed unclean copy while preserving raw sour
   assert.equal(merged.retainedContent[1].raw, raw);
   assert.equal(merged.fullTextComplete, false);
 });
+test('section-specific Most Read widgets are bounded; the Hegseth PDF keeps every reporting paragraph and contributor', async () => {
+  const pdf = await documentCandidate(readFileSync(new URL('../attached_assets/Hegseth_draws_fire_after_government_resources_used_for_partisa_1794148608665.pdf', import.meta.url)), 'hegseth.pdf');
+  const original = pdf.candidate;
+  assert.equal(original.title, 'Hegseth draws fire after using government resources for partisan video');
+  assert.deepEqual(original.journalists, ['Tara Copp']);
+  assert.deepEqual(original.credits.filter(c => c.role === 'contributor').map(c => c.name), ['Noah Robertson']);
+  const paragraphs = original.fullText.split('\n\n');
+  assert.ok(paragraphs.length > 12);
+  const cards = [
+    'Next',
+    'Potential Vance challengers smell blood in the water after brutal GOP losses',
+    'Potential Vance challengers smell blood in the water after brutal GOP losse...',
+    'November 8, 2026',
+    'Column', 'Carolyn Hax',
+    'Carolyn Hax: She says no to angry in-law at holidays. Her husband is distraught.',
+    'Carolyn Hax: She says no to angry in-law at holidays. Her husband is distra...',
+    'November 8, 2026',
+  ];
+  for (const heading of ['Most Read', 'Most Read in Military', 'Most Read in National Security']) {
+    const raw = [original.title, original.summary, 'November 6, 2026 at 6:50 p.m. ESTNovember 6, 2026',
+      '5 min', 'Summary', 'Military', 'Chevron right', 'More article actions', 'By Tara  Copp', ...paragraphs.slice(0, 8), heading, ...cards,
+      ...paragraphs.slice(8), 'Noah Robertson contributed to this report.'].join('\n\n');
+    const cleaned = textCandidate(raw, undefined, 'The Washington Post');
+    assert.equal(cleaned.fullText, original.fullText, heading);
+    assert.deepEqual(cleaned.journalists, ['Tara Copp']);
+    assert.deepEqual(cleaned.credits.filter(c => c.role === 'contributor').map(c => c.name), ['Noah Robertson']);
+    assert.match(cleaned.fullText, /Hegseth has used the Pentagon’s resources before/);
+    assert.match(cleaned.fullText, /what the strategy is moving forward/);
+    const dashboard = textCandidate(raw);
+    assert.equal(dashboard.outlet, 'The Washington Post');
+    assert.equal(dashboard.fullText, cleaned.fullText);
+    const incompleteHeader = textCandidate(raw.replace('More article actions', 'Other controls'));
+    assert.equal(incompleteHeader.contentNormalization, undefined);
+    assert.match(incompleteHeader.fullText, /Most Read/);
+    const otherPublisher = textCandidate(raw, 'https://www.reuters.com/world/example/');
+    assert.equal(otherPublisher.contentNormalization, undefined);
+    assert.equal(otherPublisher.outlet, 'Reuters');
+    assert.match(otherPublisher.fullText, /Most Read/);
+    const incomplete = textCandidate(raw.replace(cards.slice(4).join('\n\n'), ''), undefined, 'The Washington Post');
+    assert.match(incomplete.fullText, /Most Read/); // One card alone cannot establish a safe boundary.
+    assert.match(incomplete.fullText, /what the strategy is moving forward/);
+  }
+});

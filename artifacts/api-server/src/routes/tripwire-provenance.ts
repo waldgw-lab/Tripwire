@@ -4,7 +4,11 @@ import { connectPassage, reportingProvenance, reviewLineage, ProvenanceError } f
 import { claimCoverageSummaries } from "../lib/reporting-summary";
 import { claimProcessing, queueArticleClaims, LiveClaimInputError } from "../lib/live-claims";
 import { correctDirection } from "../lib/claim-direction";
+import { CLAIM_CATEGORIES } from "../lib/claim-taxonomy";
 const router = Router();
+router.get("/tripwire/claim-categories", (_req,res):void => {
+  res.json(api.GetClaimCategoriesResponse.parse(CLAIM_CATEGORIES));
+});
 router.get("/tripwire/claims/processing", async (_req,res):Promise<void>=>{
   res.json(api.GetClaimProcessingResponse.parse(await claimProcessing()));
 });

@@ -61,6 +61,18 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ReportingLinkResult" }
+  /tripwire/claim-categories:
+    get:
+      operationId: getClaimCategories
+      responses:
+        "200":
+          description: Development categories plus a needs-review fallback
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClaimCategory"
   /tripwire/provenance/summaries:
     get:
       operationId: getClaimCoverageSummaries
@@ -83,6 +95,14 @@ paths:
                     latestReportAt: { type: ["string", "null"] }
                     developmentType: { type: ["string", "null"] }
                     developmentReason: { type: ["string", "null"] }
+                    categoryId: { type: string }
+                    primaryCategory: { type: string }
+                    topicId: { type: string }
+                    topicTitle: { type: string }
+                    classificationReason: { type: string }
+                    articleIds:
+                      type: array
+                      items: { type: string }
   /tripwire/provenance:
     get:
       operationId: getReportingProvenance
@@ -551,6 +571,13 @@ paths:
               schema: { type: string, format: binary }
 components:
   schemas:
+    ClaimCategory:
+      type: object
+      required: [id, label, description]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        description: { type: string }
     ClaimDirectionInput:
       type: object
       required: [claimObservationId, subject, direction, rationale]

@@ -19,4 +19,10 @@ export type GetClaimCoverageSummaries200Item = {
   developmentType?: string | null;
   /** @nullable */
   developmentReason?: string | null;
+  categoryId?: string;
+  primaryCategory?: string;
+  topicId?: string;
+  topicTitle?: string;
+  classificationReason?: string;
+  articleIds?: string[];
 };

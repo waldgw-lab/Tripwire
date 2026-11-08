@@ -42,6 +42,11 @@ export function parsePublisherCopy(raw: string, sourceUrl?: string, outletHint?:
   let host = "";
   try { host = new URL(sourceUrl ?? pasteSourceUrl(raw) ?? "").hostname; } catch { /* A publisher-identified paste may have no URL. */ }
   const unidentifiedHost = !host || host === "news.google.com";
+  // A copied Post page can omit its logo and URL. Require its duplicated-date
+  // header AND both page controls, not generic prose or "Most Read" alone.
+  const header = lines.slice(0, 40);
+  const postHeader = !outletHint && header.includes("More article actions") && header.includes("Chevron right") &&
+    header.some(l => /^([A-Z][a-z]+ \d{1,2}, \d{4}) at \d{1,2}:\d{2}\s*[ap]\.?m\.?\s*(?:EST|EDT|ET)\s*\1$/.test(l));
   if (/(^|\.)cnn\.com$/i.test(host) || unidentifiedHost && (outletHint === "CNN" || /\]\(https:\/\/(?:www\.)?cnn\.com\/profiles\//i.test(lines.slice(0, 20).join("\n")))) {
     const cnn = cnnCopy(raw);
     return cnn ? { ...fallback, ...cnn } : fallback;
@@ -51,7 +56,7 @@ export function parsePublisherCopy(raw: string, sourceUrl?: string, outletHint?:
     return nyt ? { ...fallback, ...nyt } : fallback;
   }
   if (/(^|\.)washingtonpost\.com$/i.test(host) ||
-    (!host || host === "news.google.com") && (outletHint === "The Washington Post" || /(?:Try )?Ask The Post AI/.test(raw))) {
+    unidentifiedHost && (outletHint === "The Washington Post" || /(?:Try )?Ask The Post AI/.test(raw) || postHeader)) {
     const post = washingtonPostCopy(raw);
     return post ? { ...fallback, ...post } : fallback;
   }

@@ -1,42 +1,251 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useSearch } from 'wouter';
 import { useWorkspaceAccess } from '@/lib/workspace-access';
-import { getGetClaimCoverageSummariesQueryKey, useGetClaimCoverageSummaries, type TrackedRecord } from '@workspace/api-client-react';
-import { ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react';
+import { type TrackedRecord } from '@workspace/api-client-react';
+import { ChevronDown, ChevronRight, ExternalLink, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 import { Empty, ErrorState, PageHead, RowsSkeleton } from '@/components/bits';
 import { ClaimEditor, ConfirmDelete } from '@/components/editors';
 import { Disclosure, ProvenancePanel, TONE } from '@/components/provenance/provenance-panel';
 import { OutletBrand } from '@/components/outlet-brand';
 import { ClaimProcessingStatus } from '@/components/provenance/claim-processing';
 import { STAGES, byKind, fmtDate, useWorkspace } from '@/lib/workspace';
-import { orderClaims } from '@/lib/claim-order';
+import {
+  UNCATEGORIZED, categoryKey, groupClaimsByArticle, categoryLabel, compareClaims, groupKey, pickDefault, reportTime, topicKey, topicLabel, useClaimLinkage, type ClaimSummary,
+} from '@/lib/claim-groups';
 
 const isImportNote = (s?: string) => !!s && /supplied analysis|unreviewed claim-family/i.test(s);
 
-function shortDate(s: string) {
-  return fmtDate(s);
-}
-function dateRange(first: string | null, last: string | null) {
+function dateRange(first: string | null | undefined, last: string | null | undefined) {
   if (!first && !last) return 'Date unknown';
-  if (!first || !last || shortDate(first) === shortDate(last)) return shortDate((first ?? last)!);
-  return `${shortDate(first)} – ${shortDate(last)}`;
+  if (!first || !last || fmtDate(first) === fmtDate(last)) return fmtDate((first ?? last)!);
+  return `${fmtDate(first)} – ${fmtDate(last)}`;
 }
+
+type Sort = 'newest' | 'oldest' | 'linked';
+type Recency = 'ongoing' | 'all';
+type UrlState = { claim: string | null; category: string; topic: string; q: string; recency: Recency; sort: Sort };
+
+function readUrl(): UrlState {
+  const p = new URLSearchParams(window.location.search);
+  const sort = p.get('sort');
+  return {
+    claim: p.get('claim'), category: p.get('category') ?? '', topic: p.get('topic') ?? '', q: p.get('q') ?? '',
+    recency: p.get('recency') === 'ongoing' ? 'ongoing' : 'all',
+    sort: sort === 'oldest' || sort === 'linked' ? sort : 'newest',
+  };
+}
+function writeUrl(s: UrlState, push: boolean) {
+  const url = new URL(window.location.href);
+  const set = (k: string, v: string | null, def = '') => { if (v && v !== def) url.searchParams.set(k, v); else url.searchParams.delete(k); };
+  set('claim', s.claim); set('category', s.category); set('topic', s.topic); set('q', s.q); set('recency', s.recency, 'all'); set('sort', s.sort, 'newest');
+  if (url.href === window.location.href) return;
+  if (push) window.history.pushState(window.history.state, '', url); else window.history.replaceState(window.history.state, '', url);
+}
+
+const selectCls = 'h-8 rounded-md border border-input bg-card px-2 text-xs';
+
+type Grouping = ReturnType<typeof groupClaimsByArticle<TrackedRecord>>;
+type Group = { key: string; cat: string; topic: string; title: string; claims: TrackedRecord[]; first: string | null; last: string | null; ongoing: number; latest: number; byArticle: Grouping; total: Grouping };
+const plural = (n: number, w: string) => `${n.toLocaleString('en-US')} ${w}${n === 1 ? '' : 's'}`;
 
 export default function ClaimsPage() {
   const { canEdit: isSignedIn } = useWorkspaceAccess();
   const { data, isLoading, isError, refetch } = useWorkspace();
-  const sumQ = useGetClaimCoverageSummaries({ query: { queryKey: getGetClaimCoverageSummariesQueryKey(), staleTime: 15_000, refetchInterval: 30_000, retry: 1 } });
-  const summaryById = useMemo(() => new Map((sumQ.data ?? []).map((s) => [s.claimId, s])), [sumQ.data]);
-  const claims = useMemo(() => orderClaims(byKind(data?.records, 'claim'), summaryById), [data, summaryById]);
-  const ongoingCount = claims.filter(c => summaryById.get(c.id)?.ongoing).length;
+  const { summaries: sumQ, categories: catQ, summaryById, categoryById } = useClaimLinkage();
+  const claims = useMemo(() => byKind(data?.records, 'claim'), [data]);
   const articles = useMemo(() => byKind(data?.records, 'article'), [data]);
   const articleById = useMemo(() => new Map(articles.map((a) => [a.id, a])), [articles]);
-  const [sel, setSel] = useState<string | null>(null);
+
+  const [st, setSt] = useState<UrlState>(readUrl);
+  const update = useCallback((patch: Partial<UrlState>, push = false) => {
+    setSt(prev => { const next = { ...prev, ...patch }; writeUrl(next, push); return next; });
+  }, []);
+  // Wouter navigations (e.g. Link to /claims?claim=…) change the search without remount; resync from URL.
+  const search = useSearch();
+  useEffect(() => { setSt(prev => { const next = readUrl(); return JSON.stringify(prev) === JSON.stringify(next) ? prev : next; }); }, [search]);
+  useEffect(() => {
+    const on = () => setSt(readUrl());
+    window.addEventListener('popstate', on);
+    return () => window.removeEventListener('popstate', on);
+  }, []);
+
   const [editing, setEditing] = useState<TrackedRecord | null>(null);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<TrackedRecord | null>(null);
-  const current = claims.find((c) => c.id === sel) ?? claims[0];
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const [openArticles, setOpenArticles] = useState<Record<string, boolean>>({});
+
+
+  // Category options in catalog order, plus any unknown ids from data, Uncategorized last.
+  const categoryOptions = useMemo(() => {
+    const ids = (catQ.data ?? []).map(c => c.id);
+    for (const c of claims) { const k = categoryKey(summaryById.get(c.id)); if (!ids.includes(k)) ids.push(k); }
+    return [...ids.filter(i => i !== UNCATEGORIZED), ...(ids.includes(UNCATEGORIZED) || claims.some(c => categoryKey(summaryById.get(c.id)) === UNCATEGORIZED) ? [UNCATEGORIZED] : [])];
+  }, [catQ.data, claims, summaryById]);
+  const catOrder = useMemo(() => new Map(categoryOptions.map((c, i) => [c, i])), [categoryOptions]);
+
+  const topicOptions = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of claims) {
+      const s = summaryById.get(c.id);
+      if (st.category && categoryKey(s) !== st.category) continue;
+      if (s?.topicId) m.set(s.topicId, topicLabel(s));
+    }
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [claims, summaryById, st.category]);
+
+  const filtered = useMemo(() => {
+    const needle = st.q.trim().toLowerCase();
+    return claims.filter(c => {
+      const s = summaryById.get(c.id);
+      if (st.recency === 'ongoing' && !s?.ongoing) return false;
+      if (st.category && categoryKey(s) !== st.category) return false;
+      if (st.topic && s?.topicId !== st.topic) return false;
+      if (!needle) return true;
+      return [c.title, c.summary, c.topic, s?.topicTitle, s?.primaryCategory, s?.developmentType, ...(c.entities ?? [])].some(v => v?.toLowerCase().includes(needle));
+    });
+  }, [claims, summaryById, st]);
+
+  const cmpClaims = useCallback((a: TrackedRecord, b: TrackedRecord) => compareClaims(a, b, st.sort, summaryById), [summaryById, st.sort]);
+
+  const wholeByGroup = useMemo(() => {
+    const m = new Map<string, TrackedRecord[]>();
+    for (const c of claims) { const k = groupKey(summaryById.get(c.id)); const l = m.get(k) ?? []; l.push(c); m.set(k, l); }
+    return new Map([...m.entries()].map(([k, l]) => [k, groupClaimsByArticle(l, summaryById)]));
+  }, [claims, summaryById]);
+
+  const tree = useMemo(() => {
+    const groups = new Map<string, Group>();
+    for (const c of filtered) {
+      const s = summaryById.get(c.id);
+      const key = groupKey(s);
+      let g = groups.get(key);
+      if (!g) { g = { key, cat: categoryKey(s), topic: topicKey(s), title: topicLabel(s), claims: [], first: null, last: null, ongoing: 0, latest: -Infinity, byArticle: null as unknown as Grouping, total: null as unknown as Grouping }; groups.set(key, g); }
+      g.claims.push(c);
+      if (s?.ongoing) g.ongoing++;
+      if (s?.firstDate && (!g.first || s.firstDate < g.first)) g.first = s.firstDate;
+      const l = s?.lastDate ?? s?.latestReportAt;
+      if (l && (!g.last || l > g.last)) g.last = l;
+      g.latest = Math.max(g.latest, reportTime(s));
+    }
+    const gs = [...groups.values()];
+    gs.forEach(g => {
+      g.claims.sort(cmpClaims);
+      g.byArticle = groupClaimsByArticle(g.claims, summaryById);
+      g.total = wholeByGroup.get(g.key) ?? g.byArticle;
+      const t = (id: string) => { const a = articleById.get(id); return a?.publishedAt ? Date.parse(a.publishedAt) || -Infinity : -Infinity; };
+      g.byArticle.articles.sort((a, b) => st.sort === 'oldest' ? (t(a.articleId) === t(b.articleId) ? 0 : t(a.articleId) === -Infinity ? 1 : t(b.articleId) === -Infinity ? -1 : t(a.articleId) - t(b.articleId)) : st.sort === 'linked' ? b.claims.length - a.claims.length : (t(b.articleId) - t(a.articleId)) || 0);
+    });
+    const gcmp = (a: Group, b: Group) => {
+      if (st.sort === 'newest' && !!b.ongoing !== !!a.ongoing) return Number(!!b.ongoing) - Number(!!a.ongoing);
+      if (st.sort === 'oldest') return (a.first ?? '9').localeCompare(b.first ?? '9') || a.title.localeCompare(b.title);
+      if (st.sort === 'linked') return b.byArticle.articleCount - a.byArticle.articleCount || a.title.localeCompare(b.title);
+      return (b.latest - a.latest) || a.title.localeCompare(b.title);
+    };
+    const cats = new Map<string, Group[]>();
+    for (const g of gs) { const l = cats.get(g.cat) ?? []; l.push(g); cats.set(g.cat, l); }
+    return [...cats.entries()]
+      .map(([cat, list]) => ({ cat, groups: list.sort(gcmp), count: new Set(list.flatMap(g => g.claims.map(c => c.id))).size, articles: new Set(list.flatMap(g => g.byArticle.articles.map(a => a.articleId))).size, complete: list.every(g => g.byArticle.complete), ongoing: list.reduce((n, g) => n + g.ongoing, 0) }))
+      .sort((a, b) => (catOrder.get(a.cat) ?? 999) - (catOrder.get(b.cat) ?? 999));
+  }, [filtered, summaryById, cmpClaims, catOrder, st.sort, wholeByGroup, articleById]);
+
+  const selectedClaim = st.claim ? claims.find(c => c.id === st.claim) ?? null : null;
+  const firstVisible = pickDefault(tree.flatMap(c => c.groups.flatMap(g => g.claims)), summaryById);
+  const current = selectedClaim ?? (st.claim ? null : firstVisible) ?? null;
+  const hiddenByFilters = !!selectedClaim && !filtered.includes(selectedClaim);
+  const currentGroup = current ? groupKey(summaryById.get(current.id)) : null;
+  // Keep the overview compact; expand only a deliberately selected claim/topic.
+  const isOpen = (g: Group) => openGroups[g.key] ?? Boolean(st.claim && g.key === currentGroup || st.topic && g.topic === st.topic);
+  const currentArticleIds = current ? summaryById.get(current.id)?.articleIds ?? [] : [];
+  const isArticleOpen = (g: Group, aid: string) => openArticles[`${g.key}::${aid}`] ?? Boolean(st.claim && g.key === currentGroup && currentArticleIds.includes(aid));
   const legacy = current?.observations ?? [];
+  const active = !!(st.q || st.category || st.topic || st.recency !== 'all' || st.sort !== 'newest');
+  const reset = () => update({ q: '', category: '', topic: '', recency: 'all', sort: 'newest' });
+  const select = (id: string) => update({ claim: id }, true);
+  const ongoingTotal = claims.filter(c => summaryById.get(c.id)?.ongoing).length;
+
+  const claimRow = (c: TrackedRecord, extra?: string, nested = false) => {
+    const sm = summaryById.get(c.id);
+    const on = current?.id === c.id;
+    return (
+      <li key={c.id}>
+        <button onClick={() => select(c.id)} data-testid={`button-claim-${c.id}`} aria-current={on || undefined}
+          className={cn('w-full border-l-2 py-2.5 pr-4', nested ? 'pl-14' : 'pl-9', ' text-left transition-colors', on ? 'border-[hsl(212_24%_42%)] bg-[hsl(212_20%_96%)]' : 'border-transparent hover:bg-card/60')}>
+          {extra && <span className="mb-1 block font-mono text-[9px] uppercase text-muted-foreground">{extra}</span>}
+          {sm?.ongoing && <span className="mb-1 block font-mono text-[9px] uppercase text-muted-foreground" title={sm.developmentReason ?? undefined}>{sm.developmentType ?? 'Ongoing'}</span>}
+          <p className="line-clamp-2 font-serif text-[15px] leading-snug">{c.title}</p>
+          {!nested && <p className="mt-1 flex flex-wrap items-center gap-x-1.5 font-mono text-[10px] text-muted-foreground" data-testid={`text-claim-coverage-${c.id}`}>
+            {sumQ.isLoading ? <span className="inline-block h-2.5 w-28 animate-pulse rounded bg-muted" />
+              : sumQ.isError ? <span>Coverage unknown</span>
+              : !sm ? <span>No article attributions</span>
+              : <><span>{dateRange(sm.firstDate, sm.lastDate)}</span><span aria-hidden>·</span>
+                  <span className={cn('rounded-sm px-1', on ? TONE.slate : '')}>{sm.attributions.toLocaleString('en-US')} attribution{sm.attributions === 1 ? '' : 's'}</span>
+                  {sm.articleIds && <><span aria-hidden>·</span><span>{sm.articleIds.length} article{sm.articleIds.length === 1 ? '' : 's'}</span></>}</>}
+          </p>}
+        </button>
+      </li>
+    );
+  };
+
+  const topicStats = (g: Group) => {
+    if (sumQ.isLoading) return <span className="inline-block h-2.5 w-24 animate-pulse rounded bg-muted align-middle" />;
+    if (sumQ.isError) return <>Articles unknown · {plural(g.claims.length, 'claim')}</>;
+    const a = g.byArticle, t = g.total, plus = (x: Grouping) => x.complete ? '' : '+';
+    const narrowed = a.articleCount !== t.articleCount || g.claims.length !== t.unattributed.length + new Set(t.articles.flatMap(r => r.claims.map(c => c.id))).size;
+    if (!narrowed) return <><span className="font-semibold text-foreground">{plural(a.articleCount, 'article')}{plus(a)}</span> · {plural(g.claims.length, 'claim')}</>;
+    const totalClaims = new Set([...t.unattributed, ...t.articles.flatMap(r => r.claims)].map(c => c.id)).size;
+    return <><span className="font-semibold text-foreground">{a.articleCount}{plus(a)} of {t.articleCount}{plus(t)} articles matching</span> · {g.claims.length} of {plural(totalClaims, 'claim')}</>;
+  };
+
+  const articleList = (g: Group) => {
+    const known = g.byArticle.unattributed.filter(c => Array.isArray(summaryById.get(c.id)?.articleIds));
+    const unknown = g.byArticle.unattributed.filter(c => !Array.isArray(summaryById.get(c.id)?.articleIds));
+    const sub = (key: string, label: string, list: TrackedRecord[], testId: string) => list.length > 0 && (
+      <li key={key}>
+        <button onClick={() => setOpenArticles(o => ({ ...o, [`${g.key}::${key}`]: !(o[`${g.key}::${key}`] ?? list.some(c => c.id === current?.id && !!st.claim)) }))} data-testid={testId}
+          aria-expanded={openArticles[`${g.key}::${key}`] ?? list.some(c => c.id === current?.id && !!st.claim)}
+          className="flex w-full items-start gap-2 py-2 pl-8 pr-4 text-left hover:bg-card/60">
+          {(openArticles[`${g.key}::${key}`] ?? list.some(c => c.id === current?.id && !!st.claim)) ? <ChevronDown className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" /> : <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />}
+          <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">{label} · {plural(list.length, 'claim')}</span>
+        </button>
+        {(openArticles[`${g.key}::${key}`] ?? list.some(c => c.id === current?.id && !!st.claim)) && <ul>{list.map(c => claimRow(c, undefined, true))}</ul>}
+      </li>
+    );
+    return (
+      <ul data-testid={`list-topic-articles-${g.cat}-${g.topic}`}>
+        {g.byArticle.articles.map(({ articleId, claims: cs }) => {
+          const art = articleById.get(articleId);
+          const aopen = isArticleOpen(g, articleId);
+          const k = `${g.key}::${articleId}`;
+          return (
+            <li key={articleId} data-testid={`row-article-${g.topic}-${articleId}`}>
+              <div className="flex items-start gap-1 pr-3 hover:bg-card/60">
+                <button onClick={() => setOpenArticles(o => ({ ...o, [k]: !aopen }))} aria-expanded={aopen} data-testid={`button-article-${g.topic}-${articleId}`}
+                  className="flex min-w-0 flex-1 items-start gap-2 py-2 pl-8 text-left">
+                  {aopen ? <ChevronDown className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" /> : <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />}
+                  <span className="min-w-0">
+                    <span className="line-clamp-2 block text-[13px] leading-snug">{art?.title ?? <span className="text-muted-foreground">Article not in workspace ({articleId})</span>}</span>
+                    <span className="mt-0.5 block font-mono text-[10px] text-muted-foreground">
+                      {art?.outlet ?? 'Outlet unknown'} · {art?.publishedAt ? fmtDate(art.publishedAt) : 'Date unknown'} · {plural(cs.length, 'claim')}
+                    </span>
+                  </span>
+                </button>
+                <Link href={`/feed?article=${encodeURIComponent(articleId)}`} title="Open article in feed" aria-label="Open article in feed" data-testid={`link-article-feed-${articleId}`}
+                  className="mt-2 flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+              {aopen && <ul>{cs.map(c => claimRow(c, undefined, true))}</ul>}
+            </li>
+          );
+        })}
+        {sub('_none', 'No article attribution', known, `button-unattributed-${g.topic}`)}
+        {sub('_unknown', 'Attribution linkage unknown', unknown, `button-linkage-unknown-${g.topic}`)}
+      </ul>
+    );
+  };
 
   return (
     <div className="tw-rise flex min-h-[100dvh] flex-col">
@@ -46,98 +255,159 @@ export default function ClaimsPage() {
           : null}
       </PageHead>
       <ClaimProcessingStatus canRetry={isSignedIn} />
+
+      <div className="tw-glass sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-border px-5 py-2.5 backdrop-blur md:px-8" data-testid="bar-claim-filters">
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input value={st.q} onChange={e => update({ q: e.target.value })} placeholder="Search claims, topics, entities" className="h-8 bg-card pl-8 text-sm" data-testid="input-claim-search" />
+        </div>
+        <select value={st.category} onChange={e => update({ category: e.target.value, topic: '' })} aria-label="Category" className={selectCls} data-testid="select-claim-category">
+          <option value="">All categories</option>
+          {categoryOptions.map(id => <option key={id} value={id}>{categoryLabel(id, categoryById)}</option>)}
+        </select>
+        <select value={st.topic} onChange={e => update({ topic: e.target.value })} aria-label="Topic" className={cn(selectCls, 'max-w-[220px]')} data-testid="select-claim-topic">
+          <option value="">All topics</option>
+          {topicOptions.map(([id, t]) => <option key={id} value={id}>{t}</option>)}
+        </select>
+        <div className="inline-flex h-8 overflow-hidden rounded-md border border-input text-xs" role="group" aria-label="Recency">
+          {(['ongoing', 'all'] as const).map(r => (
+            <button key={r} onClick={() => update({ recency: r })} aria-pressed={st.recency === r} data-testid={`button-recency-${r}`}
+              className={cn('px-3', st.recency === r ? 'bg-foreground text-background' : 'bg-card hover:bg-muted')}>{r === 'ongoing' ? `Ongoing · ${ongoingTotal}` : 'All'}</button>
+          ))}
+        </div>
+        <select value={st.sort} onChange={e => update({ sort: e.target.value as Sort })} aria-label="Sort" className={selectCls} data-testid="select-claim-sort">
+          <option value="newest">Newest reporting</option>
+          <option value="oldest">Oldest first</option>
+          <option value="linked">Most linked articles</option>
+        </select>
+        <button onClick={reset} disabled={!active} className="text-xs underline underline-offset-4 disabled:opacity-40" data-testid="button-reset-claim-filters">Reset</button>
+      </div>
+
+      {catQ.isError && <p className="flex items-center gap-2 border-b border-border px-5 py-1.5 text-[11px] text-muted-foreground md:px-8" data-testid="text-categories-error">Category catalog unavailable; showing raw category ids. <button className="underline" onClick={() => catQ.refetch()}>Retry</button></p>}
+
       {isLoading ? <RowsSkeleton /> : isError ? <ErrorState onRetry={() => refetch()} /> : claims.length === 0 ? (
         <Empty title="No claim histories" />
       ) : (
-        <div className="grid flex-1 md:grid-cols-[320px_minmax(0,1fr)]">
-          <ul className="border-b border-border md:border-b-0 md:border-r">
-            {sumQ.isError && <li className="flex items-center justify-between px-5 py-2 text-[11px] text-muted-foreground" data-testid="text-summary-error">Coverage summaries unavailable <button className="underline" onClick={() => sumQ.refetch()}>Retry</button></li>}
-            {claims.map((c, index) => {
-              const sm = summaryById.get(c.id);
-              const active = current?.id === c.id;
-              return (
-                <li key={c.id}>
-                  {index === 0 && ongoingCount > 0 && <div className="border-b border-border px-5 py-2 font-mono text-[10px] uppercase tracking-wide" data-testid="heading-ongoing-claims">Ongoing developments · {ongoingCount}<p className="mt-1 normal-case tracking-normal text-muted-foreground">Leadership first · latest reporting within each topic</p></div>}
-                  {index === ongoingCount && ongoingCount > 0 && <div className="border-y border-border px-5 py-2 font-mono text-[10px] uppercase tracking-wide" data-testid="heading-other-claims">Other claims · latest reporting first</div>}
-                  <button onClick={() => setSel(c.id)} data-testid={`button-claim-${c.id}`}
-                    className={cn('w-full border-l-2 px-5 py-3 text-left transition-colors', active ? 'border-[hsl(212_24%_42%)] bg-[hsl(212_20%_96%)]' : 'border-transparent hover:bg-card/60')}>
-                    {sm?.ongoing && <span className="mb-1 block font-mono text-[9px] uppercase text-muted-foreground" title={sm.developmentReason ?? undefined}>{sm.developmentType}</span>}
-                    <p className="line-clamp-2 font-serif text-[15px] leading-snug">{c.title}</p>
-                    <p className="mt-1 flex flex-wrap items-center gap-x-1.5 font-mono text-[10px] text-muted-foreground" data-testid={`text-claim-coverage-${c.id}`}>
-                      {sumQ.isLoading ? <span className="inline-block h-2.5 w-28 animate-pulse rounded bg-muted" />
-                        : sumQ.isError ? <span>Coverage unknown</span>
-                        : !sm ? <span>No article attributions</span>
-                        : <><span>{dateRange(sm.firstDate, sm.lastDate)}</span><span aria-hidden>·</span><span className={cn('rounded-sm px-1', active ? TONE.slate : '')}>{sm.attributions.toLocaleString('en-US')} attribution{sm.attributions === 1 ? '' : 's'}</span></>}
-                    </p>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          {current && (
-            <section className="min-w-0 px-5 py-6 md:px-10" data-testid={`detail-claim-${current.id}`}>
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  {current.topic && <p className="font-mono text-[11px] uppercase tracking-wider text-[hsl(212_24%_38%)]">{current.topic}</p>}
-                  <h2 className="mt-1 max-w-3xl font-serif text-2xl leading-tight">{current.title}</h2>
-                  {current.summary && !isImportNote(current.summary) && <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{current.summary}</p>}
-                  {(current.entities ?? []).length > 0 && <div className="mt-2 flex flex-wrap gap-1">{current.entities!.map((e) => <span key={e} className={cn('rounded-sm px-1.5 py-0.5 text-[11px]', TONE.slate)}>{e}</span>)}</div>}
-                  {isImportNote(current.summary) && <Disclosure label="Import provenance" testId="details-import-provenance" className="max-w-3xl"><p className="text-muted-foreground">{current.summary}</p></Disclosure>}
-                </div>
-                {isSignedIn && (
-                  <div className="flex shrink-0 gap-1">
-                    <button onClick={() => setEditing(current)} className="flex h-8 w-8 items-center justify-center rounded-md border border-input text-muted-foreground hover:text-foreground" data-testid="button-edit-claim"><Pencil className="h-4 w-4" /></button>
-                    <button onClick={() => setDeleting(current)} className="flex h-8 w-8 items-center justify-center rounded-md border border-input text-muted-foreground hover:text-destructive" data-testid="button-delete-claim"><Trash2 className="h-4 w-4" /></button>
-                  </div>
-                )}
-              </div>
-
-              <ProvenancePanel key={current.id} params={{ claimId: current.id }} editable={isSignedIn} heading="Coverage" />
-
-              {legacy.length > 0 && (
-                <div className="mt-8" data-testid="section-legacy-observations">
-                  <p className="mb-2 border-b border-border pb-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground" data-testid="text-legacy-note">Manual timeline · legacy assessments</p>
-                  <div className="space-y-5">
-                    {STAGES.map((stage) => {
-                      const obs = legacy.filter((o) => o.stage === stage).sort((a, b) => a.observedAt.localeCompare(b.observedAt));
-                      if (!obs.length) return null;
-                      return (
-                        <div key={stage} className="grid gap-2 md:grid-cols-[110px_1fr]">
-                          <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground md:pt-2">{stage}</span>
-                          <ol className="space-y-2">
-                            {obs.map((o) => {
-                              const art = articleById.get(o.articleId);
-                              return (
-                                <li key={o.id} className="flex items-start gap-3" data-testid={`observation-${o.id}`}>
-                                  <OutletBrand name={art?.outlet ?? '?'} variant="square" className="h-9 w-9 border border-border" />
-                                  <div className="min-w-0">
-                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-                                      <time className="font-mono text-[11px] text-muted-foreground">{fmtDate(o.observedAt)}</time>
-                                      {art?.outlet && <span className="font-semibold">{art.outlet}</span>}
-                                      {o.journalist && <span className="text-muted-foreground">{o.journalist}</span>}
-                                      <span className={cn('rounded-sm px-1.5 py-0.5 text-[10px]', o.verified ? TONE.sage : TONE.clay)}>{o.verified ? 'legacy verified' : 'legacy unverified'}</span>
-                                      {(o.url || art?.url) && <a href={o.url || art?.url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground"><ExternalLink className="h-3.5 w-3.5" /></a>}
-                                    </div>
-                                    {art && <p className="mt-0.5 text-sm">{art.title}</p>}
-                                    {o.attribution && <blockquote className="mt-1 font-serif text-[15px] italic">“{o.attribution}”</blockquote>}
-                                    {o.evidence && <p className="mt-1 text-sm text-muted-foreground">{o.evidence}</p>}
-                                  </div>
-                                </li>
-                              );
-                            })}
-                          </ol>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </section>
-          )}
+        <div className="grid flex-1 md:grid-cols-[340px_minmax(0,1fr)]">
+          <div className="max-h-[50dvh] overflow-y-auto border-b border-border md:max-h-[calc(100dvh-205px)] md:border-b-0 md:border-r">
+            {sumQ.isError && <p className="flex items-center justify-between px-5 py-2 text-[11px] text-muted-foreground" data-testid="text-summary-error">Coverage summaries unavailable; grouping falls back to Uncategorized <button className="underline" onClick={() => sumQ.refetch()}>Retry</button></p>}
+            {hiddenByFilters && selectedClaim && (
+              <ul className="border-b border-border" data-testid="section-pinned-claim">{claimRow(selectedClaim, 'Linked claim · outside current filters')}</ul>
+            )}
+            {tree.length === 0 ? (
+              <Empty title="No claims match"><button onClick={reset} className="text-xs text-accent underline" data-testid="button-claims-empty-clear">Reset filters</button></Empty>
+            ) : tree.map(cat => (
+              <section key={cat.cat} data-testid={`category-${cat.cat}`}>
+                <h3 className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1 border-b border-border bg-background/60 px-5 py-2 font-mono text-[10px] uppercase tracking-wide">
+                  <span title={categoryById.get(cat.cat)?.description}>{categoryLabel(cat.cat, categoryById, summaryById.get(cat.groups[0]?.claims[0]?.id ?? ''))}</span>
+                  <span className="text-muted-foreground" data-testid={`text-category-counts-${cat.cat}`}>{sumQ.isLoading ? '…' : sumQ.isError ? 'Articles unknown' : `${cat.articles}${cat.complete ? '' : '+'} article${cat.articles === 1 ? '' : 's'}`} · {plural(cat.count, 'claim')}</span>
+                </h3>
+                <ul>
+                  {cat.groups.map(g => {
+                    const open = isOpen(g);
+                    return (
+                      <li key={g.key} className="border-b border-border/60">
+                        <button onClick={() => setOpenGroups(o => ({ ...o, [g.key]: !open }))} aria-expanded={open} data-testid={`button-topic-${g.cat}-${g.topic}`}
+                          className={cn("flex w-full items-start gap-2 px-4 py-2.5 text-left hover:bg-card/60", g.key === currentGroup && "bg-card/60")}>
+                          {open ? <ChevronDown className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-medium leading-snug">{g.title}</span>
+                            <span className="mt-0.5 block font-mono text-[10px] text-muted-foreground" data-testid={`text-topic-counts-${g.cat}-${g.topic}`}>
+                              {topicStats(g)} · {sumQ.isLoading ? '…' : dateRange(g.first, g.last)}
+                            </span>
+                          </span>
+                        </button>
+                        {open && <div className="pb-1">{articleList(g)}</div>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
+          {current ? (
+            <ClaimDetail current={current} summary={summaryById.get(current.id)} catLabel={categoryLabel(categoryKey(summaryById.get(current.id)), categoryById, summaryById.get(current.id))}
+              isSignedIn={isSignedIn} onEdit={() => setEditing(current)} onDelete={() => setDeleting(current)}
+              onTopic={() => { const s = summaryById.get(current.id); update({ category: categoryKey(s), topic: s?.topicId ?? '' }); }}
+              legacy={legacy} articleById={articleById} />
+          ) : st.claim ? (
+            <Empty title="Claim not found"><button onClick={() => update({ claim: null })} className="text-xs text-accent underline" data-testid="button-claim-missing-clear">Show claims</button></Empty>
+          ) : null}
         </div>
       )}
       <ClaimEditor open={creating || !!editing} onOpenChange={(o) => { if (!o) { setCreating(false); setEditing(null); } }} record={editing} articles={articles} />
-      <ConfirmDelete target={deleting} onClose={() => { setDeleting(null); setSel(null); }} />
+      <ConfirmDelete target={deleting} onClose={() => { setDeleting(null); update({ claim: null }); }} />
     </div>
+  );
+}
+
+function ClaimDetail({ current, summary, catLabel, isSignedIn, onEdit, onDelete, onTopic, legacy, articleById }: {
+  current: TrackedRecord; summary?: ClaimSummary; catLabel: string; isSignedIn: boolean; onEdit: () => void; onDelete: () => void; onTopic: () => void;
+  legacy: NonNullable<TrackedRecord['observations']>; articleById: Map<string, TrackedRecord>;
+}) {
+  return (
+    <section className="min-w-0 px-5 py-6 md:max-h-[calc(100dvh-205px)] md:overflow-y-auto md:px-10" data-testid={`detail-claim-${current.id}`}>
+      <nav className="mb-2 flex flex-wrap items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground" aria-label="Claim location" data-testid="text-claim-breadcrumb">
+        <span>{catLabel}</span><ChevronRight className="h-3 w-3" />
+        <button onClick={onTopic} className="uppercase hover:text-foreground hover:underline" data-testid="button-claim-topic-filter">{topicLabel(summary)}</button>
+      </nav>
+      {summary?.classificationReason && <p className="mb-2 max-w-3xl text-[11px] text-muted-foreground" data-testid="text-classification-reason">Grouped for navigation: {summary.classificationReason}</p>}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          {current.topic && <p className="font-mono text-[11px] uppercase tracking-wider text-[hsl(212_24%_38%)]">{current.topic}</p>}
+          <h2 className="mt-1 max-w-3xl font-serif text-2xl leading-tight">{current.title}</h2>
+          {current.summary && !isImportNote(current.summary) && <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{current.summary}</p>}
+          {(current.entities ?? []).length > 0 && <div className="mt-2 flex flex-wrap gap-1">{current.entities!.map((e) => <span key={e} className={cn('rounded-sm px-1.5 py-0.5 text-[11px]', TONE.slate)}>{e}</span>)}</div>}
+          {isImportNote(current.summary) && <Disclosure label="Import provenance" testId="details-import-provenance" className="max-w-3xl"><p className="text-muted-foreground">{current.summary}</p></Disclosure>}
+        </div>
+        {isSignedIn && (
+          <div className="flex shrink-0 gap-1">
+            <button onClick={onEdit} className="flex h-8 w-8 items-center justify-center rounded-md border border-input text-muted-foreground hover:text-foreground" data-testid="button-edit-claim"><Pencil className="h-4 w-4" /></button>
+            <button onClick={onDelete} className="flex h-8 w-8 items-center justify-center rounded-md border border-input text-muted-foreground hover:text-destructive" data-testid="button-delete-claim"><Trash2 className="h-4 w-4" /></button>
+          </div>
+        )}
+      </div>
+
+      <ProvenancePanel key={current.id} params={{ claimId: current.id }} editable={isSignedIn} heading="Coverage" />
+
+      {legacy.length > 0 && (
+        <div className="mt-8" data-testid="section-legacy-observations">
+          <p className="mb-2 border-b border-border pb-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground" data-testid="text-legacy-note">Manual timeline · legacy assessments</p>
+          <div className="space-y-5">
+            {STAGES.map((stage) => {
+              const obs = legacy.filter((o) => o.stage === stage).sort((a, b) => a.observedAt.localeCompare(b.observedAt));
+              if (!obs.length) return null;
+              return (
+                <div key={stage} className="grid gap-2 md:grid-cols-[110px_1fr]">
+                  <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground md:pt-2">{stage}</span>
+                  <ol className="space-y-2">
+                    {obs.map((o) => {
+                      const art = articleById.get(o.articleId);
+                      return (
+                        <li key={o.id} className="flex items-start gap-3" data-testid={`observation-${o.id}`}>
+                          <OutletBrand name={art?.outlet ?? '?'} variant="square" className="h-9 w-9 border border-border" />
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                              <time className="font-mono text-[11px] text-muted-foreground">{fmtDate(o.observedAt)}</time>
+                              {art?.outlet && <span className="font-semibold">{art.outlet}</span>}
+                              {o.journalist && <span className="text-muted-foreground">{o.journalist}</span>}
+                              <span className={cn('rounded-sm px-1.5 py-0.5 text-[10px]', o.verified ? TONE.sage : TONE.clay)}>{o.verified ? 'legacy verified' : 'legacy unverified'}</span>
+                              {(o.url || art?.url) && <a href={o.url || art?.url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground"><ExternalLink className="h-3.5 w-3.5" /></a>}
+                            </div>
+                            {art && <p className="mt-0.5 text-sm">{art.title}</p>}
+                            {o.attribution && <blockquote className="mt-1 font-serif text-[15px] italic">“{o.attribution}”</blockquote>}
+                            {o.evidence && <p className="mt-1 text-sm text-muted-foreground">{o.evidence}</p>}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }

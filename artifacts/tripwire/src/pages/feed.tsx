@@ -16,6 +16,7 @@ import { ArticleEditor, ConfirmDelete } from '@/components/editors';
 import { Importer } from '@/components/importer';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { OutletBrand } from '@/components/outlet-brand';
+import { claimFilterCount, defaultClaimFeedFilter, matchesClaimFilter, useClaimLinkage } from '@/lib/claim-groups';
 import { articleCredits } from '@/lib/media-coverage';
 import { FOCUS, REPORTING, SENTIMENT, byKind, isFlagged, useFlag, useRefresh, useWorkspace } from '@/lib/workspace';
 
@@ -43,6 +44,13 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
   const contentSearch = useSearchArticleContent({ q: debouncedQ }, { query: { enabled: debouncedQ.length > 0, staleTime: 60_000 } });
   const bodyHits = useMemo(() => new Set(debouncedQ && debouncedQ === q.trim() ? contentSearch.data?.articleIds ?? [] : []), [contentSearch.data, debouncedQ, q]);
   const [filters, setFilters] = useState(defaultFeedFilters);
+  const linkage = useClaimLinkage();
+  const [claimFilter, setClaimFilter] = useState(defaultClaimFeedFilter);
+  const claimStatus: 'off' | 'ok' | 'stale' | 'loading' | 'error' | 'unavailable' = claimFilterCount(claimFilter) === 0 ? 'off'
+    : linkage.summaries.data && linkage.linkageKnown ? (linkage.summaries.isError ? 'stale' : 'ok')
+    : linkage.summaries.isLoading ? 'loading' : linkage.summaries.isError ? 'error' : 'unavailable';
+  const claimFilterLive = claimStatus === 'ok' || claimStatus === 'stale';
+  const claimBlocked = claimStatus === 'loading' || claimStatus === 'error' || claimStatus === 'unavailable';
   const [flaggedOnly, setFlaggedOnlyState] = useState(() => mode === 'saved' || readFlagged());
   const setFlaggedOnly = useCallback((v: boolean) => { setFlaggedOnlyState(v); writeFlagged(v); }, []);
   const [flaggedFirst, setFlaggedFirst] = useState(false);
@@ -66,13 +74,15 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
     const out = articles.filter((a) => {
       if (flaggedOnly && !isFlagged(a)) return false;
       if (!matchesFeedFilters(a, impacts.get(a.id)?.value, filters)) return false;
+      if (claimFilterLive && !matchesClaimFilter(a.id, claimFilter, linkage.claimsByArticle, linkage.summaryById)) return false;
       if (!needle) return true;
       if (bodyHits.has(a.id)) return true;
       return [a.title, a.summary, a.fullText, a.outlet, a.contentType, a.contentFormat, a.topic, a.byline, ...articleCredits(a).map(c => c.name), ...(a.entities ?? [])]
         .some((s) => s?.toLowerCase().includes(needle));
     });
+    if (claimBlocked) return [];
     return flaggedFirst ? out.sort((x, y) => Number(isFlagged(y)) - Number(isFlagged(x))) : out;
-  }, [articles, impacts, q, bodyHits, filters, flaggedOnly, flaggedFirst]);
+  }, [articles, impacts, q, bodyHits, filters, flaggedOnly, flaggedFirst, claimFilter, claimFilterLive, claimBlocked, linkage.claimsByArticle, linkage.summaryById]);
 
   const selected = useMemo(() => (open ? articles.find((a) => a.id === open) ?? null : null), [articles, open]);
   useEffect(() => {
@@ -107,8 +117,8 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
     return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', trapTab); };
   }, [selected, narrow]);
 
-  const filtered = q || flaggedOnly || filterSelectionCount(filters) > 0;
-  const clear = () => { setQ(''); setFilters(defaultFeedFilters()); setFlaggedOnly(false); };
+  const filtered = q || flaggedOnly || filterSelectionCount(filters) > 0 || claimFilterCount(claimFilter) > 0;
+  const clear = () => { setQ(''); setFilters(defaultFeedFilters()); setFlaggedOnly(false); setClaimFilter(defaultClaimFeedFilter()); };
   const toggleFlag = (a: TrackedRecord) => flag.mutate({ id: a.id, data: { flagged: !isFlagged(a) } });
 
   return (
@@ -127,13 +137,28 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search headline, text, journalist, entity" className="h-8 bg-card pl-8 text-sm" data-testid="input-search" />
         </div>
         <FeedFilterMenu value={filters} onChange={setFilters} topics={topics} outlets={outlets} reporting={REPORTING} sentiment={SENTIMENT} focus={FOCUS}
-          flagged={flaggedOnly} onFlaggedChange={setFlaggedOnly} flaggedFirst={flaggedFirst} onFlaggedFirstChange={setFlaggedFirst} />
+          flagged={flaggedOnly} onFlaggedChange={setFlaggedOnly} flaggedFirst={flaggedFirst} onFlaggedFirstChange={setFlaggedFirst}
+          claimFilter={claimFilter} onClaimFilterChange={setClaimFilter} linkage={linkage} />
       </div>
 
       <div className={cn(selected && 'lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(380px,46%)]')}>
       <div className="min-w-0">
       <DevelopmentsPanel />
-      {isLoading ? <RowsSkeleton /> : isError ? <ErrorState onRetry={() => refetch()} /> : rows.length === 0 ? (
+      {claimStatus !== 'off' && claimStatus !== 'ok' && (
+        <div role="status" className="mx-3 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs md:mx-5" data-testid={`notice-claim-filter-${claimStatus}`}>
+          <span className="text-muted-foreground">
+            {claimStatus === 'loading' ? 'Loading claim links; claim filters will apply once loaded.'
+              : claimStatus === 'error' ? 'Claim links could not be loaded, so claim filters cannot be applied. No results are shown.'
+              : claimStatus === 'unavailable' ? 'Claim linkage is not available yet, so claim filters cannot be applied. No results are shown.'
+              : 'Claim links failed to refresh; filtering with the last loaded links, which may be stale.'}
+          </span>
+          <span className="flex items-center gap-3">
+            {claimStatus !== 'loading' && <button onClick={() => linkage.summaries.refetch()} className="underline underline-offset-4" data-testid="button-claim-filter-notice-retry">Retry</button>}
+            <button onClick={() => setClaimFilter(defaultClaimFeedFilter())} className="underline underline-offset-4" data-testid="button-claim-filter-notice-clear">Clear claim filters</button>
+          </span>
+        </div>
+      )}
+      {isLoading || claimStatus === 'loading' ? <RowsSkeleton /> : isError ? <ErrorState onRetry={() => refetch()} /> : claimBlocked ? null : rows.length === 0 ? (
         filtered ? <Empty title="No matches"><button onClick={clear} className="text-xs text-accent underline" data-testid="button-empty-clear">Clear filters</button></Empty>
           : <Empty title="No articles yet">
               <button onClick={() => refresh.mutate()} disabled={refresh.isPending} data-testid="button-empty-refresh" className="rounded-md bg-accent px-3 py-1.5 text-xs text-accent-foreground disabled:opacity-60">

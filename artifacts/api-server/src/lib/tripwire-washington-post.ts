@@ -12,7 +12,7 @@ const sameCardTitle = (a: string, b: string) => {
 function recommendations(lines: string[]) {
   const kept: string[] = [];
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i] !== "Most Read") { kept.push(lines[i]!); continue; }
+    if (!/^Most Read(?: in [\p{L}\p{N} &'’/-]{1,60})?$/u.test(lines[i]!)) { kept.push(lines[i]!); continue; }
     let cursor = i + 1, end = cursor, cards = 0;
     if (lines[cursor] === "Next") cursor++;
     while (cursor < lines.length) {
@@ -32,7 +32,7 @@ export function washingtonPostCopy(raw: string) {
   const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   const at = lines.findIndex((s, i) => i < 40 && /^By\s+/i.test(s));
   if (at < 0) return undefined;
-  const byline = lines[at]!;
+  const byline = lines[at]!.replace(/\s+/g, " ");
   const authors = parseByline(byline);
   if (!authors.length || authors.some(c => c.role !== "author" || !person(c.name))) return undefined;
   let body = lines.slice(at + 1);

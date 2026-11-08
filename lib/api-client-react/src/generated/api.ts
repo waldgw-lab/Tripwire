@@ -30,6 +30,7 @@ import type {
   ArticleFeedbackPage,
   AutomationAction,
   AutomationHealth,
+  ClaimCategory,
   ClaimDirectionInput,
   ContentSearch,
   DevelopmentAction,
@@ -350,6 +351,101 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getCorrectClaimDirectionMutationOptions(options), queryClient);
     }
+
+export const getGetClaimCategoriesUrl = () => {
+
+
+
+
+  return `/api/tripwire/claim-categories`
+}
+
+export const getClaimCategories = async ( options?: Parameters<typeof customFetch>[1]): Promise<ClaimCategory[]> => {
+
+  return customFetch<ClaimCategory[]>(getGetClaimCategoriesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetClaimCategoriesQueryKey = () => {
+    return [
+    `/api/tripwire/claim-categories`
+    ] as const;
+    }
+
+
+export const getGetClaimCategoriesQueryOptions = <TData = Awaited<ReturnType<typeof getClaimCategories>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClaimCategories>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetClaimCategoriesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClaimCategories>>> = ({ signal }) => getClaimCategories({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClaimCategories>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetClaimCategoriesQueryResult = NonNullable<Awaited<ReturnType<typeof getClaimCategories>>>
+export type GetClaimCategoriesQueryError = ErrorType<unknown>
+
+
+export function useGetClaimCategories<TData = Awaited<ReturnType<typeof getClaimCategories>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClaimCategories>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getClaimCategories>>,
+          TError,
+          Awaited<ReturnType<typeof getClaimCategories>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetClaimCategories<TData = Awaited<ReturnType<typeof getClaimCategories>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClaimCategories>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getClaimCategories>>,
+          TError,
+          Awaited<ReturnType<typeof getClaimCategories>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetClaimCategories<TData = Awaited<ReturnType<typeof getClaimCategories>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClaimCategories>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetClaimCategories<TData = Awaited<ReturnType<typeof getClaimCategories>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClaimCategories>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetClaimCategoriesQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetClaimCoverageSummariesUrl = () => {
 
