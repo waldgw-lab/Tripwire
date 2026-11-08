@@ -25,7 +25,7 @@ function ClaimCategories() {
           ))}
         </ol>
       )}
-      <p className="mt-3 text-[11px] text-muted-foreground">Uncategorized / Needs Review keeps uncertain material visible without forcing a match. Catalog order breaks primary-placement ties.</p>
+      <p className="mt-3 text-[11px] text-muted-foreground">Uncategorized / Needs Review keeps uncertain material visible without forcing a match. The article’s main focus sets its primary home; developments describe that focus.</p>
     </div>
   );
 }

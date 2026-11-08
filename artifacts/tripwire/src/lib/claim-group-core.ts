@@ -2,7 +2,19 @@
 export type ClaimSummary = {
   claimId: string; attributions: number; firstDate: string | null; lastDate: string | null; ongoing?: boolean;
   latestReportAt?: string | null; categoryId?: string; primaryCategory?: string; secondaryCategories?: { id: string; label: string; description: string }[]; topicId?: string; topicTitle?: string; articleIds?: string[]; classificationReason?: string; developmentType?: string | null; developmentReason?: string | null;
+  developments?: string[];
+  relatedSubjects?: string[];
+  placements?: ClaimPlacement[];
 };
+export type ClaimPlacement = Partial<Omit<ClaimSummary, 'claimId' | 'attributions' | 'placements'>> & { articleIds: string[] };
+/** The same proposition can be sourced by articles with different primary focuses.
+ * Each projection contains only the source articles actually placed in that home. */
+export function summariesForClaim(s?: ClaimSummary): (ClaimSummary | undefined)[] {
+  return s?.placements?.length ? s.placements.map(p => ({ ...s, ...p, placements: undefined })) : [s];
+}
+export function summaryForArticle(s: ClaimSummary | undefined, articleId: string) {
+  return summariesForClaim(s).find(p => p?.articleIds?.includes(articleId));
+}
 type Cat = { id: string; label: string; description?: string };
 export const UNCATEGORIZED = 'uncategorized';
 export const UNCATEGORIZED_LABEL = 'Uncategorized / Needs review';
@@ -40,7 +52,7 @@ export function matchesClaimFilter(articleId: string, f: ClaimFeedFilter, claims
   if (f.mode === 'with' && !ids.length) return false;
   if (!f.categories.length && !f.topics.length) return true;
   return ids.some(id => {
-    const s = summaryById.get(id);
+    const s = summaryForArticle(summaryById.get(id), articleId);
     return (!f.categories.length || f.categories.includes(categoryKey(s))) && (!f.topics.length || f.topics.includes(groupKey(s)));
   });
 }

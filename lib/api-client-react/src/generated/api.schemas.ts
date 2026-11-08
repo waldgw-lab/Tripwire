@@ -4,6 +4,31 @@
  * Api
  * OpenAPI spec version: 1.0.0
  */
+export interface ClaimCategory {
+  id: string;
+  label: string;
+  description: string;
+}
+
+export interface ClaimArticlePlacement {
+  categoryId: string;
+  primaryCategory: string;
+  topicId: string;
+  topicTitle: string;
+  articleIds: string[];
+  developments: string[];
+  relatedSubjects?: string[];
+  secondaryCategories: ClaimCategory[];
+  classificationReason?: string;
+  /** @nullable */
+  firstDate?: string | null;
+  /** @nullable */
+  lastDate?: string | null;
+  /** @nullable */
+  latestReportAt?: string | null;
+  ongoing?: boolean;
+}
+
 export interface ClaimProcessingRun {
   jobId: string;
   articleId: string;
@@ -15,12 +40,6 @@ export interface ClaimProcessingRun {
   /** @nullable */
   bodyCharacters: number | null;
   current: boolean;
-}
-
-export interface ClaimCategory {
-  id: string;
-  label: string;
-  description: string;
 }
 
 export type ClaimDirectionInputDirection = typeof ClaimDirectionInputDirection[keyof typeof ClaimDirectionInputDirection];
@@ -1576,6 +1595,9 @@ export type GetClaimCoverageSummaries200Item = {
   secondaryCategories?: ClaimCategory[];
   topicId?: string;
   topicTitle?: string;
+  developments?: string[];
+  relatedSubjects?: string[];
+  placements?: ClaimArticlePlacement[];
   classificationReason?: string;
   articleIds?: string[];
 };

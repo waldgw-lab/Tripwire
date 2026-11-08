@@ -39,9 +39,13 @@ export function summariseClaimCoverage(records: RecordRow[], attributed: Attribu
 
 export async function claimCoverageSummaries() {
   // Select the workspace override before filtering hidden records, never resurrect a dismissed public base.
-  const records = (await pool.query(`select distinct on (kind,coalesce(data->>'baseId',id)) id,data || jsonb_build_object('kind',kind) data
+  const records = (await pool.query(`with selected as (
+    select distinct on (kind,coalesce(data->>'baseId',id)) id,kind,data
     from tripwire_records where kind in ('claim','article') and owner in ('public',$1)
-    order by kind,coalesce(data->>'baseId',id),(owner=$1) desc`, [W])).rows;
+    order by kind,coalesce(data->>'baseId',id),(owner=$1) desc)
+    select s.id,s.data || jsonb_build_object('kind',s.kind) ||
+      case when s.kind='article' then jsonb_build_object('focusLead',left(c.text,2400)) else '{}'::jsonb end data
+    from selected s left join tripwire_content c on c.hash=s.data->>'fullTextHash'`, [W])).rows;
   const attributed = (await pool.query(`select f.claim_id,c.article_id,c.proposition from tripwire_attributed_claims c
     join tripwire_claim_families f on f.workspace=c.workspace and f.id=c.family_id where c.workspace=$1`, [W])).rows;
   const developments = claimDevelopments(records, attributed);

@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
-import { SecondaryCategoryTags } from '@/components/provenance/category-tags';
+import { FocusContext } from '@/components/provenance/focus-context';
 import { Link } from 'wouter';
 import { ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
 import { byKind, fmtDate, useWorkspace } from '@/lib/workspace';
-import { categoryKey, categoryLabel, groupKey, topicLabel, useClaimLinkage } from '@/lib/claim-groups';
+import { categoryKey, categoryLabel, groupKey, topicLabel, summaryForArticle, useClaimLinkage } from '@/lib/claim-groups';
 
 /** Claims explicitly attributed to this article, grouped by category -> topic. Navigational only. */
 export function ArticleClaims({ articleId }: { articleId: string }) {
-  const { summaries, summaryById, categoryById, claimsByArticle, linkageKnown } = useClaimLinkage();
+  const { summaries, summaryById: allSummaries, categoryById, claimsByArticle, linkageKnown } = useClaimLinkage();
+  const summaryById = useMemo(() => new Map([...allSummaries].map(([id, s]) =>
+    [id, summaryForArticle(s, articleId) ?? s])), [allSummaries, articleId]);
   const { data } = useWorkspace();
   const claimById = useMemo(() => new Map(byKind(data?.records, 'claim').map(c => [c.id, c])), [data]);
   const ids = claimsByArticle.get(articleId) ?? [];
@@ -65,7 +67,7 @@ export function ArticleClaims({ articleId }: { articleId: string }) {
                   <span className="min-w-0 flex-1">{t.title}</span>
                   <span className="font-mono text-[10px] text-muted-foreground">{t.ids.length}</span>
                 </button>
-                <SecondaryCategoryTags categories={summaryById.get(t.ids[0] ?? '')?.secondaryCategories} />
+                <FocusContext summary={summaryById.get(t.ids[0] ?? '')} />
                 {to && <ul className="mt-0.5">
                   {t.ids.map(id => {
                     const s = summaryById.get(id);

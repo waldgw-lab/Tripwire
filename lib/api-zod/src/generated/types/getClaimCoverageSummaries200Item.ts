@@ -4,6 +4,7 @@
  * Api
  * OpenAPI spec version: 1.0.0
  */
+import type { ClaimArticlePlacement } from './claimArticlePlacement';
 import type { ClaimCategory } from './claimCategory';
 
 export type GetClaimCoverageSummaries200Item = {
@@ -25,6 +26,9 @@ export type GetClaimCoverageSummaries200Item = {
   secondaryCategories?: ClaimCategory[];
   topicId?: string;
   topicTitle?: string;
+  developments?: string[];
+  relatedSubjects?: string[];
+  placements?: ClaimArticlePlacement[];
   classificationReason?: string;
   articleIds?: string[];
 };

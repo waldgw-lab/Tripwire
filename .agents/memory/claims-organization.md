@@ -1,6 +1,6 @@
 ---
 name: Claims organization
-description: User intent for primary development categories, topic threads and feed linkages.
+description: Article-focus-first Claims organization, primary homes and exact source linkages.
 ---
 Use the approved twelve development categories as the primary organization for
 Claims, with related topic threads inside each category. The user specifically
@@ -35,6 +35,17 @@ such as impeachment efforts, possible removal and leadership confidence can
 describe the same focus group without splitting its articles into action-based
 groups. Keep claims beneath their reporting articles, with secondary categories
 and background context in the details.
+
+A shared proposition may be reported by articles with different primary focuses.
+That does not give any one article several primary homes.
+
+**Why:** The user requires article-focus-first organization while retaining the
+actual reporting and claims beneath each article.
+
+**How to apply:** Preserve the same claim identity and all exact source links,
+but count and display only the articles actually assigned to each focus group.
+Do not move all of a shared claim's source articles into its representative
+category, or duplicate claim records to make navigation work.
 
 Measure subtopic coverage primarily by distinct reporting articles, and group
 each article's claims beneath that article rather than presenting a flat list.

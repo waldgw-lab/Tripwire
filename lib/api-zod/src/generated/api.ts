@@ -91,6 +91,27 @@ export const GetClaimCoverageSummariesResponseItem = zod.object({
 })).optional(),
   "topicId": zod.string().optional(),
   "topicTitle": zod.string().optional(),
+  "developments": zod.array(zod.string()).optional(),
+  "relatedSubjects": zod.array(zod.string()).optional(),
+  "placements": zod.array(zod.object({
+  "categoryId": zod.string(),
+  "primaryCategory": zod.string(),
+  "topicId": zod.string(),
+  "topicTitle": zod.string(),
+  "articleIds": zod.array(zod.string()),
+  "developments": zod.array(zod.string()),
+  "relatedSubjects": zod.array(zod.string()).optional(),
+  "secondaryCategories": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "description": zod.string()
+})),
+  "classificationReason": zod.string().optional(),
+  "firstDate": zod.string().nullish(),
+  "lastDate": zod.string().nullish(),
+  "latestReportAt": zod.string().nullish(),
+  "ongoing": zod.boolean().optional()
+})).optional(),
   "classificationReason": zod.string().optional(),
   "articleIds": zod.array(zod.string()).optional()
 })

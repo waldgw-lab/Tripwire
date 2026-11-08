@@ -10,10 +10,10 @@ import { ClaimEditor, ConfirmDelete } from '@/components/editors';
 import { Disclosure, ProvenancePanel, TONE } from '@/components/provenance/provenance-panel';
 import { OutletBrand } from '@/components/outlet-brand';
 import { ClaimProcessingStatus } from '@/components/provenance/claim-processing';
-import { SecondaryCategoryTags } from '@/components/provenance/category-tags';
+import { FocusContext } from '@/components/provenance/focus-context';
 import { STAGES, byKind, fmtDate, useWorkspace } from '@/lib/workspace';
 import {
-  UNCATEGORIZED, categoryKey, groupClaimsByArticle, categoryLabel, compareClaims, groupKey, pickDefault, reportTime, topicKey, topicLabel, useClaimLinkage, type ClaimSummary,
+  UNCATEGORIZED, categoryKey, groupClaimsByArticle, categoryLabel, compareClaims, groupKey, pickDefault, reportTime, topicKey, topicLabel, summariesForClaim, useClaimLinkage, type ClaimSummary,
 } from '@/lib/claim-groups';
 
 const isImportNote = (s?: string) => !!s && /supplied analysis|unreviewed claim-family/i.test(s);
@@ -48,7 +48,7 @@ function writeUrl(s: UrlState, push: boolean) {
 const selectCls = 'h-8 rounded-md border border-input bg-card px-2 text-xs';
 
 type Grouping = ReturnType<typeof groupClaimsByArticle<TrackedRecord>>;
-type Group = { key: string; cat: string; topic: string; title: string; claims: TrackedRecord[]; first: string | null; last: string | null; ongoing: number; latest: number; byArticle: Grouping; total: Grouping };
+type Group = { key: string; cat: string; topic: string; title: string; claims: TrackedRecord[]; summaries: Map<string, ClaimSummary>; developments: string[]; first: string | null; last: string | null; ongoing: number; latest: number; byArticle: Grouping; total: Grouping };
 const plural = (n: number, w: string) => `${n.toLocaleString('en-US')} ${w}${n === 1 ? '' : 's'}`;
 
 export default function ClaimsPage() {
@@ -77,6 +77,8 @@ export default function ClaimsPage() {
   const [deleting, setDeleting] = useState<TrackedRecord | null>(null);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [openArticles, setOpenArticles] = useState<Record<string, boolean>>({});
+  const views = useMemo(() => claims.flatMap(claim =>
+    summariesForClaim(summaryById.get(claim.id)).map(summary => ({ claim, summary }))), [claims, summaryById]);
 
 
   // Category options in catalog order, plus any unknown ids from data, Uncategorized last.
@@ -89,42 +91,40 @@ export default function ClaimsPage() {
 
   const topicOptions = useMemo(() => {
     const m = new Map<string, string>();
-    for (const c of claims) {
-      const s = summaryById.get(c.id);
+    for (const { summary: s } of views) {
       if (st.category && categoryKey(s) !== st.category) continue;
       if (s?.topicId) m.set(s.topicId, topicLabel(s));
     }
     return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  }, [claims, summaryById, st.category]);
+  }, [views, st.category]);
 
   const filtered = useMemo(() => {
     const needle = st.q.trim().toLowerCase();
-    return claims.filter(c => {
-      const s = summaryById.get(c.id);
+    return views.filter(({ claim: c, summary: s }) => {
       if (st.recency === 'ongoing' && !s?.ongoing) return false;
       if (st.category && categoryKey(s) !== st.category) return false;
       if (st.topic && s?.topicId !== st.topic) return false;
       if (!needle) return true;
-      return [c.title, c.summary, c.topic, s?.topicTitle, s?.primaryCategory, s?.developmentType, ...(c.entities ?? [])].some(v => v?.toLowerCase().includes(needle));
+      return [c.title, c.summary, c.topic, s?.topicTitle, s?.primaryCategory, ...(s?.developments ?? []), ...(s?.articleIds ?? []).map(id => articleById.get(id)?.title), ...(c.entities ?? [])].some(v => v?.toLowerCase().includes(needle));
     });
-  }, [claims, summaryById, st]);
+  }, [views, articleById, st]);
 
-  const cmpClaims = useCallback((a: TrackedRecord, b: TrackedRecord) => compareClaims(a, b, st.sort, summaryById), [summaryById, st.sort]);
 
   const wholeByGroup = useMemo(() => {
-    const m = new Map<string, TrackedRecord[]>();
-    for (const c of claims) { const k = groupKey(summaryById.get(c.id)); const l = m.get(k) ?? []; l.push(c); m.set(k, l); }
-    return new Map([...m.entries()].map(([k, l]) => [k, groupClaimsByArticle(l, summaryById)]));
-  }, [claims, summaryById]);
+    const m = new Map<string, typeof views>();
+    for (const v of views) { const k = groupKey(v.summary); const l = m.get(k) ?? []; l.push(v); m.set(k, l); }
+    return new Map([...m.entries()].map(([k, l]) => [k, groupClaimsByArticle(l.map(v => v.claim),
+      new Map(l.filter(v => !!v.summary).map(v => [v.claim.id, v.summary!])))]));
+  }, [views]);
 
   const tree = useMemo(() => {
     const groups = new Map<string, Group>();
-    for (const c of filtered) {
-      const s = summaryById.get(c.id);
+    for (const { claim: c, summary: s } of filtered) {
       const key = groupKey(s);
       let g = groups.get(key);
-      if (!g) { g = { key, cat: categoryKey(s), topic: topicKey(s), title: topicLabel(s), claims: [], first: null, last: null, ongoing: 0, latest: -Infinity, byArticle: null as unknown as Grouping, total: null as unknown as Grouping }; groups.set(key, g); }
+      if (!g) { g = { key, cat: categoryKey(s), topic: topicKey(s), title: topicLabel(s), claims: [], summaries: new Map(), developments: s?.developments ?? [], first: null, last: null, ongoing: 0, latest: -Infinity, byArticle: null as unknown as Grouping, total: null as unknown as Grouping }; groups.set(key, g); }
       g.claims.push(c);
+      if (s) g.summaries.set(c.id, s);
       if (s?.ongoing) g.ongoing++;
       if (s?.firstDate && (!g.first || s.firstDate < g.first)) g.first = s.firstDate;
       const l = s?.lastDate ?? s?.latestReportAt;
@@ -133,8 +133,8 @@ export default function ClaimsPage() {
     }
     const gs = [...groups.values()];
     gs.forEach(g => {
-      g.claims.sort(cmpClaims);
-      g.byArticle = groupClaimsByArticle(g.claims, summaryById);
+      g.claims.sort((a, b) => compareClaims(a, b, st.sort, g.summaries));
+      g.byArticle = groupClaimsByArticle(g.claims, g.summaries);
       g.total = wholeByGroup.get(g.key) ?? g.byArticle;
       const t = (id: string) => { const a = articleById.get(id); return a?.publishedAt ? Date.parse(a.publishedAt) || -Infinity : -Infinity; };
       g.byArticle.articles.sort((a, b) => st.sort === 'oldest' ? (t(a.articleId) === t(b.articleId) ? 0 : t(a.articleId) === -Infinity ? 1 : t(b.articleId) === -Infinity ? -1 : t(a.articleId) - t(b.articleId)) : st.sort === 'linked' ? b.claims.length - a.claims.length : (t(b.articleId) - t(a.articleId)) || 0);
@@ -150,7 +150,7 @@ export default function ClaimsPage() {
     return [...cats.entries()]
       .map(([cat, list]) => ({ cat, groups: list.sort(gcmp), count: new Set(list.flatMap(g => g.claims.map(c => c.id))).size, articles: new Set(list.flatMap(g => g.byArticle.articles.map(a => a.articleId))).size, complete: list.every(g => g.byArticle.complete), ongoing: list.reduce((n, g) => n + g.ongoing, 0) }))
       .sort((a, b) => (catOrder.get(a.cat) ?? 999) - (catOrder.get(b.cat) ?? 999));
-  }, [filtered, summaryById, cmpClaims, catOrder, st.sort, wholeByGroup, articleById]);
+  }, [filtered, catOrder, st.sort, wholeByGroup, articleById]);
 
   const selectedClaim = st.claim ? claims.find(c => c.id === st.claim) ?? null : null;
   useEffect(() => {
@@ -161,26 +161,28 @@ export default function ClaimsPage() {
     if ((movedCategory || scopedLegacyTopic) && (s.categoryId !== st.category || s.topicId !== st.topic))
       update({ category: s.categoryId, topic: s.topicId });
   }, [st.claim, st.category, st.topic, summaryById, update]);
-  const firstVisible = pickDefault(tree.flatMap(c => c.groups.flatMap(g => g.claims)), summaryById);
+  const orderedGroups = tree.flatMap(c => c.groups);
+  const defaultGroup = orderedGroups.find(g => g.ongoing > 0) ?? orderedGroups[0];
+  const firstVisible = defaultGroup ? pickDefault(defaultGroup.claims, defaultGroup.summaries) : undefined;
   const current = selectedClaim ?? (st.claim ? null : firstVisible) ?? null;
-  const hiddenByFilters = !!selectedClaim && !filtered.includes(selectedClaim);
-  const currentGroup = current ? groupKey(summaryById.get(current.id)) : null;
+  const currentSummary = current ? ((!selectedClaim ? defaultGroup?.summaries.get(current.id) : filtered.find(v => v.claim.id === current.id)?.summary) ?? summaryById.get(current.id)) : undefined;
+  const hiddenByFilters = !!selectedClaim && !filtered.some(v => v.claim.id === selectedClaim.id);
+  const currentGroup = current ? groupKey(currentSummary) : null;
   // Keep the overview compact; expand only a deliberately selected claim/topic.
   const isOpen = (g: Group) => openGroups[g.key] ?? Boolean(st.claim && g.key === currentGroup || st.topic && g.topic === st.topic);
-  const currentArticleIds = current ? summaryById.get(current.id)?.articleIds ?? [] : [];
+  const currentArticleIds = currentSummary?.articleIds ?? [];
   const isArticleOpen = (g: Group, aid: string) => openArticles[`${g.key}::${aid}`] ?? Boolean(st.claim && g.key === currentGroup && currentArticleIds.includes(aid));
   const legacy = current?.observations ?? [];
   const active = !!(st.q || st.category || st.topic || st.recency !== 'all' || st.sort !== 'newest');
   const reset = () => update({ q: '', category: '', topic: '', recency: 'all', sort: 'newest' });
-  const select = (id: string) => update({ claim: id }, true);
   const ongoingTotal = claims.filter(c => summaryById.get(c.id)?.ongoing).length;
 
-  const claimRow = (c: TrackedRecord, extra?: string, nested = false) => {
-    const sm = summaryById.get(c.id);
-    const on = current?.id === c.id;
+  const claimRow = (c: TrackedRecord, extra?: string, nested = false, scope?: ClaimSummary) => {
+    const sm = scope ?? summaryById.get(c.id);
+    const on = current?.id === c.id && (!scope || groupKey(scope) === currentGroup);
     return (
       <li key={c.id}>
-        <button onClick={() => select(c.id)} data-testid={`button-claim-${c.id}`} aria-current={on || undefined}
+        <button onClick={() => update({ claim: c.id, ...(scope ? { category: scope.categoryId ?? '', topic: scope.topicId ?? '' } : {}) }, true)} data-testid={`button-claim-${c.id}`} aria-current={on || undefined}
           className={cn('w-full border-l-2 py-2.5 pr-4', nested ? 'pl-14' : 'pl-9', ' text-left transition-colors', on ? 'border-[hsl(212_24%_42%)] bg-[hsl(212_20%_96%)]' : 'border-transparent hover:bg-card/60')}>
           {extra && <span className="mb-1 block font-mono text-[9px] uppercase text-muted-foreground">{extra}</span>}
           {sm?.ongoing && <span className="mb-1 block font-mono text-[9px] uppercase text-muted-foreground" title={sm.developmentReason ?? undefined}>{sm.developmentType ?? 'Ongoing'}</span>}
@@ -246,7 +248,7 @@ export default function ClaimsPage() {
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Link>
               </div>
-              {aopen && <ul>{cs.map(c => claimRow(c, undefined, true))}</ul>}
+              {aopen && <ul>{cs.map(c => claimRow(c, undefined, true, g.summaries.get(c.id)))}</ul>}
             </li>
           );
         })}
@@ -321,6 +323,7 @@ export default function ClaimsPage() {
                           {open ? <ChevronDown className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
                           <span className="min-w-0 flex-1">
                             <span className="block text-sm font-medium leading-snug">{g.title}</span>
+                            {!!g.developments.length && <span className="mt-1 block text-[11px] leading-snug text-muted-foreground" data-testid={`text-developments-${g.topic}`}>Developments: {g.developments.slice(0, 3).join(' · ')}{g.developments.length > 3 ? ` · +${g.developments.length - 3} more in details` : ''}</span>}
                             <span className="mt-0.5 block font-mono text-[10px] text-muted-foreground" data-testid={`text-topic-counts-${g.cat}-${g.topic}`}>
                               {topicStats(g)} · {sumQ.isLoading ? '…' : dateRange(g.first, g.last)}
                             </span>
@@ -335,9 +338,9 @@ export default function ClaimsPage() {
             ))}
           </div>
           {current ? (
-            <ClaimDetail current={current} summary={summaryById.get(current.id)} catLabel={categoryLabel(categoryKey(summaryById.get(current.id)), categoryById, summaryById.get(current.id))}
+            <ClaimDetail current={current} summary={currentSummary} catLabel={categoryLabel(categoryKey(currentSummary), categoryById, currentSummary)}
               isSignedIn={isSignedIn} onEdit={() => setEditing(current)} onDelete={() => setDeleting(current)}
-              onTopic={() => { const s = summaryById.get(current.id); update({ category: categoryKey(s), topic: s?.topicId ?? '' }); }}
+              onTopic={() => update({ category: categoryKey(currentSummary), topic: currentSummary?.topicId ?? '' })}
               legacy={legacy} articleById={articleById} />
           ) : st.claim ? (
             <Empty title="Claim not found"><button onClick={() => update({ claim: null })} className="text-xs text-accent underline" data-testid="button-claim-missing-clear">Show claims</button></Empty>
@@ -360,7 +363,7 @@ function ClaimDetail({ current, summary, catLabel, isSignedIn, onEdit, onDelete,
         <span className="text-muted-foreground">Primary category:</span><span>{catLabel}</span><ChevronRight className="h-3 w-3" />
         <button onClick={onTopic} className="uppercase hover:text-foreground hover:underline" data-testid="button-claim-topic-filter">{topicLabel(summary)}</button>
       </nav>
-      <SecondaryCategoryTags categories={summary?.secondaryCategories} />
+      <FocusContext summary={summary} />
       {summary?.classificationReason && <Disclosure label="Why this category" testId="details-category-assignment" className="mb-2 max-w-3xl">
         <p className="text-[11px] text-muted-foreground" data-testid="text-classification-reason">{summary.classificationReason}</p>
       </Disclosure>}

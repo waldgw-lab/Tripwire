@@ -43,11 +43,11 @@ test('unknown topics are not forcibly merged and grouping does not infer a real-
   const b = claimTopic('An unnamed official disputed that account.', '', 'uncategorized', 'b');
   assert.notEqual(a.topicId, b.topicId);
 });
-test('bare Miller mentions use explicit same-article context, not a global surname assumption', () => {
+test('article focus uses explicit source context; incidental claim names cannot change its home', () => {
   const rows = [
     { id: 'c1', data: { kind: 'claim', title: 'Stephen Miller was promoted to White House chief of staff.' } },
     { id: 'c2', data: { kind: 'claim', title: 'Slotkin pointed to Miller’s promotion as Trump doubling down.' } },
-    { id: 'a', data: { kind: 'article', title: 'Slotkin discusses staffing' } },
+    { id: 'a', data: { kind: 'article', title: 'Slotkin discusses chief of staff Miller', summary: 'Stephen Miller is the White House chief of staff.' } },
   ];
   const links = rows.slice(0, 2).map(r => ({ claim_id: r.id, article_id: 'a', proposition: r.data.title }));
   const summaries = rows.slice(0, 2).map(r => ({ claimId: r.id, latestReportAt: '2026-11-08T12:00:00Z' }));
@@ -55,14 +55,14 @@ test('bare Miller mentions use explicit same-article context, not a global surna
   assert.equal(out[0].topicId, 'white-house-chief-of-staff');
   assert.equal(out[1].topicId, out[0].topicId);
   const other = { claim_id: 'other', article_id: 'a', proposition: 'Matt Miller also discussed his campaign.' };
-  assert.notEqual(organizeClaimCoverage(rows, [...links, other], summaries, now)[1].topicId, out[0].topicId);
+  assert.equal(organizeClaimCoverage(rows, [...links, other], summaries, now)[1].topicId, out[0].topicId);
 });
 test('feed linkages are exact, visible, canonical and deduplicated, never inherited from a shared topic', () => {
   const rows = [
     { id: 'c1', data: { kind: 'claim', title: 'Trump may fire Hegseth.', observations: [{ articleId: 'a1' }] } },
     { id: 'c2', data: { kind: 'claim', title: 'Hegseth may be replaced.' } },
-    { id: 'owner:a1', data: { baseId: 'a1', kind: 'article', title: 'Hegseth future' } },
-    { id: 'a2', data: { kind: 'article', title: 'Hegseth future' } },
+    { id: 'owner:a1', data: { baseId: 'a1', kind: 'article', title: 'Hegseth future', publishedAt: '2026-11-08T12:00:00Z' } },
+    { id: 'a2', data: { kind: 'article', title: 'Hegseth future', publishedAt: '2026-11-08T11:00:00Z' } },
     { id: 'hidden', data: { kind: 'article', title: 'Hidden Hegseth report', hidden: true } },
   ];
   const snapshot = structuredClone(rows);
@@ -87,7 +87,7 @@ test('fresh saves cannot revive old or undated claims; historical background is 
     assert.equal(organizeClaimCoverage(rows, links, [{ claimId: 'stats', latestReportAt }], now)[0].ongoing, false);
 });
 
-test('one topic has one primary home; related categories stay as detail tags and cannot outvote distinct articles', () => {
+test('one article focus has one primary home regardless of the quantity of differently categorized claims', () => {
   const statements = [
     ['staff1', 'a1', 'Stephen Miller would replace Susie Wiles as chief of staff.'],
     ['staff2', 'a2', 'Susie Wiles is departing as chief of staff.'],
@@ -95,7 +95,7 @@ test('one topic has one primary home; related categories stay as detail tags and
   ];
   const rows = [
     ...statements.map(([id, , title]) => ({ id, data: { kind: 'claim', title } })),
-    ...['a1', 'a2', 'a3'].map(id => ({ id, data: { kind: 'article', title: 'White House staffing reporting' } })),
+    ...['a1', 'a2', 'a3'].map(id => ({ id, data: { kind: 'article', title: 'Stephen Miller / Susie Wiles: White House chief-of-staff transition' } })),
   ];
   const links = statements.map(([claim_id, article_id, proposition]) => ({ claim_id, article_id, proposition }));
   const summaries = statements.map(([claimId]) => ({ claimId, latestReportAt: '2026-11-08T12:00:00Z' }));
@@ -118,7 +118,7 @@ test('geography alone does not collapse unrelated military and diplomatic develo
     ['talks', 'Iran and the other countries are negotiating a ceasefire.'],
   ];
   const rows = statements.flatMap(([id, title]) => [
-    { id, data: { kind: 'claim', title } }, { id: `${id}-article`, data: { kind: 'article', title: 'Iran reporting' } },
+    { id, data: { kind: 'claim', title } }, { id: `${id}-article`, data: { kind: 'article', title } },
   ]);
   const out = organizeClaimCoverage(rows, statements.map(([claim_id, proposition]) =>
     ({ claim_id, article_id: `${claim_id}-article`, proposition })),
@@ -126,6 +126,6 @@ test('geography alone does not collapse unrelated military and diplomatic develo
   assert.notEqual(out[0].topicId, out[1].topicId);
   assert.notEqual(out[0].topicTitle, out[1].topicTitle);
   assert.deepEqual(out.map(r => r.categoryId), ['operations-enforcement', 'diplomacy-agreements']);
-  assert.equal(out[0].topicTitle, 'Iran · Operations & Enforcement');
-  assert.equal(out[1].topicTitle, 'Iran · Diplomacy & Agreements');
+  assert.equal(out[0].topicTitle, 'Iran — military operations');
+  assert.equal(out[1].topicTitle, 'Iran — diplomacy & negotiations');
 });

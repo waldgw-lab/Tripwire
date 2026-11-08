@@ -31,6 +31,7 @@ export * from './automationHealthMode';
 export * from './automationHealthPolicy';
 export * from './automationHealthProvider';
 export * from './automationJob';
+export * from './claimArticlePlacement';
 export * from './claimCategory';
 export * from './claimDirectionInput';
 export * from './claimDirectionInputDirection';

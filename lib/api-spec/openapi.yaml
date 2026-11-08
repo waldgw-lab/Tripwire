@@ -102,6 +102,16 @@ paths:
                       items: { $ref: "#/components/schemas/ClaimCategory" }
                     topicId: { type: string }
                     topicTitle: { type: string }
+                    developments:
+                      type: array
+                      items: { type: string }
+                    relatedSubjects:
+                      type: array
+                      items: { type: string }
+                    placements:
+                      type: array
+                      items:
+                        $ref: "#/components/schemas/ClaimArticlePlacement"
                     classificationReason: { type: string }
                     articleIds:
                       type: array
@@ -574,6 +584,25 @@ paths:
               schema: { type: string, format: binary }
 components:
   schemas:
+    ClaimArticlePlacement:
+      type: object
+      required: [categoryId, primaryCategory, topicId, topicTitle, articleIds, developments, secondaryCategories]
+      properties:
+        categoryId: { type: string }
+        primaryCategory: { type: string }
+        topicId: { type: string }
+        topicTitle: { type: string }
+        articleIds: { type: array, items: { type: string } }
+        developments: { type: array, items: { type: string } }
+        relatedSubjects: { type: array, items: { type: string } }
+        secondaryCategories:
+          type: array
+          items: { $ref: "#/components/schemas/ClaimCategory" }
+        classificationReason: { type: string }
+        firstDate: { type: ["string", "null"] }
+        lastDate: { type: ["string", "null"] }
+        latestReportAt: { type: ["string", "null"] }
+        ongoing: { type: boolean }
     ClaimProcessingRun:
       type: object
       required: [jobId, articleId, status, claims, error, updatedAt, bodyCharacters, current]

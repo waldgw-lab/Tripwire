@@ -1,14 +1,14 @@
 import { useMemo } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { categoryKey, categoryLabel, groupKey, topicLabel, type ClaimFeedFilter, type ClaimLinkMode, type useClaimLinkage } from '@/lib/claim-groups';
+import { categoryKey, categoryLabel, groupKey, topicLabel, summariesForClaim, type ClaimFeedFilter, type ClaimLinkMode, type useClaimLinkage } from '@/lib/claim-groups';
 
 export function ClaimLinkFilter({ value, onChange, linkage }: { value: ClaimFeedFilter; onChange: (v: ClaimFeedFilter) => void; linkage: ReturnType<typeof useClaimLinkage> }) {
   const { summaries, summaryById, categoryById, linkageKnown } = linkage;
   const tree = useMemo(() => {
     const cats = new Map<string, Map<string, string>>();
-    for (const s of summaries.data ?? []) {
-      if (!s.articleIds?.length) continue;
+    for (const parent of summaries.data ?? []) for (const s of summariesForClaim(parent)) {
+      if (!s?.articleIds?.length) continue;
       const ck = categoryKey(s);
       const m = cats.get(ck) ?? new Map(); m.set(groupKey(s), topicLabel(s)); cats.set(ck, m);
     }
