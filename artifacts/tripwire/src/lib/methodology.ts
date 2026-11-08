@@ -1,0 +1,72 @@
+/** Product methodology, not live operating status. Keep aligned with policy changes. */
+export type MethodologySection = {
+  id: string;
+  title: string;
+  introduction: string;
+  concepts: { title: string; text: string }[];
+};
+
+export const methodologySections: MethodologySection[] = [
+  {
+    id: 'principles', title: 'App-wide principles',
+    introduction: 'Tripwire organizes consequential reporting about decisions, advice, leadership, institutional relationships and accountability. Its purpose is to make reporting traceable and understandable—not to turn repetition or automated extraction into proof.',
+    concepts: [
+      { title: 'Keep the units separate', text: 'An article is a reporting item. A claim is a specific reported proposition. A topic groups related developments for navigation. A Coverage subject is an organization, position, person or issue. These are connected, but their counts are not interchangeable.' },
+      { title: 'Attribution is not verification', text: '“An outlet reported this” does not mean Tripwire established that it happened. Preserve tentative wording, denials, corrections and the distinction between a reporter’s account, a quoted source and supplied analysis. A topic group does not merge claims or establish a resolved outcome.' },
+      { title: 'Reporting volume is not source independence', text: 'Several articles can repeat one origin. Article totals, source mentions, anonymous-source descriptions and reviewed evidence paths are separate measures. Similar anonymous descriptions do not establish a person’s identity or independent confirmation, and potentially overlapping groups must not be added into a false total.' },
+      { title: 'Retained content and selected text', text: 'Available article text and capture history are stored in the database, not as application source code. Retained raw representations and earlier extracted versions are separate from the text selected for display. Cleaning the display copy must preserve source history; background refreshes must not silently restore an older retained body.' },
+      { title: 'Distinguish discovery, retrieval and completeness', text: 'Finding a headline or URL does not mean the article body was retrieved. Minimal, partial and complete-content indications describe what is retained. A user-confirmed complete copy is not independent verification of its assertions. File parsing likewise does not imply that every original binary file is archived.' },
+      { title: 'Use dates honestly', text: 'Publication time, ingestion time and processing time have different meanings. Unknown publication times stay unknown rather than being replaced with ingestion time. Dates use day and abbreviated month, such as 8 NOV; the year appears when outside the current year. Where shown, article times are labeled ET.' },
+      { title: 'Separate automation permissions', text: 'Local processing of retained text, publisher retrieval, paid-model extraction and autonomous decisions are different capabilities. A configured provider is not a validated connection or permission to send real/private content. Optional review of identity or source independence must not turn every article-backed claim into a verification chore.' },
+    ],
+  },
+  {
+    id: 'feed', title: 'Feed',
+    introduction: 'The Feed is the article-level view: what was discovered, what is retained, why it matters to the monitoring scope, and where to inspect or improve the content.',
+    concepts: [
+      { title: 'Publisher intake and fallbacks', text: 'Intake uses available publisher feeds and sitemaps, with fallback discovery where supported. Fallback headlines are discovery—not proof of full publisher access. Retrieval diagnostics distinguish successful content, access restrictions, failures and work not yet attempted. Missing content does not justify bypassing access restrictions.' },
+      { title: 'Identity before headline similarity', text: 'Source URLs and existing record identity matter more than a headline alone: publishers can change titles. The standard paste, URL and PDF/DOC/DOCX analyzer supports both Dashboard intake and item-level enrichment. A possible match is presented for a choice to update the matched item or create a separate item; content must not silently overwrite another article.' },
+      { title: 'Clean the body, retain the source', text: 'The analyzer separates reporting from navigation, recommendation cards, advertisements and other page furniture. Byline, contributing credits, publication metadata and content type belong in their own fields. The selected body should keep the reporting paragraphs, while retained source versions make cleanup and extraction decisions inspectable.' },
+      { title: 'Content type follows available evidence', text: 'Publisher labels, structured metadata and reliable URL patterns help distinguish news, opinion, editorial, interviews/commentary, video and live updates. A video can still have a useful description or transcript worth retaining. Ordinary News need not add a badge to the feed row; type and available classification evidence can be inspected in the detail pane.' },
+      { title: 'Impact and enrichment priority', text: 'Impact organizes relevance and attention, not truth or outlet credibility. Critical enrichment takes priority over High. Low items can retain useful content already available at intake without requiring extra background retrieval. The default Feed excludes Low, but it remains selectable; filtering an item out does not delete it.' },
+      { title: 'Manual enrichment queue', text: 'The Dashboard queue surfaces Critical items ingested in the last 12 hours that still need enriched text. This is an ingestion window, not a publication-date window. Its eligible count can change as time passes, content improves or classifications change. Background submissions let work continue on other items.' },
+      { title: 'Flags, corrections and claim links', text: 'Flags are a workspace attention marker that can be counted and filtered, not an assessment of truth. Classification corrections explain that item’s judgment; they do not exclude a subject globally or prove source independence. Item details expose exact linked claims, their topic home and secondary category tags rather than treating every article on a similar subject as linked.' },
+    ],
+  },
+  {
+    id: 'claims', title: 'Claims',
+    introduction: 'Claims makes related reporting understandable through primary development categories, topic threads, distinct reporting articles and passage-backed statements.',
+    concepts: [
+      { title: 'Extraction is not adjudication', text: 'New retained reporting is processed locally into passage-backed claims using rules, without a model or fresh publisher request for that step. Quotes and source references remain attached. “No matching statements” means the current rules found none—not that the article contains no claims, and not that its assertions are false.' },
+      { title: 'One primary home per topic', text: 'A topic appears under one primary category rather than being split across several areas. Primary placement uses distinct article coverage, not the number of extracted statements; catalog order breaks ties. Other supported categories are secondary topic tags in the details. These tags describe related reporting in the thread, not necessarily every individual statement.' },
+      { title: 'Distinct developments, not just shared names', text: 'Related staffing reporting about Miller/Wiles belongs together; Hegseth is a separate thread. A country alone is too broad to identify one development: Iranian military operations and diplomatic negotiations need distinguishable scopes. Grouping is navigation, not permission to resolve an ambiguous person or combine unrelated propositions.' },
+      { title: 'Articles first, claims second', text: 'Topic coverage leads with distinct linked articles. Each article’s statements are grouped under that article, with claim counts secondary. Multiple statements or captures from one article are not multiple reporting articles. An article may genuinely report on more than one distinct development; exact source links are preserved rather than invented or erased for the grouping.' },
+      { title: 'Current reporting and ongoing developments', text: 'Recency follows linked reporting dates, not the latest record save. The current local organization uses a 14-day reporting window for eligible ongoing developments and excludes recognized historical/background statements. Ongoing is a navigation aid—not confirmation, a prediction or proof that an issue remains unresolved. Search, topic/category filters and sort controls help inspect the broader record.' },
+      { title: 'Selected text versus extraction history', text: 'Recent processing shows one current row per article, based on its selected text. Other retained versions are separate history. Per-version extraction counts overlap and must not be added together. Earlier claim links and evidence remain preserved; choosing cleaner text does not automatically erase historical claims.' },
+      { title: 'Direction belongs to the proposition', text: 'Where direction is assessed, positive or negative treatment concerns the claim’s subject—not the sentiment of every paragraph in the article, and not an outlet-wide judgment. Uncertainty and disagreement remain visible; article attributions do not automatically become independently confirmed evidence paths.' },
+    ],
+  },
+  {
+    id: 'coverage', title: 'Coverage',
+    introduction: 'Coverage is the organization-first view of the canonical subject registry, connecting organizations, positions and people to the reporting scope, evidence and monitoring history.',
+    concepts: [
+      { title: 'Organization → position → person', text: 'Browse institutions, their positions and linked individuals together. Unplaced people and positions remain visible rather than being forced into an organization. Issues and other subjects have their own place. A role belongs to a position; a named person’s relationship to that role needs its own context and support.' },
+      { title: 'Identity and role links need support', text: 'Aliases help find a subject but do not by themselves prove that two identities are the same. Historical or supplied named-holder context must not be presented as a verified current appointment. Similar anonymous-source descriptions remain source references, not identified participants.' },
+      { title: 'Discovery candidates are not established identities', text: 'Automated extraction can suggest an entity or an external identifier, but a matching code or number in a passage does not prove who it identifies. Unresolved candidates must stay separate until trusted subject-to-identifier evidence or an explicit identity decision supports a link.' },
+      { title: 'Priorities and analyst control', text: 'Monitoring priorities and states organize attention and eligibility; they are not truth ratings. Analyst pins, unresolved identities and retained evidence matter. Missing access or an unavailable extractor is not evidence that a subject has become less relevant. Proposed changes and applied decisions must remain distinguishable.' },
+      { title: 'Observe-only preparation and activation gates', text: 'Entity discovery, calibration and live decision application are separate stages. Observe-only preparation does not authorize real-article or private-upload model processing. Provider configuration, schema/exact-quotation validation, an approved private reporting trial, calibration and explicit activation approval are distinct gates. Consult Coverage’s operating controls for current status; this page does not activate anything.' },
+      { title: 'Budget reservations are not billed cost', text: 'The prepared entity-extraction trial policy uses a $1 ceiling per UTC day, a conservative $0.10 reservation per attempt and a 750,000-token daily allowance. These are extraction limits, not an account-wide spending limit. Failed or interrupted attempts can retain their reservation when charges are uncertain; a lower reported cost does not imply an automatic refund or permission for more work.' },
+    ],
+  },
+  {
+    id: 'news-media', title: 'News Media',
+    introduction: 'News Media connects outlets and journalists to the articles they actually published or contributed to, while keeping bylines, roles and sourcing distinctions intact.',
+    concepts: [
+      { title: 'Credits belong to articles', text: 'A person can author one item, contribute to another or serve in a different credited role. Preserve the article’s original byline wording, multiple primary authors and contributing credits separately. Being interviewed, quoted or mentioned is not automatically a byline or contributor credit.' },
+      { title: 'Outlet coverage follows actual credits', text: 'Journalist profiles and outlet views are built from exact article credits. Do not carry a person’s work at one outlet into another outlet’s totals, or make an article-level role a permanent attribute of that person. Article counts use distinct linked records rather than repeated credit appearances.' },
+      { title: 'Names and aliases are not interchangeable by default', text: 'Keep the spelling, initials and suffixes used in the source credit. Aliases can connect supported name variants, but a shared surname is not enough to merge journalists. Uncertain attribution should remain inspectable rather than guessed.' },
+      { title: 'Original reporting versus repetition', text: 'An outlet publishing a story does not establish that it originated every assertion in it. Trace the earliest supported origin, the outlet’s own sourcing or evidence, and any independently reported additions separately. A citation, rewrite or similar anonymous-source description does not establish a new independent source.' },
+      { title: 'Profiles are navigation, not endorsements', text: 'Tracking an outlet or journalist supports research and coverage review; it does not endorse their reporting, assign blanket credibility or verify their claims. Missing assessments and zero assessed counts should not be read as evidence that no original reporting exists.' },
+    ],
+  },
+];

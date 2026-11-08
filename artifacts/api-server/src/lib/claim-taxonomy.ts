@@ -1,10 +1,10 @@
 import { developmentKind } from "./claim-developments";
 
 export const CLAIM_CATEGORIES = [
-  { id: "leadership-staffing", label: "Leadership & Staffing", description: "Appointments, nominations, possible firings, departures and succession." },
+  { id: "leadership-staffing", label: "Leadership & Staffing", description: "Appointments, nominations, possible firings, departures and succession, including related advice and confidence about the same personnel development." },
   { id: "authority-structure", label: "Authority & Organizational Structure", description: "Institutional powers, reporting lines, reorganizations and delegated authority." },
-  { id: "advice-deliberations", label: "Advice & Deliberations", description: "Recommendations, options, consultations and internal decision-making." },
-  { id: "institutional-relationships", label: "Institutional Relationships & Confidence", description: "Trust, disagreements, pressure and confidence between officials or institutions." },
+  { id: "advice-deliberations", label: "Advice & Deliberations", description: "Recommendations, options and internal planning without a more specific supported development; otherwise secondary context for that development." },
+  { id: "institutional-relationships", label: "Institutional Relationships & Confidence", description: "Institutional trust, disagreements and confidence as the main development; otherwise secondary context for a specific personnel, policy, legal or operational story." },
   { id: "policy-rulemaking", label: "Policy & Rulemaking", description: "Legislation, executive orders, regulations, policy changes and formal directives." },
   { id: "operations-enforcement", label: "Operations & Enforcement", description: "Military missions, deployments, enforcement activity and operational results." },
   { id: "diplomacy-agreements", label: "Diplomacy & Agreements", description: "Negotiations, diplomatic engagements, ceasefires and international commitments." },
@@ -119,7 +119,8 @@ export function organizeClaimCoverage<T extends Summary>(records: Row[], links: 
   };
   for (const [id, article] of articles) addContext(id, article.title || "");
   for (const link of links) if (link.proposition) addContext(link.article_id, link.proposition.slice(0, 6000));
-  return summaries.map(summary => {
+  const relatedByTopic = new Map<string, Set<CategoryId>>();
+  const organized = summaries.map(summary => {
     const claim = claims.get(summary.claimId) ?? {};
     const candidates = [...(byClaim.get(summary.claimId) ?? []),
       ...(claim.observations ?? []).map((o: any) => ({ article_id: o.articleId, proposition: claim.title }))];
@@ -138,7 +139,22 @@ export function organizeClaimCoverage<T extends Summary>(records: Row[], links: 
       claimCategory(claim.title || "", "", now);
     const selected = categorized.find(c => c.category === chosen) ?? { text: claim.title || "", headline: "", millerContext: undefined };
     const category = categoryById.get(chosen)!;
-    const topic = claimTopic(selected.text, selected.headline, chosen, summary.claimId, selected.millerContext);
+    const identified = claimTopic(selected.text, selected.headline, chosen, summary.claimId, selected.millerContext);
+    // A country is not a single development: military operations and diplomacy
+    // need distinguishable scopes, not one enormous "Iran" staffing/policy group.
+    const broadIssue = issues.some(([, id]) => id === identified.topicId);
+    const topic = broadIssue ? { topicId: `${identified.topicId}--${chosen}`, topicTitle: `${identified.topicTitle} · ${category.label}` } : identified;
+    const related = relatedByTopic.get(topic.topicId) ?? new Set<CategoryId>();
+    related.add(chosen);
+    for (const c of categorized) {
+      related.add(c.category);
+      // A specific proceeding can coexist with an explicit personnel action
+      // or confidence context in the same passage; don't discard that context.
+      const contextKind = developmentKind(c.text, c.headline, now);
+      if (contextKind === "Leadership & staffing") related.add("leadership-staffing");
+      if (contextKind === "Institutional relationships") related.add("institutional-relationships");
+    }
+    relatedByTopic.set(topic.topicId, related);
     const time = summary.latestReportAt ? Date.parse(summary.latestReportAt) : NaN;
     const background = /^\s*(?:since|in|during|back in)\s+(?:the\s+)?(?:19|20)\d{2}\b/i.test(selected.text) ||
       /\b(historically|on average|statistically|every midterm)\b/i.test(selected.text);
@@ -146,5 +162,33 @@ export function organizeClaimCoverage<T extends Summary>(records: Row[], links: 
       Number.isFinite(time) && time <= now + 300_000 && time >= now - 14 * 86_400_000;
     return { ...summary, ongoing, developmentType: category.label, categoryId: chosen, primaryCategory: category.label,
       ...topic, articleIds, classificationReason: `Automatic text-based organization. ${category.description} Topic groups do not merge claims, identify anonymous sources, establish confirmation or infer a resolved status.` };
+  });
+  // Give each actual topic ONE navigation home. A long article with many
+  // extracted statements must not outvote several distinct reporting articles.
+  const groups = new Map<string, typeof organized>();
+  for (const row of organized) {
+    const members = groups.get(row.topicId) ?? []; members.push(row); groups.set(row.topicId, members);
+  }
+  const assignments = new Map<string, { primary: CategoryId; secondary: typeof CLAIM_CATEGORIES[number][] }>();
+  for (const [topicId, members] of groups) {
+    const voters = new Map<CategoryId, Set<string>>();
+    for (const row of members) {
+      if (row.categoryId === "uncategorized") continue;
+      const ids = voters.get(row.categoryId) ?? new Set<string>();
+      for (const articleId of row.articleIds) ids.add(articleId);
+      voters.set(row.categoryId, ids);
+    }
+    const ranked = [...voters].sort((a, b) => b[1].size - a[1].size ||
+      CLAIM_CATEGORIES.findIndex(c => c.id === a[0]) - CLAIM_CATEGORIES.findIndex(c => c.id === b[0]));
+    const primary = ranked[0]?.[0] ?? "uncategorized";
+    const secondary = CLAIM_CATEGORIES.filter(c => c.id !== primary && c.id !== "uncategorized" && relatedByTopic.get(topicId)?.has(c.id));
+    assignments.set(topicId, { primary, secondary });
+  }
+  return organized.map(row => {
+    const assignment = assignments.get(row.topicId)!;
+    const category = categoryById.get(assignment.primary)!;
+    return { ...row, categoryId: category.id, primaryCategory: category.label, developmentType: category.label,
+      secondaryCategories: assignment.secondary,
+      classificationReason: `One primary category for this topic, chosen by distinct article coverage, with catalog order breaking ties. This statement's original category: ${row.primaryCategory}. Secondary tags describe related reporting in the topic, not additional groups. ${row.classificationReason}` };
   });
 }

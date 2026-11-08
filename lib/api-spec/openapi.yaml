@@ -23,15 +23,15 @@ paths:
                   recent:
                     type: array
                     items:
-                      type: object
-                      required: [articleId, title, status, claims, error, updatedAt]
-                      properties:
-                        articleId: { type: string }
-                        title: { type: string }
-                        status: { type: string }
-                        claims: { type: integer }
-                        error: { type: ["string", "null"] }
-                        updatedAt: { type: string }
+                      allOf:
+                        - $ref: "#/components/schemas/ClaimProcessingRun"
+                        - type: object
+                          required: [title, history]
+                          properties:
+                            title: { type: string }
+                            history:
+                              type: array
+                              items: { $ref: "#/components/schemas/ClaimProcessingRun" }
   /tripwire/claims/processing/{articleId}:
     post:
       operationId: processArticleClaims
@@ -97,6 +97,9 @@ paths:
                     developmentReason: { type: ["string", "null"] }
                     categoryId: { type: string }
                     primaryCategory: { type: string }
+                    secondaryCategories:
+                      type: array
+                      items: { $ref: "#/components/schemas/ClaimCategory" }
                     topicId: { type: string }
                     topicTitle: { type: string }
                     classificationReason: { type: string }
@@ -571,6 +574,18 @@ paths:
               schema: { type: string, format: binary }
 components:
   schemas:
+    ClaimProcessingRun:
+      type: object
+      required: [jobId, articleId, status, claims, error, updatedAt, bodyCharacters, current]
+      properties:
+        jobId: { type: string }
+        articleId: { type: string }
+        status: { type: string }
+        claims: { type: integer }
+        error: { type: ["string", "null"] }
+        updatedAt: { type: string }
+        bodyCharacters: { type: ["integer", "null"] }
+        current: { type: boolean }
     ClaimCategory:
       type: object
       required: [id, label, description]

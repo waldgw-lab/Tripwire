@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { SecondaryCategoryTags } from '@/components/provenance/category-tags';
 import { Link } from 'wouter';
 import { ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
 import { byKind, fmtDate, useWorkspace } from '@/lib/workspace';
@@ -64,6 +65,7 @@ export function ArticleClaims({ articleId }: { articleId: string }) {
                   <span className="min-w-0 flex-1">{t.title}</span>
                   <span className="font-mono text-[10px] text-muted-foreground">{t.ids.length}</span>
                 </button>
+                <SecondaryCategoryTags categories={summaryById.get(t.ids[0] ?? '')?.secondaryCategories} />
                 {to && <ul className="mt-0.5">
                   {t.ids.map(id => {
                     const s = summaryById.get(id);

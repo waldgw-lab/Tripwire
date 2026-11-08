@@ -49,6 +49,19 @@ test('confirmed complete human-supplied text is not overwritten by RSS', () => {
   assert.equal(merged.fullText, 'Complete');
   assert.equal(merged.fullTextComplete, true);
 });
+test('background snapshots cannot restore a retained historical complete body after cleanup', () => {
+  const oldHash = 'a'.repeat(64), newHash = 'b'.repeat(64);
+  const stale = { fullText: 'Older article with recommendations and unrelated widgets', fullTextHash: oldHash, fullTextComplete: true };
+  const current = { fullText: 'Clean reviewed article', fullTextHash: newHash, fullTextComplete: true,
+    retainedContent: [{ id: 'old', source: 'paste', bodyHash: oldHash }, { id: 'new', source: 'paste:cleaned', bodyHash: newHash }] };
+  const protectedMerge = mergeArticleContent(current, stale, { background: true });
+  assert.equal(protectedMerge.fullTextHash, newHash);
+  assert.equal(protectedMerge.fullText, current.fullText);
+  assert.deepEqual(protectedMerge.retainedContent, current.retainedContent);
+  assert.equal(mergeArticleContent(current, stale).fullTextHash, oldHash, 'an explicit reviewed import can still replace the selection');
+  const fresh = { ...stale, fullTextHash: 'c'.repeat(64) };
+  assert.equal(mergeArticleContent(current, fresh, { background: true }).fullTextHash, fresh.fullTextHash);
+});
 test('markup becomes readable plain text while raw captures remain separate', () => {
   assert.equal(plainText('<script>alert(1)</script><p>Reporting &amp; evidence &#8212; &#x41;.</p><p>Next.</p>'), 'Reporting & evidence — A.\nNext.');
 });

@@ -46,7 +46,7 @@ export async function recordsFor(userId?: string | null, includeContent = true) 
       if (base && r.owner !== "public") Object.assign(data, publicationUpdate(data, base.data));
       Object.assign(data, publisherIdentityUpdate(data as RecordData, base?.data as RecordData | undefined));
       const content = mergeArticleContent((r.owner !== "public" ? data : base?.data ?? {}) as { fullText?: string; retainedContent?: Capture[]; fullTextComplete?: boolean },
-        (r.owner !== "public" ? base?.data ?? {} : data) as { fullText?: string; retainedContent?: Capture[]; fullTextComplete?: boolean });
+        (r.owner !== "public" ? base?.data ?? {} : data) as { fullText?: string; retainedContent?: Capture[]; fullTextComplete?: boolean }, { background: true });
       Object.assign(data, content, { flagged: data.flagged ?? data.saved ?? false });
       // Raw publisher content and complete article bodies are never returned anonymously.
       if (!userId) { delete data.fullText; delete data.retainedContent; data.fullTextComplete = false; }
@@ -81,7 +81,7 @@ export async function writeRecord(userId: string, data: RecordData, protectMetad
     data = { ...data, verifiedHeadlines: mergeHeadlines(data, original?.verifiedHeadlines, incomingHeadlines) };
     if (original) {
       const incoming = data;
-      data = { ...original, ...data, ...mergeArticleContent(original, data), automaticAssessment: original.automaticAssessment, impact: original.impact, topic: original.topic,
+      data = { ...original, ...data, ...mergeArticleContent(original, data, { background: protectMetadata || analystEdit }), automaticAssessment: original.automaticAssessment, impact: original.impact, topic: original.topic,
         impactMode: original.impactMode, topicMode: original.topicMode, impactOverrideOrigin: original.impactOverrideOrigin,
         topicOverrideOrigin: original.topicOverrideOrigin, classificationRevision: original.classificationRevision };
       if (analystEdit) {
@@ -115,12 +115,12 @@ export async function writeRecord(userId: string, data: RecordData, protectMetad
         // Use the current shared projection, not the pre-promotion raw shadow.
         const current = original ?? existing.data as RecordData;
         const incoming = data;
-        data = { ...incoming, ...current, ...mergeArticleContent(current, incoming), ...mergeClassification(current, incoming), retrieval: incoming.retrieval,
+        data = { ...incoming, ...current, ...mergeArticleContent(current, incoming, { background: true }), ...mergeClassification(current, incoming), retrieval: incoming.retrieval,
           ...(current.summary || !incoming.summary ? {} : { summary: incoming.summary }),
           ...(current.byline || !incoming.byline ? {} : { byline: incoming.byline, credits: incoming.credits, journalists: incoming.journalists }),
           ...publicationUpdate(current, incoming) };
       }
-      const preserved = mergeArticleContent(existing.data as { fullText?: string; fullTextComplete?: boolean; retainedContent?: Capture[] }, data);
+      const preserved = mergeArticleContent(existing.data as { fullText?: string; fullTextComplete?: boolean; retainedContent?: Capture[] }, data, { background: protectMetadata || analystEdit });
       // Editing metadata or flagging must not erase already retained source captures.
       data = { ...data, ...preserved, ...mergeClassification(existing.data, data) };
       if (!protectMetadata && existing.data.retrieval) data.retrieval = existing.data.retrieval as RecordData["retrieval"];

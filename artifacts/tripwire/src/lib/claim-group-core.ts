@@ -1,7 +1,7 @@
 /** Pure claim grouping / linkage helpers. No hooks or React imports: unit-testable. */
 export type ClaimSummary = {
   claimId: string; attributions: number; firstDate: string | null; lastDate: string | null; ongoing?: boolean;
-  latestReportAt?: string | null; categoryId?: string; primaryCategory?: string; topicId?: string; topicTitle?: string; articleIds?: string[]; classificationReason?: string; developmentType?: string | null; developmentReason?: string | null;
+  latestReportAt?: string | null; categoryId?: string; primaryCategory?: string; secondaryCategories?: { id: string; label: string; description: string }[]; topicId?: string; topicTitle?: string; articleIds?: string[]; classificationReason?: string; developmentType?: string | null; developmentReason?: string | null;
 };
 type Cat = { id: string; label: string; description?: string };
 export const UNCATEGORIZED = 'uncategorized';

@@ -20,10 +20,11 @@ export async function queueArticleClaims(articleId: string) {
   if(!article || article.data.hidden)throw new LiveClaimInputError("Article is unavailable");
   const hash=article.data.fullTextHash;
   if(typeof hash!=="string" || hash.length!==64)throw new LiveClaimInputError("Add retained article text before processing claims");
-  await client.query(`insert into tripwire_claim_jobs(workspace,article_id,hash,policy) values($1,$2,$3,$4)
-   on conflict(workspace,article_id,hash,policy) do update set status='pending',attempts=0,cursor=0,result_count=0,error=null,updated_at=now()`,
+  const result=await client.query(`insert into tripwire_claim_jobs(workspace,article_id,hash,policy) values($1,$2,$3,$4)
+   on conflict(workspace,article_id,hash,policy) do update set status='pending',attempts=0,cursor=0,result_count=0,error=null,updated_at=now()
+   where tripwire_claim_jobs.status in ('failed','superseded') returning article_id`,
    [W,article.data.baseId??article.id,hash,CLAIM_POLICY]);
-  return {queued:true};
+  return {queued:!!result.rowCount};
  } finally {client.release();}
 }
 
@@ -125,18 +126,41 @@ export async function runClaimTick() {
 }
 
 export async function claimProcessing() {
- // Resolve shadows once, not once per queued capture on every UI poll.
- const view=`with article_view as materialized(select distinct on(coalesce(data->>'baseId',id))
-  coalesce(data->>'baseId',id) article_id,data from tripwire_records where kind='article' and owner in('public',$1)
-  order by coalesce(data->>'baseId',id),(owner=$1) desc)`;
- const visible=`from tripwire_claim_jobs j join article_view a on a.article_id=j.article_id
-  and coalesce(a.data->>'hidden','false')<>'true' where j.workspace=$1 and j.policy=$2`;
- const counts=(await pool.query(`${view} select count(*) filter(where j.status='pending')::int pending,
-  count(*) filter(where j.status='failed')::int failed ${visible}`,[W,CLAIM_POLICY])).rows[0];
- const jobs=(await pool.query(`${view} select j.*,a.data->>'title' title ${visible}
-  order by(j.status='failed') desc,j.updated_at desc limit 12`,[W,CLAIM_POLICY])).rows;
- const recent=jobs.map(j=>({articleId:j.article_id,title:j.title??"Retained article",status:j.status,claims:j.result_count,error:j.error,updatedAt:j.updated_at.toISOString()}));
- return {policy:CLAIM_POLICY,pending:counts.pending,failed:counts.failed,recent};
+ // One database snapshot for counters AND rows; current means the selected
+ // body, not whichever historical capture happened to finish most recently.
+ const result=(await pool.query(`with article_view as materialized(
+  select distinct on(coalesce(data->>'baseId',id)) coalesce(data->>'baseId',id) article_id,data,updated_at
+  from tripwire_records where kind='article' and owner in('public',$1)
+  order by coalesce(data->>'baseId',id),(owner=$1) desc),
+ visible_jobs as materialized(
+  select j.*,a.data->>'title' title,a.data->>'fullTextHash' current_hash,a.updated_at article_updated_at
+  from tripwire_claim_jobs j join article_view a on a.article_id=j.article_id
+  where coalesce(a.data->>'hidden','false')<>'true' and j.workspace=$1 and j.policy=$2),
+ recent_articles as(
+  select article_id from visible_jobs group by article_id
+  order by bool_or(status='failed') desc,max(updated_at) desc,article_id limit 12)
+ select (select count(*)::int from visible_jobs where status='pending') pending,
+ (select count(*)::int from visible_jobs where status='failed') failed,
+ coalesce((select jsonb_agg(to_jsonb(v)||jsonb_build_object('body_characters',length(c.text))
+  order by v.updated_at desc,v.article_id,v.hash) from visible_jobs v
+  join recent_articles r using(article_id) left join tripwire_content c on c.hash=v.hash),'[]'::jsonb) jobs`,
+  [W,CLAIM_POLICY])).rows[0];
+ const byArticle=new Map<string,Row[]>();
+ for(const j of result.jobs as Row[]) {
+  const rows=byArticle.get(j.article_id)??[]; rows.push(j); byArticle.set(j.article_id,rows);
+ }
+ const run=(j:Row)=>({jobId:sourceKey(W,j.article_id,j.hash,j.policy),articleId:j.article_id,
+  status:j.status,claims:j.result_count,error:j.error??null,updatedAt:new Date(j.updated_at).toISOString(),
+  bodyCharacters:j.body_characters??null,current:j.hash===j.current_hash});
+ const recent=[...byArticle.values()].map(rows=>{
+  const selected=rows.find(j=>j.hash===j.current_hash);
+  const primary=selected?run(selected):{
+   jobId:sourceKey(W,rows[0].article_id,rows[0].current_hash,"not-processed"),
+   articleId:rows[0].article_id,status:"not-processed",claims:0,error:null,
+   updatedAt:new Date(rows[0].article_updated_at).toISOString(),bodyCharacters:null,current:true};
+  return {...primary,title:rows[0].title??"Retained article",history:rows.filter(j=>j!==selected).map(run)};
+ });
+ return {policy:CLAIM_POLICY,pending:result.pending,failed:result.failed,recent};
 }
 
 export function startClaimWorker() {

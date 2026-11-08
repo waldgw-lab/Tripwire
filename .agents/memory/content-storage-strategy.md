@@ -50,3 +50,15 @@ A successful ad-hoc public fetch does not establish that automated publisher acc
 **Why:** The same CNN page returned public HTML to one request while the application's requests received HTTP 403.
 
 **How to apply:** Preserve actual response provenance and keep publisher access failures/backoff honest. Local extraction of an already retrieved response can repair retained content without claiming the network restriction is resolved.
+
+Background refreshes and metadata edits must not restore an already retained
+historical body as the selected article text. Explicit reviewed imports may
+replace the selection.
+
+**Why:** A feed refresh can hold an older workspace snapshot while the user
+cleans an article. That snapshot's “complete” flag describes its old version;
+it must not silently undo the newer choice when the refresh finishes.
+
+**How to apply:** Submit fresh publisher content rather than a pre-fetch
+workspace snapshot, preserve source history, and check durability with a stale
+writer replay—not just an immediate successful import response.

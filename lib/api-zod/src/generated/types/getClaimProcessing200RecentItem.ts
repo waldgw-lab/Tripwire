@@ -4,13 +4,9 @@
  * Api
  * OpenAPI spec version: 1.0.0
  */
+import type { ClaimProcessingRun } from './claimProcessingRun';
 
-export type GetClaimProcessing200RecentItem = {
-  articleId: string;
+export type GetClaimProcessing200RecentItem = ClaimProcessingRun & {
   title: string;
-  status: string;
-  claims: number;
-  /** @nullable */
-  error: string | null;
-  updatedAt: string;
+  history: ClaimProcessingRun[];
 };

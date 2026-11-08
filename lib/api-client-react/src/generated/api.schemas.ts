@@ -4,6 +4,19 @@
  * Api
  * OpenAPI spec version: 1.0.0
  */
+export interface ClaimProcessingRun {
+  jobId: string;
+  articleId: string;
+  status: string;
+  claims: number;
+  /** @nullable */
+  error: string | null;
+  updatedAt: string;
+  /** @nullable */
+  bodyCharacters: number | null;
+  current: boolean;
+}
+
 export interface ClaimCategory {
   id: string;
   label: string;
@@ -1528,14 +1541,9 @@ export interface RefreshResult {
   refreshedAt: string;
 }
 
-export type GetClaimProcessing200RecentItem = {
-  articleId: string;
+export type GetClaimProcessing200RecentItem = ClaimProcessingRun & {
   title: string;
-  status: string;
-  claims: number;
-  /** @nullable */
-  error: string | null;
-  updatedAt: string;
+  history: ClaimProcessingRun[];
 };
 
 export type GetClaimProcessing200 = {
@@ -1565,6 +1573,7 @@ export type GetClaimCoverageSummaries200Item = {
   developmentReason?: string | null;
   categoryId?: string;
   primaryCategory?: string;
+  secondaryCategories?: ClaimCategory[];
   topicId?: string;
   topicTitle?: string;
   classificationReason?: string;

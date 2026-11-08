@@ -16,6 +16,17 @@ rather than adding noise to feed rows. Topic grouping is navigation, not permiss
 to merge claim evidence, assume independent confirmation, resolve anonymous
 identities or assert who holds an office. Retain ambiguous material for review.
 
+Each topic must have one primary category. Applicable secondary categories belong
+as tags in the item's details, not as duplicate topic groups in other areas.
+
+**Why:** The user does not want related items split across multiple category areas.
+
+**How to apply:** Assign the topic's home before filtering the overview, using
+distinct article coverage rather than the number of extracted statements. Show
+secondary context in Claims and the feed item's linked-claims details. A country
+alone is not a development: distinguish military, diplomatic and other scopes
+rather than collapsing unrelated reporting into one geographic group.
+
 Measure subtopic coverage primarily by distinct reporting articles, and group
 each article's claims beneath that article rather than presenting a flat list.
 Keep statement counts secondary and explicitly labeled.

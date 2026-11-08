@@ -34,6 +34,7 @@ export * from './automationJob';
 export * from './claimCategory';
 export * from './claimDirectionInput';
 export * from './claimDirectionInputDirection';
+export * from './claimProcessingRun';
 export * from './classificationEvidence';
 export * from './classificationSnapshot';
 export * from './contentCapture';

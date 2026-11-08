@@ -161,12 +161,13 @@ export async function refreshFeeds(_userId?: string | null) {
                 }
                 await tx.update(tripwireRecords).set({ data: archived, updatedAt: new Date() }).where(and(eq(tripwireRecords.id, recordId), eq(tripwireRecords.owner, owner)));
               });
-              const workspaceArticle = records.find(r => r.id === id && r.kind === "article");
               // Refresh an existing workspace shadow from retained publisher
               // content through the same override/audit rules as retrieval.
               const [shadow] = await db.select({ id: tripwireRecords.id }).from(tripwireRecords).where(eq(tripwireRecords.id, `workspace:${id}`));
-              if (shadow && workspaceArticle) {
-                try { await writeRecord("workspace", workspaceArticle, true); }
+              if (shadow) {
+                // Submit this fetch, never the workspace snapshot read before
+                // network I/O: an import may have replaced its body meanwhile.
+                try { await writeRecord("workspace", { ...data, id }, true); }
                 catch (error) { if (!(error instanceof Error && /dismissed/.test(error.message))) throw error; }
               }
             }

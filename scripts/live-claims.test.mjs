@@ -8,6 +8,7 @@ import {queueArticleClaims,runClaimTick,claimProcessing} from '../artifacts/api-
 import {reportingProvenance} from '../artifacts/api-server/src/lib/reporting-provenance.ts';
 import {claimCoverageSummaries} from '../artifacts/api-server/src/lib/reporting-summary.ts';
 import {correctDirection} from '../artifacts/api-server/src/lib/claim-direction.ts';
+import {recordsFor,writeRecord} from '../artifacts/api-server/src/lib/tripwire-store.ts';
 
 const text='Officials said the regional commanders strengthened air defenses after the attack.\nThe commanders failed to protect the northern supply route during the attack.';
 const hash=s=>createHash('sha256').update(JSON.stringify([s,s])).digest('hex');
@@ -152,6 +153,33 @@ test('real intake trigger, worker, versions, corrections, retries and summaries 
   await put('after-deletion',text);await runClaimTick();
   assert.equal((await admin.query('select count(*)::int n from tripwire_claim_families where proposition=$1',[family.proposition])).rows[0].n,1);
   assert.equal((await admin.query("select count(*)::int n from tripwire_records where data->>'baseId'=$1",[family.claim_id])).rows[0].n,0);
+  // A feed snapshot read before an import must not restore its historical body.
+  const cleaned='The mountain unit strengthened air defenses after the attack.';
+  const unclean=cleaned+'\nThe stale sidebar claimed the ministers failed to protect the supply route.';
+  const oldHash=await content(unclean),cleanHash=await content(cleaned);
+  await put('snapshot',unclean,{fullTextComplete:true,retainedContent:[{id:'original-copy',source:'paste',bodyHash:oldHash}]});
+  const stale=(await recordsFor('workspace')).find(r=>r.id==='snapshot');
+  await writeRecord('workspace',{...stale,fullText:cleaned,fullTextHash:cleanHash,fullTextLength:cleaned.length,fullTextComplete:true,
+   retainedContent:[...stale.retainedContent,{id:'clean-copy',source:'paste:cleaned',bodyHash:cleanHash}]});
+  await writeRecord('workspace',stale,true);
+  await writeRecord('workspace',stale,false,true);
+  const restored=(await recordsFor('workspace')).find(r=>r.id==='snapshot');
+  assert.equal(restored.fullText,cleaned);
+  assert.equal(restored.fullTextHash,cleanHash);
+  assert.ok(restored.retainedContent.some(c=>c.bodyHash===oldHash),'history remains available');
+  for(let n=0;n<20;n++)if(!await runClaimTick())break;
+  // Equal timestamps across different versions used to collide in React keys.
+  await admin.query("update tripwire_claim_jobs set updated_at=now() where article_id='snapshot'");
+  const status=await claimProcessing(),row=status.recent.find(r=>r.articleId==='snapshot');
+  assert.equal(new Set(status.recent.map(r=>r.articleId)).size,status.recent.length);
+  assert.equal(row.bodyCharacters,cleaned.length);
+  assert.equal(row.current,true);
+  assert.equal(row.status,'complete');
+  assert.equal(row.claims,1);
+  assert.ok(row.history.some(h=>h.bodyCharacters===unclean.length && h.claims===2 && !h.current));
+  assert.equal(new Set([row.jobId,...row.history.map(h=>h.jobId)]).size,1+row.history.length);
+  assert.equal((await queueArticleClaims('snapshot')).queued,false,'completed text does not silently rerun');
+  assert.equal((await claimProcessing()).pending,0);
  } finally {
   if(setPath)pool.off('connect',setPath);
   await admin.query('set search_path to public');

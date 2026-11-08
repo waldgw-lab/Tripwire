@@ -35,10 +35,15 @@ export function rssContent(item: object, sourceUrl: string) {
   return { retainedContent, fullText: text, contentRetained: !!text, retainedCharacters: text?.length ?? 0 };
 }
 type ArticleContent = { retainedContent?: Capture[]; fullText?: string; fullTextComplete?: boolean; fullTextHash?: string; fullTextLength?: number; contentNormalization?: { method: string; sourceCharacters: number; articleCharacters: number } };
-export function prefersIncomingContent(existing: ArticleContent, incoming: ArticleContent) {
+export function prefersIncomingContent(existing: ArticleContent, incoming: ArticleContent, options: { background?: boolean } = {}) {
   const oldLength = existing.fullText?.length ?? existing.fullTextLength ?? 0;
   const newLength = incoming.fullText?.length ?? incoming.fullTextLength ?? 0;
   if (!newLength) return false;
+  // A collector or metadata save may have started before a reviewed import.
+  // Its stale "complete" snapshot is history, not permission to restore it.
+  if (options.background && existing.fullTextHash && incoming.fullTextHash &&
+    existing.fullTextHash !== incoming.fullTextHash &&
+    existing.retainedContent?.some(c => c.bodyHash === incoming.fullTextHash)) return false;
   if (!oldLength || !!incoming.fullTextComplete && !!(incoming.fullText || incoming.fullTextHash)) return true;
   // A previously confirmed copy may still contain page controls/recommendations.
   // Bounded publisher-copy cleanup can repair that while retaining the raw copy.
@@ -52,12 +57,12 @@ export function prefersIncomingContent(existing: ArticleContent, incoming: Artic
   if (existing.contentNormalization && !incoming.contentNormalization) return false;
   return newLength > oldLength;
 }
-export function mergeArticleContent(existing: ArticleContent, incoming: ArticleContent) {
+export function mergeArticleContent(existing: ArticleContent, incoming: ArticleContent, options: { background?: boolean } = {}) {
   const retainedContent = mergeCaptures(existing.retainedContent, incoming.retainedContent);
   // A short subsequent feed excerpt must never overwrite a longer retained body.
   const oldLength = existing.fullText?.length ?? existing.fullTextLength ?? 0;
   const newLength = incoming.fullText?.length ?? incoming.fullTextLength ?? 0;
-  const useIncoming = prefersIncomingContent(existing, incoming);
+  const useIncoming = prefersIncomingContent(existing, incoming, options);
   const chosen = useIncoming ? incoming : existing;
   return { retainedContent, fullText: chosen.fullText, fullTextHash: chosen.fullTextHash, fullTextLength: useIncoming ? newLength : oldLength,
     fullTextComplete: chosen.fullTextComplete ?? false, contentNormalization: chosen.contentNormalization,

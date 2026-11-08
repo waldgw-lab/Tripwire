@@ -1,5 +1,8 @@
 import { useGetRetrievalReport } from '@workspace/api-client-react';
 import { RefreshCw } from 'lucide-react';
+import { useLocation, useSearch } from 'wouter';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Methodology } from '@/components/dashboard/methodology';
 import { cn } from '@/lib/utils';
 import { ErrorState, PageHead } from '@/components/bits';
 import { Importer } from '@/components/importer';
@@ -78,16 +81,34 @@ function RetrievalTable() {
 }
 
 export default function DashboardPage() {
+  const search = useSearch();
+  const [location, setLocation] = useLocation();
+  const tab = new URLSearchParams(search).get('tab') === 'methodology' ? 'methodology' : 'operations';
+  const onTab = (v: string) => {
+    const p = new URLSearchParams(search);
+    if (v === 'methodology') p.set('tab', 'methodology'); else p.delete('tab');
+    const q = p.toString();
+    setLocation(q ? `${location}?${q}` : location);
+  };
   return (
     <div className="tw-rise">
       <PageHead title="Dashboard" />
-      <div className="mx-auto w-full max-w-[1000px] px-5 py-6 md:px-8">
-        <Importer />
-        <CriticalEnrichmentQueue />
-        <IntakeHealth />
-        <RetrievalTable />
-        <FeedbackLog />
-      </div>
+      <Tabs value={tab} onValueChange={onTab} className="mx-auto w-full max-w-[1000px] px-5 py-6 md:px-8">
+        <TabsList aria-label="Dashboard views" className="rounded-md border border-border bg-card/80" data-testid="tabs-dashboard">
+          <TabsTrigger value="operations" className="font-mono text-[11px] uppercase tracking-wider" data-testid="tab-operations">Operations</TabsTrigger>
+          <TabsTrigger value="methodology" className="font-mono text-[11px] uppercase tracking-wider" data-testid="tab-methodology">Methodology</TabsTrigger>
+        </TabsList>
+        <TabsContent value="operations" forceMount className="mt-6 data-[state=inactive]:hidden">
+          <Importer />
+          <CriticalEnrichmentQueue />
+          <IntakeHealth />
+          <RetrievalTable />
+          <FeedbackLog />
+        </TabsContent>
+        <TabsContent value="methodology" className="mt-6">
+          <Methodology />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

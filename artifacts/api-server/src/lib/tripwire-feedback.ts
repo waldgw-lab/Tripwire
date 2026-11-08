@@ -26,7 +26,7 @@ export async function currentArticle(tx: FeedbackTx, owner: string, id: string) 
   if (!row) throw new FeedbackError(404, "Article not found");
   const own = row.data as RecordData;
   const base = shared?.data as RecordData | undefined;
-  const data = { ...own, ...mergeArticleContent(own, base ?? {}),
+  const data = { ...own, ...mergeArticleContent(own, base ?? {}, { background: true }),
     ...publisherIdentityUpdate(own, base),
     ...publicationUpdate(own, base ?? {}), id, kind: "article" as const };
   return { data, hidden: row.data.hidden === true, createdAt: (shared ?? row).createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() };

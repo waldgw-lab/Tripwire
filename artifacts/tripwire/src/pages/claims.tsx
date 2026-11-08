@@ -10,6 +10,7 @@ import { ClaimEditor, ConfirmDelete } from '@/components/editors';
 import { Disclosure, ProvenancePanel, TONE } from '@/components/provenance/provenance-panel';
 import { OutletBrand } from '@/components/outlet-brand';
 import { ClaimProcessingStatus } from '@/components/provenance/claim-processing';
+import { SecondaryCategoryTags } from '@/components/provenance/category-tags';
 import { STAGES, byKind, fmtDate, useWorkspace } from '@/lib/workspace';
 import {
   UNCATEGORIZED, categoryKey, groupClaimsByArticle, categoryLabel, compareClaims, groupKey, pickDefault, reportTime, topicKey, topicLabel, useClaimLinkage, type ClaimSummary,
@@ -152,6 +153,14 @@ export default function ClaimsPage() {
   }, [filtered, summaryById, cmpClaims, catOrder, st.sort, wholeByGroup, articleById]);
 
   const selectedClaim = st.claim ? claims.find(c => c.id === st.claim) ?? null : null;
+  useEffect(() => {
+    const s = st.claim ? summaryById.get(st.claim) : undefined;
+    if (!s?.topicId || !s.categoryId || !st.topic) return;
+    const movedCategory = s.topicId === st.topic && s.secondaryCategories?.some(c => c.id === st.category);
+    const scopedLegacyTopic = s.topicId.startsWith(`${st.topic}--`);
+    if ((movedCategory || scopedLegacyTopic) && (s.categoryId !== st.category || s.topicId !== st.topic))
+      update({ category: s.categoryId, topic: s.topicId });
+  }, [st.claim, st.category, st.topic, summaryById, update]);
   const firstVisible = pickDefault(tree.flatMap(c => c.groups.flatMap(g => g.claims)), summaryById);
   const current = selectedClaim ?? (st.claim ? null : firstVisible) ?? null;
   const hiddenByFilters = !!selectedClaim && !filtered.includes(selectedClaim);
@@ -261,7 +270,7 @@ export default function ClaimsPage() {
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input value={st.q} onChange={e => update({ q: e.target.value })} placeholder="Search claims, topics, entities" className="h-8 bg-card pl-8 text-sm" data-testid="input-claim-search" />
         </div>
-        <select value={st.category} onChange={e => update({ category: e.target.value, topic: '' })} aria-label="Category" className={selectCls} data-testid="select-claim-category">
+        <select value={st.category} onChange={e => update({ category: e.target.value, topic: '' })} aria-label="Primary category" className={selectCls} data-testid="select-claim-category">
           <option value="">All categories</option>
           {categoryOptions.map(id => <option key={id} value={id}>{categoryLabel(id, categoryById)}</option>)}
         </select>
@@ -348,10 +357,13 @@ function ClaimDetail({ current, summary, catLabel, isSignedIn, onEdit, onDelete,
   return (
     <section className="min-w-0 px-5 py-6 md:max-h-[calc(100dvh-205px)] md:overflow-y-auto md:px-10" data-testid={`detail-claim-${current.id}`}>
       <nav className="mb-2 flex flex-wrap items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground" aria-label="Claim location" data-testid="text-claim-breadcrumb">
-        <span>{catLabel}</span><ChevronRight className="h-3 w-3" />
+        <span className="text-muted-foreground">Primary category:</span><span>{catLabel}</span><ChevronRight className="h-3 w-3" />
         <button onClick={onTopic} className="uppercase hover:text-foreground hover:underline" data-testid="button-claim-topic-filter">{topicLabel(summary)}</button>
       </nav>
-      {summary?.classificationReason && <p className="mb-2 max-w-3xl text-[11px] text-muted-foreground" data-testid="text-classification-reason">Grouped for navigation: {summary.classificationReason}</p>}
+      <SecondaryCategoryTags categories={summary?.secondaryCategories} />
+      {summary?.classificationReason && <Disclosure label="Why this category" testId="details-category-assignment" className="mb-2 max-w-3xl">
+        <p className="text-[11px] text-muted-foreground" data-testid="text-classification-reason">{summary.classificationReason}</p>
+      </Disclosure>}
       <div className="flex items-start justify-between gap-4">
         <div>
           {current.topic && <p className="font-mono text-[11px] uppercase tracking-wider text-[hsl(212_24%_38%)]">{current.topic}</p>}

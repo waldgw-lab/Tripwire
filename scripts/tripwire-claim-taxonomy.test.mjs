@@ -86,3 +86,46 @@ test('fresh saves cannot revive old or undated claims; historical background is 
   for (const latestReportAt of ['2026-11-08T12:00:00Z', '2025-11-08T12:00:00Z', null])
     assert.equal(organizeClaimCoverage(rows, links, [{ claimId: 'stats', latestReportAt }], now)[0].ongoing, false);
 });
+
+test('one topic has one primary home; related categories stay as detail tags and cannot outvote distinct articles', () => {
+  const statements = [
+    ['staff1', 'a1', 'Stephen Miller would replace Susie Wiles as chief of staff.'],
+    ['staff2', 'a2', 'Susie Wiles is departing as chief of staff.'],
+    ...Array.from({ length: 8 }, (_, i) => [`confidence${i}`, 'a3', 'Susie Wiles described disagreements with presidential advisers.']),
+  ];
+  const rows = [
+    ...statements.map(([id, , title]) => ({ id, data: { kind: 'claim', title } })),
+    ...['a1', 'a2', 'a3'].map(id => ({ id, data: { kind: 'article', title: 'White House staffing reporting' } })),
+  ];
+  const links = statements.map(([claim_id, article_id, proposition]) => ({ claim_id, article_id, proposition }));
+  const summaries = statements.map(([claimId]) => ({ claimId, latestReportAt: '2026-11-08T12:00:00Z' }));
+  const out = organizeClaimCoverage(rows, links, summaries, now);
+  assert.equal(new Set(out.map(r => r.topicId)).size, 1);
+  assert.deepEqual([...new Set(out.map(r => r.categoryId))], ['leadership-staffing']);
+  assert.equal(new Set(out.flatMap(r => r.articleIds)).size, 3);
+  for (const r of out) {
+    assert.deepEqual(r.secondaryCategories.map(c => c.id), ['institutional-relationships']);
+    assert.deepEqual(r.articleIds, [statements.find(([id]) => id === r.claimId)[1]]);
+  }
+  const reversed = organizeClaimCoverage([...rows].reverse(), [...links].reverse(), [...summaries].reverse(), now);
+  assert.deepEqual(reversed.map(r => [r.claimId, r.categoryId, r.secondaryCategories]).sort(),
+    out.map(r => [r.claimId, r.categoryId, r.secondaryCategories]).sort());
+});
+
+test('geography alone does not collapse unrelated military and diplomatic developments into one category', () => {
+  const statements = [
+    ['ops', 'Military forces deployed troops and fired missiles in Iran.'],
+    ['talks', 'Iran and the other countries are negotiating a ceasefire.'],
+  ];
+  const rows = statements.flatMap(([id, title]) => [
+    { id, data: { kind: 'claim', title } }, { id: `${id}-article`, data: { kind: 'article', title: 'Iran reporting' } },
+  ]);
+  const out = organizeClaimCoverage(rows, statements.map(([claim_id, proposition]) =>
+    ({ claim_id, article_id: `${claim_id}-article`, proposition })),
+    statements.map(([claimId]) => ({ claimId })), now);
+  assert.notEqual(out[0].topicId, out[1].topicId);
+  assert.notEqual(out[0].topicTitle, out[1].topicTitle);
+  assert.deepEqual(out.map(r => r.categoryId), ['operations-enforcement', 'diplomacy-agreements']);
+  assert.equal(out[0].topicTitle, 'Iran · Operations & Enforcement');
+  assert.equal(out[1].topicTitle, 'Iran · Diplomacy & Agreements');
+});

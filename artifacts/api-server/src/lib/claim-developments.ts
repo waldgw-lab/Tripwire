@@ -6,7 +6,7 @@ export type Development = {
 };
 const DAY = 86_400_000;
 const leadershipContext = /\b(president|white house|pentagon|secretar(?:y|ies)|chief of staff|joint chiefs|chairman|chair|general|director|minister|cabinet|advis[eo]rs?|administration|trump|hegseth|caine)\b/i;
-const personnel = /\b(dismiss(?:ed|al)?|oust(?:ed|er)?|replac(?:e|ed|ing|ement)|resign(?:ed|ation|s)?|remov(?:e|ed|al)|impeach(?:ed|ment)?|appoint(?:ed|ment)?|nominat(?:e|ed|ion)|promot(?:e|ed|ion)|elevat(?:e|ed|ion)|stepp?ing down|step down|take over|taking over|new role|new (?:white house )?chief of staff|stay in (?:his|her|their) job|should (?:stay|go)|expect.{0,45}gone)\b/i;
+const personnel = /\b(dismiss(?:ed|al)?|oust(?:ed|er)?|replac(?:e|ed|ing|ement)|resign(?:ed|ation|s)?|remov(?:e|ed|al)|impeach(?:ed|ment)?|appoint(?:ed|ment)?|nominat(?:e|ed|ion)|promot(?:e|ed|ion)|elevat(?:e|ed|ion)|depart(?:ed|ing|s)? as|stepp?ing down|step down|take over|taking over|new role|new (?:white house )?chief of staff|stay in (?:his|her|their) job|should (?:stay|go)|expect.{0,45}gone)\b/i;
 const pendingDecision = /\b(consider(?:s|ed|ing)?|weigh(?:s|ed|ing)?|discuss(?:es|ed|ing)?|plan(?:s|ned|ning)?|prepar(?:e|es|ed|ing)|order(?:s|ed)?|authoriz(?:e|es|ed)|approv(?:e|es|ed)|announc(?:e|es|ed)|set to)\b/i;
 const consequential = /\b(strikes?|deploy(?:ment|ing)?|operations?|investigat(?:e|ion)|funding|sanctions?|ceasefire|negotiat(?:e|ions?)|military|national security|policy|legislation|war)\b/i;
 const relationships = /\b(confidence|disagre(?:e|ed|ements?)|consult(?:ed|ing|ations?)?|advis(?:ed|ing)|pressure|rift|friction)\b/i;

@@ -12,13 +12,27 @@ export const GetClaimProcessingResponse = zod.object({
   "pending": zod.number().int(),
   "failed": zod.number().int(),
   "recent": zod.array(zod.object({
+  "jobId": zod.string(),
   "articleId": zod.string(),
-  "title": zod.string(),
   "status": zod.string(),
   "claims": zod.number().int(),
   "error": zod.string().nullable(),
-  "updatedAt": zod.string()
+  "updatedAt": zod.string(),
+  "bodyCharacters": zod.number().int().nullable(),
+  "current": zod.boolean()
+}).and(zod.object({
+  "title": zod.string(),
+  "history": zod.array(zod.object({
+  "jobId": zod.string(),
+  "articleId": zod.string(),
+  "status": zod.string(),
+  "claims": zod.number().int(),
+  "error": zod.string().nullable(),
+  "updatedAt": zod.string(),
+  "bodyCharacters": zod.number().int().nullable(),
+  "current": zod.boolean()
 }))
+})))
 })
 
 
@@ -70,6 +84,11 @@ export const GetClaimCoverageSummariesResponseItem = zod.object({
   "developmentReason": zod.string().nullish(),
   "categoryId": zod.string().optional(),
   "primaryCategory": zod.string().optional(),
+  "secondaryCategories": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "description": zod.string()
+})).optional(),
   "topicId": zod.string().optional(),
   "topicTitle": zod.string().optional(),
   "classificationReason": zod.string().optional(),
