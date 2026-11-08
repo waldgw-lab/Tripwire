@@ -4,8 +4,10 @@
  * Api
  * OpenAPI spec version: 1.0.0
  */
+import type { GetReportingProvenanceEvidenceScope } from './getReportingProvenanceEvidenceScope';
 
 export type GetReportingProvenanceParams = {
+evidenceScope?: GetReportingProvenanceEvidenceScope;
 articleId?: string;
 claimId?: string;
 evidenceId?: string;

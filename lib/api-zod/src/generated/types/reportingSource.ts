@@ -4,8 +4,10 @@
  * Api
  * OpenAPI spec version: 1.0.0
  */
+import type { ReportingEvidenceVersion } from './reportingEvidenceVersion';
 
 export interface ReportingSource {
+  evidenceVersion?: ReportingEvidenceVersion;
   id: string;
   articleId: string;
   descriptor: string;

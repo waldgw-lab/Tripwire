@@ -13,7 +13,10 @@ const day = (value: unknown) => {
   return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === d ? d : null;
 };
 
-/** Article attributions, not source-human counts or independently verified paths. */
+/** All historical article attributions, including legacy observations.
+ * Never reduce these to the selected body's processing count or sum capture versions.
+ * Source-version filtering belongs to provenance, not destructive summary pruning.
+ */
 export function summariseClaimCoverage(records: RecordRow[], attributed: Attribution[]) {
   const articles = new Map<string, Record<string, any>>();
   for (const r of records.filter(r => r.data.kind === "article" && !r.data.hidden)) {

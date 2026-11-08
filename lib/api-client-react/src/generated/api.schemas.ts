@@ -186,6 +186,48 @@ export const ReportingClaimDirectionOrigin = {
   unassessed: 'unassessed',
 } as const;
 
+export type ReportingClaimEvidenceScope = typeof ReportingClaimEvidenceScope[keyof typeof ReportingClaimEvidenceScope];
+
+
+export const ReportingClaimEvidenceScope = {
+  selected: 'selected',
+  'retained-excerpt': 'retained-excerpt',
+  superseded: 'superseded',
+  unknown: 'unknown',
+} as const;
+
+export type ReportingEvidenceVersionScope = typeof ReportingEvidenceVersionScope[keyof typeof ReportingEvidenceVersionScope];
+
+
+export const ReportingEvidenceVersionScope = {
+  selected: 'selected',
+  'retained-excerpt': 'retained-excerpt',
+  superseded: 'superseded',
+  unknown: 'unknown',
+} as const;
+
+export interface ReportingEvidenceVersion {
+  /** @nullable */
+  evidenceId: string | null;
+  /** @nullable */
+  captureId: string | null;
+  scope: ReportingEvidenceVersionScope;
+  /** @nullable */
+  bodyHash?: string | null;
+  /** @nullable */
+  selectedBodyHash?: string | null;
+  /** @nullable */
+  source?: string | null;
+  /** @nullable */
+  capturedAt?: string | null;
+  /** @nullable */
+  excerpt?: string | null;
+  /** @nullable */
+  start?: number | null;
+  /** @nullable */
+  end?: number | null;
+}
+
 export interface ReportingReview {
   id: string;
   relation: string;
@@ -201,11 +243,6 @@ export interface ReportingReview {
   evidenceId?: string | null;
 }
 
-export type ReportingClaimEvidenceVersionsItem = {
-  captureId: string;
-  evidenceId: string;
-};
-
 export interface ReportingClaim {
   direction?: ReportingClaimDirection;
   /** @nullable */
@@ -215,7 +252,9 @@ export interface ReportingClaim {
   directionOrigin?: ReportingClaimDirectionOrigin;
   /** @nullable */
   directionCorrectionId?: string | null;
-  evidenceVersions?: ReportingClaimEvidenceVersionsItem[];
+  evidenceScope?: ReportingClaimEvidenceScope;
+  displayedEvidenceVersion?: ReportingEvidenceVersion;
+  evidenceVersions?: ReportingEvidenceVersion[];
   id: string;
   claimId: string;
   familyId: string;
@@ -250,6 +289,7 @@ export interface ReportingClaim {
 }
 
 export interface ReportingSource {
+  evidenceVersion?: ReportingEvidenceVersion;
   id: string;
   articleId: string;
   descriptor: string;
@@ -1603,6 +1643,7 @@ export type GetClaimCoverageSummaries200Item = {
 };
 
 export type GetReportingProvenanceParams = {
+evidenceScope?: GetReportingProvenanceEvidenceScope;
 articleId?: string;
 claimId?: string;
 evidenceId?: string;
@@ -1612,6 +1653,17 @@ eventId?: string;
  */
 offset?: number;
 };
+
+export type GetReportingProvenanceEvidenceScope = typeof GetReportingProvenanceEvidenceScope[keyof typeof GetReportingProvenanceEvidenceScope];
+
+
+export const GetReportingProvenanceEvidenceScope = {
+  all: 'all',
+  selected: 'selected',
+  'retained-excerpt': 'retained-excerpt',
+  superseded: 'superseded',
+  unknown: 'unknown',
+} as const;
 
 export type ListEntitiesParams = {
 /**

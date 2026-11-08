@@ -105,6 +105,9 @@ test('real intake trigger, worker, versions, corrections, retries and summaries 
   p=await reportingProvenance({articleId:'first'});
   assert.equal(p.claims.length,3);
   assert.equal(p.claims.find(c=>c.id===positive.id).evidenceVersions.length,2);
+  assert.equal(p.claims.find(c=>c.id===positive.id).evidenceScope,'selected');
+  const latestVersion=p.claims.find(c=>c.id===positive.id).evidenceVersions.at(-1);
+  assert.equal((await reportingProvenance({evidenceId:latestVersion.evidenceId})).claims.some(c=>c.id===positive.id),true);
   assert.equal(p.claims.find(c=>c.id===positive.id).directionCorrectionId,correction.id);
   assert.equal((await admin.query('select count(*)::int n from tripwire_claim_direction_corrections')).rows[0].n,1);
   assert.equal((await admin.query('select count(*)::int n from tripwire_claim_jobs where hash=$1',[h])).rows[0].n,2);
@@ -140,6 +143,11 @@ test('real intake trigger, worker, versions, corrections, retries and summaries 
   await runClaimTick();
   p=await reportingProvenance({articleId:'first'});
   assert.equal(p.claims.length,4);
+  const excerpts=await reportingProvenance({articleId:'first',evidenceScope:'retained-excerpt'});
+  assert.equal(excerpts.total,1);
+  assert.equal(excerpts.claims[0].excerpt,short);
+  assert.equal((await reportingProvenance({articleId:'first',evidenceScope:'selected'})).total,3);
+  assert.equal((await reportingProvenance({articleId:'first',evidenceScope:'selected',offset:3})).claims.length,0);
   assert.equal((await admin.query("select data->>'fullTextHash' h from tripwire_records where id='first'")).rows[0].h,hash(changed));
   // Explicit metadata-only intake becomes eligible when body text arrives.
   await put('metadata',text);await runClaimTick();
@@ -168,6 +176,13 @@ test('real intake trigger, worker, versions, corrections, retries and summaries 
   assert.equal(restored.fullTextHash,cleanHash);
   assert.ok(restored.retainedContent.some(c=>c.bodyHash===oldHash),'history remains available');
   for(let n=0;n<20;n++)if(!await runClaimTick())break;
+  const snapshot=await reportingProvenance({articleId:'snapshot'});
+  const historical=await reportingProvenance({articleId:'snapshot',evidenceScope:'superseded'});
+  assert.equal(snapshot.total,2);
+  assert.equal(historical.total,1);
+  assert.equal(historical.claims[0].excerpt,'The stale sidebar claimed the ministers failed to protect the supply route.');
+  assert.equal(snapshot.claims.find(c=>c.evidenceScope==='selected').evidenceVersions.every(v=>v.scope==='selected'),true);
+  assert.equal((await claimCoverageSummaries()).filter(c=>snapshot.claims.some(o=>o.claimId===c.claimId)).length,2,'historical families remain in summaries');
   // Equal timestamps across different versions used to collide in React keys.
   await admin.query("update tripwire_claim_jobs set updated_at=now() where article_id='snapshot'");
   const status=await claimProcessing(),row=status.recent.find(r=>r.articleId==='snapshot');

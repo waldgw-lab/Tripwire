@@ -2,6 +2,7 @@ import { pool, type PoolClient } from "@workspace/db";
 import { ConnectReportingPassageBody, ReviewReportingLineageBody } from "@workspace/api-zod";
 import { WORKSPACE_OWNER as W } from "./tripwire-access";
 import { grammaticalMinimum, conservativeMinimum, sourceKey, suppliedDate } from "./source-search-rules";
+import { evidenceVersion, claimEvidenceScope, type EvidenceScope } from "./reporting-versions";
 
 type Row = Record<string, any>;
 const latestSql = `select r.* from tripwire_provenance_reviews r where r.workspace=$1
@@ -11,7 +12,7 @@ const review = (r: Row) => ({ id: r.id, relation: r.relation, rationale: r.ratio
 export class ProvenanceError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
-export async function reportingProvenance(q: { articleId?: string; claimId?: string; evidenceId?: string; eventId?: string; offset?: number }) {
+export async function reportingProvenance(q: { articleId?: string; claimId?: string; evidenceId?: string; eventId?: string; offset?: number; evidenceScope?: "all" | EvidenceScope }) {
   const params: unknown[] = [W];
   const add = (value: string) => { params.push(value); return `$${params.length}`; };
   const filters = [];
@@ -20,7 +21,8 @@ export async function reportingProvenance(q: { articleId?: string; claimId?: str
   if (q.eventId) filters.push(`(f.event_id=${add(q.eventId)} or f.entity_event_id=$${params.length})`);
   if (q.evidenceId) {
     const p = add(q.evidenceId);
-    filters.push(`(c.evidence_id=${p} or exists(select 1 from tripwire_provenance_reviews r where r.workspace=c.workspace and r.claim_id=c.id and r.evidence_id=${p})
+    filters.push(`(c.evidence_id=${p} or exists(select 1 from tripwire_claim_capture_links v where v.workspace=c.workspace and v.claim_id=c.id and v.evidence_id=${p})
+     or exists(select 1 from tripwire_provenance_reviews r where r.workspace=c.workspace and r.claim_id=c.id and r.evidence_id=${p})
      or exists(select 1 from tripwire_claim_sources l join tripwire_source_occurrences s on s.workspace=l.workspace and s.id=l.source_id
        where l.workspace=c.workspace and l.claim_id=c.id and s.evidence_id=${p}))`);
   }
@@ -39,7 +41,18 @@ export async function reportingProvenance(q: { articleId?: string; claimId?: str
   const sourceRows = articleIds.length ? (await pool.query(`select s.*,e.excerpt from tripwire_source_occurrences s
     left join tripwire_entity_evidence e on e.workspace=s.workspace and e.id=s.evidence_id
     where s.workspace=$1 and s.article_id=any($2::text[]) order by s.article_id,s.id limit 2000`, [W, articleIds])).rows : [];
+  const captures = articleIds.length ? (await pool.query("select * from tripwire_entity_captures where workspace=$1 and article_id=any($2::text[])", [W, articleIds])).rows : [];
+  const articles = new Map(all.map(c => [c.article_id, c.article]));
+  if (q.articleId && selectedArticle) articles.set(q.articleId, selectedArticle);
+  const hashes = [...new Set([...captures.map(c => c.hash), ...[...articles.values()].map(a => a?.fullTextHash)].filter(Boolean))];
+  const bodies = new Map<string, string>(hashes.length ? (await pool.query("select hash,text from tripwire_content where hash=any($1::text[])", [hashes])).rows.map(r => [r.hash, r.text]) : []);
+  const retainedEvidence = captures.length ? (await pool.query("select * from tripwire_entity_evidence where workspace=$1 and capture_id=any($2::text[])", [W, captures.map(c => c.id)])).rows : [];
+  const versionFor = (id: string | null, articleId: string) => {
+    const e = retainedEvidence.find(e => e.id === id);
+    return evidenceVersion(e, captures.find(c => c.id === e?.capture_id && c.article_id === articleId), articles.get(articleId), bodies);
+  };
   const sources = sourceRows.map(s => ({ id: s.id, articleId: s.article_id, descriptor: s.descriptor, sourceType: s.source_type,
+    evidenceVersion: versionFor(s.evidence_id, s.article_id),
     anonymity: s.anonymity, minimumHumans: s.minimum_humans, supplied: s.supplied, externalId: s.external_id,
     familyHypothesis: s.family_hypothesis, evidenceId: s.evidence_id, excerpt: s.excerpt ?? null, captureId: s.capture_id }));
   const sourceIds = sources.map(s => s.id);
@@ -47,11 +60,17 @@ export async function reportingProvenance(q: { articleId?: string; claimId?: str
   const reviews = (await pool.query(`select * from tripwire_provenance_reviews where workspace=$1 and
     (claim_id=any($2::text[]) or source_match_id=any($3::text[])) order by created_at,id`, [W, all.map(c => c.id), matched.map(m => m.id)])).rows;
   const current = reviews.filter(r => !reviews.some(n => n.supersedes_id === r.id));
-  const page = all.slice(q.offset ?? 0, (q.offset ?? 0) + 30);
+  const versions=all.length ? (await pool.query(`select * from tripwire_claim_capture_links where workspace=$1 and claim_id=any($2::text[])
+    order by created_at,capture_id`,[W,all.map(c=>c.id)])).rows : [];
+  const versionsByClaim = new Map(all.map(c => {
+    const ids = [...new Set([c.evidence_id, ...versions.filter(v => v.claim_id === c.id).map(v => v.evidence_id),
+      ...reviews.filter(r => r.claim_id === c.id).map(r => r.evidence_id)].filter(Boolean))] as string[];
+    return [c.id, ids.map(id => versionFor(id, c.article_id))];
+  }));
+  const filtered = all.filter(c => !q.evidenceScope || q.evidenceScope === "all" || claimEvidenceScope(versionsByClaim.get(c.id)!) === q.evidenceScope);
+  const page = filtered.slice(q.offset ?? 0, (q.offset ?? 0) + 30);
   const corrections=page.length ? (await pool.query(`select distinct on(claim_id) * from tripwire_claim_direction_corrections
     where workspace=$1 and claim_id=any($2::text[]) order by claim_id,created_at desc,id desc`,[W,page.map(c=>c.id)])).rows : [];
-  const versions=page.length ? (await pool.query(`select * from tripwire_claim_capture_links where workspace=$1 and claim_id=any($2::text[])
-    order by created_at,capture_id`,[W,page.map(c=>c.id)])).rows : [];
   const evidenceIds = [...new Set([...page.map(c => c.evidence_id), ...reviews.map(r => r.evidence_id)].filter(Boolean))];
   const evidence = evidenceIds.length ? (await pool.query("select * from tripwire_entity_evidence where workspace=$1 and id=any($2::text[])", [W, evidenceIds])).rows : [];
   const links = page.length ? (await pool.query("select * from tripwire_claim_sources where workspace=$1 and claim_id=any($2::text[])", [W, page.map(c => c.id)])).rows : [];
@@ -66,7 +85,9 @@ export async function reportingProvenance(q: { articleId?: string; claimId?: str
       directionReason: correction?.rationale ?? assessment?.reason ?? null,
       directionOrigin: correction ? "analyst" : assessment ? "automatic" : "unassessed",
       directionCorrectionId: correction?.id ?? null,
-      evidenceVersions: versions.filter(v=>v.claim_id===c.id).map(v=>({captureId:v.capture_id,evidenceId:v.evidence_id})),
+      evidenceScope: claimEvidenceScope(versionsByClaim.get(c.id)!),
+      displayedEvidenceVersion: versionFor(e?.id ?? null, c.article_id),
+      evidenceVersions: versionsByClaim.get(c.id)!,
       title: c.article?.title ?? "Retained article", outlet: c.article?.outlet ?? null, url: c.article?.url ?? null, publishedAt: c.article?.publishedAt ?? null,
       suppliedDate: suppliedDate(c.article?.sourceSearch?.date),
       eventId: c.event_id ?? c.entity_event_id ?? null, evidenceId: e?.id ?? null, excerpt: e?.excerpt ?? null,
@@ -86,7 +107,7 @@ export async function reportingProvenance(q: { articleId?: string; claimId?: str
       provisionalSourceRecords: q.articleId ? (selectedArticle?.sourceSearch?.provisionalSourceRecords ?? null) : null,
       suppliedMinimumAnonymousHumans: q.articleId ? (selectedArticle?.sourceSearch?.minimumAnonymousHumans ?? null) : null,
       independentPaths: current.some(r => r.path_key) ? new Set(current.filter(r => r.claim_id && r.path_key).map(r => r.path_key)).size : null },
-    total: all.length, offset: q.offset ?? 0 };
+    total: filtered.length, offset: q.offset ?? 0 };
 }
 
 async function transaction<T>(work: (client: PoolClient) => Promise<T>) {

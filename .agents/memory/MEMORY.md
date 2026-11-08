@@ -9,3 +9,4 @@
 - [Entity automation gates](entity-automation-gates.md) — stage discovery separately from live decisions; use journaled migrations for workspace-scoped graph constraints.
 - [Classification feedback](classification-feedback.md) — corrections explain article judgments; they never imply global exclusions, entity removal or verified sourcing.
 - [Source provenance policy](source-provenance-policy.md) — keep supplied analysis separate from reviewed paths; offline backfills do not authorize live retrieval.
+- [Evidence version context](evidence-version-context.md) — exact wording in selected text is separate from original capture offsets, historical counts, and reviewed evidence links.

@@ -118,12 +118,14 @@ export const GetClaimCoverageSummariesResponseItem = zod.object({
 export const GetClaimCoverageSummariesResponse = zod.array(GetClaimCoverageSummariesResponseItem)
 
 
+export const getReportingProvenanceQueryEvidenceScopeDefault = `all`;
 export const getReportingProvenanceQueryOffsetDefault = 0;
 export const getReportingProvenanceQueryOffsetMin = 0;
 
 
 
 export const GetReportingProvenanceQueryParams = zod.object({
+  "evidenceScope": zod.enum(['all', 'selected', 'retained-excerpt', 'superseded', 'unknown']).default(getReportingProvenanceQueryEvidenceScopeDefault),
   "articleId": zod.coerce.string().optional(),
   "claimId": zod.coerce.string().optional(),
   "evidenceId": zod.coerce.string().optional(),
@@ -138,9 +140,30 @@ export const GetReportingProvenanceResponse = zod.object({
   "directionReason": zod.string().nullish(),
   "directionOrigin": zod.enum(['automatic', 'analyst', 'unassessed']).optional(),
   "directionCorrectionId": zod.string().nullish(),
+  "evidenceScope": zod.enum(['selected', 'retained-excerpt', 'superseded', 'unknown']).optional(),
+  "displayedEvidenceVersion": zod.object({
+  "evidenceId": zod.string().nullable(),
+  "captureId": zod.string().nullable(),
+  "scope": zod.enum(['selected', 'retained-excerpt', 'superseded', 'unknown']),
+  "bodyHash": zod.string().nullish(),
+  "selectedBodyHash": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "capturedAt": zod.string().nullish(),
+  "excerpt": zod.string().nullish(),
+  "start": zod.number().int().nullish(),
+  "end": zod.number().int().nullish()
+}).optional(),
   "evidenceVersions": zod.array(zod.object({
-  "captureId": zod.string(),
-  "evidenceId": zod.string()
+  "evidenceId": zod.string().nullable(),
+  "captureId": zod.string().nullable(),
+  "scope": zod.enum(['selected', 'retained-excerpt', 'superseded', 'unknown']),
+  "bodyHash": zod.string().nullish(),
+  "selectedBodyHash": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "capturedAt": zod.string().nullish(),
+  "excerpt": zod.string().nullish(),
+  "start": zod.number().int().nullish(),
+  "end": zod.number().int().nullish()
 })).optional(),
   "id": zod.string(),
   "claimId": zod.string(),
@@ -173,6 +196,18 @@ export const GetReportingProvenanceResponse = zod.object({
 }))
 })),
   "sources": zod.array(zod.object({
+  "evidenceVersion": zod.object({
+  "evidenceId": zod.string().nullable(),
+  "captureId": zod.string().nullable(),
+  "scope": zod.enum(['selected', 'retained-excerpt', 'superseded', 'unknown']),
+  "bodyHash": zod.string().nullish(),
+  "selectedBodyHash": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "capturedAt": zod.string().nullish(),
+  "excerpt": zod.string().nullish(),
+  "start": zod.number().int().nullish(),
+  "end": zod.number().int().nullish()
+}).optional(),
   "id": zod.string(),
   "articleId": zod.string(),
   "descriptor": zod.string(),

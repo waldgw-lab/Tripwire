@@ -16,6 +16,7 @@ import {
   type ReportingReview,
   type ReportingReviewInputRelation,
   type ReportingSource,
+  type ReportingEvidenceVersion,
 } from '@workspace/api-client-react';
 import { ChevronLeft, ChevronRight, RefreshCw, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -68,6 +69,19 @@ export function RelationTag({ value }: { value: string }) {
 
 const unknownN = (v: number | null | undefined) => (v == null ? 'unknown' : v.toLocaleString('en-US'));
 const coverageDate = (o: ReportingClaim) => o.publishedAt ? fmtDate(o.publishedAt) : o.suppliedDate ? fmtDate(o.suppliedDate) : 'date unknown';
+const VERSION_LABEL = {
+  selected: 'Evidence in selected text',
+  'retained-excerpt': 'Other retained excerpt only',
+  superseded: 'Superseded page copy only',
+  unknown: 'Source version unclear',
+};
+function VersionContext({ version }: { version?: ReportingEvidenceVersion }) {
+  if (!version) return null;
+  return <p className="mt-1 text-[11px] text-muted-foreground" data-testid="evidence-version-context">
+    {VERSION_LABEL[version.scope]}{version.source ? ` · ${version.source}` : ''}
+    {version.capturedAt ? ` · captured ${fmtDate(version.capturedAt, true)}` : ''}
+  </p>;
+}
 
 const useInvalidateProvenance = useInvalidateClaims;
 
@@ -176,6 +190,7 @@ function SourceRow({ s }: { s: ReportingSource }) {
       <Mono>min. humans {unknownN(s.minimumHumans)}</Mono>
     </div>
     {s.excerpt && <blockquote className="mt-1 border-l-2 border-[hsl(212_20%_70%)] pl-2 font-serif">{s.excerpt}</blockquote>}
+    <VersionContext version={s.evidenceVersion} />
     {(s.evidenceId || s.captureId || s.externalId || s.familyHypothesis || s.supplied) && <Disclosure label="Source record details" testId={`details-source-${s.id}`}>
       {s.supplied && <p className="text-muted-foreground">Imported with supplied analysis.</p>}
       {s.familyHypothesis && <p className="text-muted-foreground">Family hypothesis: {s.familyHypothesis}</p>}
@@ -230,7 +245,18 @@ function ClaimObservation({ o, editable, onReview, onFocusEvent, highlight, sour
         </div>
         <p className="mt-0.5 text-sm leading-snug">{o.title}</p>
         <ClaimDirection o={o} editable={editable} />
+        <p className="mt-1 text-[11px] font-medium" data-testid={`claim-evidence-scope-${o.id}`}>{VERSION_LABEL[o.evidenceScope ?? 'unknown']}</p>
         {o.excerpt && <blockquote className="mt-1 border-l-2 border-[hsl(212_20%_70%)] pl-2 font-serif text-sm">{o.excerpt}</blockquote>}
+        <VersionContext version={o.displayedEvidenceVersion} />
+        <Disclosure label="Retained evidence versions" count={o.evidenceVersions?.length} testId={`details-evidence-versions-${o.id}`}>
+          <p className="text-[11px] text-muted-foreground">The quote above retains its original or reviewed evidence link. A matching passage may also occur in selected text; versions are not independent reporting.</p>
+          {(o.evidenceVersions ?? []).map(v => <div key={v.evidenceId ?? v.captureId} className="mt-2">
+            <VersionContext version={v} />
+            {v.excerpt && <blockquote className="mt-1 border-l-2 border-border pl-2 font-serif text-sm">{v.excerpt}</blockquote>}
+            <Mono className="block">capture {v.captureId ?? 'unknown'} · evidence {v.evidenceId ?? 'unknown'} · offsets {v.start ?? '?'}-{v.end ?? '?'}</Mono>
+            <Mono className="block">body {v.bodyHash ?? 'unknown'} · selected {v.selectedBodyHash ?? 'unknown'}</Mono>
+          </div>)}
+        </Disclosure>
         {own.length > 0 && <Disclosure label="Supporting sources" count={own.length} testId={`details-sources-${o.id}`}>
           <ul className="space-y-1.5">{own.map(s => <SourceRow key={s.id} s={s} />)}</ul>
         </Disclosure>}
@@ -267,9 +293,10 @@ export function ProvenancePanel({ params, editable, heading = 'Source lineage', 
   const [eventFocus, setEventFocus] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<ReviewTarget | null>(null);
   const [connecting, setConnecting] = useState(false);
+  const [evidenceScope, setEvidenceScope] = useState<NonNullable<GetReportingProvenanceParams['evidenceScope']>>('all');
   const base = eventFocus ? { eventId: eventFocus } : params;
-  const p: GetReportingProvenanceParams = { ...base, offset };
-  const q = useGetReportingProvenance(p, { query: { queryKey: getGetReportingProvenanceQueryKey(p), staleTime: 30_000, gcTime: 5 * 60_000, refetchInterval: 120_000, placeholderData: (prev) => prev, retry: 1 } });
+  const p: GetReportingProvenanceParams = { ...base, evidenceScope, offset };
+  const q = useGetReportingProvenance(p, { query: { queryKey: getGetReportingProvenanceQueryKey(p), staleTime: 30_000, gcTime: 5 * 60_000, refetchInterval: 120_000, retry: 1 } });
   const ws = useWorkspace();
   const claimRecords = useMemo(() => byKind(ws.data?.records, 'claim').map(c => ({ id: c.id, title: c.title })), [ws.data]);
   const reviewAnchor = useRef<HTMLDivElement>(null);
@@ -294,13 +321,21 @@ export function ProvenancePanel({ params, editable, heading = 'Source lineage', 
         <button onClick={() => q.refetch()} aria-label="Refresh lineage" className="text-muted-foreground hover:text-foreground" data-testid="button-refresh-provenance"><RefreshCw className={cn('h-3.5 w-3.5', q.isFetching && 'animate-spin')} /></button>
       </div>
     </div>
+    <label className="block text-xs">Claim evidence scope
+      <select value={evidenceScope} onChange={e => { setEvidenceScope(e.target.value as typeof evidenceScope); setOffset(0); setReviewing(null); }}
+        className={cn(inputCls, 'mt-1 text-xs')} data-testid="select-evidence-scope">
+        <option value="all">All retained history</option>
+        {Object.entries(VERSION_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+      </select>
+    </label>
+    <p className="mt-1 text-[11px] text-muted-foreground">Selected text is not necessarily complete. Absence from it does not make an older claim false. Filters change the claim list, not retained evidence, reviews, or article-wide source counts.</p>
 
     {connecting && connect && <ConnectPassage {...connect} claims={claimRecords} sources={(d?.sources ?? []).filter(s => s.articleId === connect.articleId)} onDone={() => setConnecting(false)} />}
 
     {q.isLoading ? <div className="space-y-2" aria-busy data-testid="provenance-loading">{[80, 95, 60].map((w, i) => <div key={i} className="h-3 animate-pulse rounded bg-muted" style={{ width: `${w}%` }} />)}</div>
       : q.isError || !d ? <div className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-xs" data-testid="provenance-error"><span className="text-muted-foreground">Lineage could not be loaded. {errText(q.error)}</span><button className="underline" onClick={() => q.refetch()}>Retry</button></div>
       : <>
-        <Disclosure label="Lineage counts" testId="details-provenance-counts">
+        <Disclosure label="Lineage counts across all retained history" testId="details-provenance-counts">
         <dl className="grid grid-cols-2 gap-2" data-testid="provenance-counts">
           {([['Articles', d.counts.articles], ['Occurrences', d.counts.occurrences], ['Min. anonymous humans', d.counts.minimumAnonymousHumans], ['Supplied provisional records', d.counts.provisionalSourceRecords], ['Reviewed independent paths', d.counts.independentPaths]] as const).map(([k, v]) =>
             <div key={k} className="rounded-md border border-border px-2 py-1.5"><dt><Mono>{k}</Mono></dt><dd className={cn('font-mono text-sm', v == null && 'text-muted-foreground')}>{unknownN(v)}</dd></div>)}
@@ -313,7 +348,7 @@ export function ProvenancePanel({ params, editable, heading = 'Source lineage', 
         <div ref={reviewAnchor}>{reviewing && <ReviewForm key={`${reviewing.kind}-${reviewing.kind === 'claim' ? reviewing.observation.id : reviewing.match.id}-${reviewing.supersedes?.id ?? ''}`} target={reviewing} related={d.claims} onDone={() => setReviewing(null)} />}</div>
 
         <h4 className="mt-4 mb-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Reported in provided articles</h4>
-        {families.length === 0 ? <p className="text-xs text-muted-foreground" data-testid="text-no-coverage">No passages connected yet. Open an article and connect an exact passage to this claim.</p>
+        {families.length === 0 ? <p className="text-xs text-muted-foreground" data-testid="text-no-coverage">{evidenceScope === 'all' ? 'No passages connected yet. Open an article and connect an exact passage to this claim.' : 'No claims match this evidence scope. Choose all retained history to see other attributions.'}</p>
           : families.map(list => <div key={list[0].familyId} className="mb-4" data-testid={`family-${list[0].familyId}`}>
             <p className="font-serif text-[15px] leading-snug">{list[0].proposition}</p>
             <ol className="mt-1.5 space-y-1">

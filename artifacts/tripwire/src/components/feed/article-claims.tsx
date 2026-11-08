@@ -55,6 +55,7 @@ export function ArticleClaims({ articleId }: { articleId: string }) {
         </span>
       </button>
       {open && <div id={`article-claims-${articleId}`} className="max-h-72 space-y-2 overflow-y-auto border-t border-border/70 px-3 py-2">
+        <p className="text-[11px] text-muted-foreground">Links include retained history, not just the selected text’s latest processing run. Use source lineage to filter evidence by version.</p>
         {groups.map(([ck, cat]) => (
           <div key={ck}>
             <p className="font-mono text-[10px] uppercase tracking-wide">{cat.label}</p>

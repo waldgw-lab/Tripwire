@@ -6,7 +6,8 @@
  */
 import type { ReportingClaimDirection } from './reportingClaimDirection';
 import type { ReportingClaimDirectionOrigin } from './reportingClaimDirectionOrigin';
-import type { ReportingClaimEvidenceVersionsItem } from './reportingClaimEvidenceVersionsItem';
+import type { ReportingClaimEvidenceScope } from './reportingClaimEvidenceScope';
+import type { ReportingEvidenceVersion } from './reportingEvidenceVersion';
 import type { ReportingReview } from './reportingReview';
 
 export interface ReportingClaim {
@@ -18,7 +19,9 @@ export interface ReportingClaim {
   directionOrigin?: ReportingClaimDirectionOrigin;
   /** @nullable */
   directionCorrectionId?: string | null;
-  evidenceVersions?: ReportingClaimEvidenceVersionsItem[];
+  evidenceScope?: ReportingClaimEvidenceScope;
+  displayedEvidenceVersion?: ReportingEvidenceVersion;
+  evidenceVersions?: ReportingEvidenceVersion[];
   id: string;
   claimId: string;
   familyId: string;

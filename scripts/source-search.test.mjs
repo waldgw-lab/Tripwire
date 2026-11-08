@@ -164,6 +164,10 @@ test('isolated database: actual apply/rerun/rollback, public overrides, exact ev
    const connected=await connectPassage({articleId:'existing',claimId:claim.claimId,captureId:cap.id,excerpt:text,start:0,end:text.length,descriptor,proposition:'The decision was made',anonymity:'Unnamed'});
    const exact=(await reportingProvenance({articleId:'existing'})).claims.find(c=>c.id===connected.id);
    assert.equal(exact.excerpt,text);
+   assert.equal(exact.evidenceScope,'selected');
+   assert.equal(exact.displayedEvidenceVersion.excerpt,text);
+   assert.equal((await reportingProvenance({articleId:'existing',evidenceScope:'selected'})).claims.some(c=>c.id===connected.id),true);
+   assert.equal((await reportingProvenance({articleId:'existing',evidenceScope:'unknown'})).claims.every(c=>!c.excerpt),true);
    await pool.query(`insert into tripwire_entity_developments(workspace,id,event_key,claim_key,title,explanation,disposition,entity_ids,policy_version)
      values('workspace','fixture-dev','fixture-event','legacy-key','Fixture development','Isolated fixture','Review','{}','fixture')`);
    await pool.query("insert into tripwire_entity_observations(workspace,id,development_id,evidence_id,novelty) values('workspace','fixture-obs','fixture-dev',$1,'unknown')",[exact.evidenceId]);

@@ -120,6 +120,7 @@ paths:
     get:
       operationId: getReportingProvenance
       parameters:
+        - { name: evidenceScope, in: query, schema: { type: string, enum: [all, selected, retained-excerpt, superseded, unknown], default: all } }
         - { name: articleId, in: query, schema: { type: string } }
         - { name: claimId, in: query, schema: { type: string } }
         - { name: evidenceId, in: query, schema: { type: string } }
@@ -699,6 +700,20 @@ components:
         targetClaimId: { type: ["string", "null"] }
         supersedesId: { type: ["string", "null"] }
         evidenceId: { type: ["string", "null"] }
+    ReportingEvidenceVersion:
+      type: object
+      required: [evidenceId, captureId, scope]
+      properties:
+        evidenceId: { type: ["string", "null"] }
+        captureId: { type: ["string", "null"] }
+        scope: { type: string, enum: [selected, retained-excerpt, superseded, unknown] }
+        bodyHash: { type: ["string", "null"] }
+        selectedBodyHash: { type: ["string", "null"] }
+        source: { type: ["string", "null"] }
+        capturedAt: { type: ["string", "null"] }
+        excerpt: { type: ["string", "null"] }
+        start: { type: ["integer", "null"] }
+        end: { type: ["integer", "null"] }
     ReportingClaim:
       type: object
       required: [id, claimId, familyId, proposition, articleId, title, supplied, sourceIds, reviews]
@@ -708,14 +723,11 @@ components:
         directionReason: { type: ["string", "null"] }
         directionOrigin: { type: string, enum: [automatic, analyst, unassessed] }
         directionCorrectionId: { type: ["string", "null"] }
+        evidenceScope: { type: string, enum: [selected, retained-excerpt, superseded, unknown] }
+        displayedEvidenceVersion: { $ref: "#/components/schemas/ReportingEvidenceVersion" }
         evidenceVersions:
           type: array
-          items:
-            type: object
-            required: [captureId, evidenceId]
-            properties:
-              captureId: { type: string }
-              evidenceId: { type: string }
+          items: { $ref: "#/components/schemas/ReportingEvidenceVersion" }
         id: { type: string }
         claimId: { type: string }
         familyId: { type: string }
@@ -740,6 +752,7 @@ components:
       type: object
       required: [id, articleId, descriptor, sourceType, anonymity, supplied, minimumHumans]
       properties:
+        evidenceVersion: { $ref: "#/components/schemas/ReportingEvidenceVersion" }
         id: { type: string }
         articleId: { type: string }
         descriptor: { type: string }
