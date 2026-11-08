@@ -14,9 +14,7 @@ import { orderClaims } from '@/lib/claim-order';
 const isImportNote = (s?: string) => !!s && /supplied analysis|unreviewed claim-family/i.test(s);
 
 function shortDate(s: string) {
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? s : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric',
-    ...(/^\d{4}-\d{2}-\d{2}$/.test(s) ? { timeZone: 'UTC' } : {}) });
+  return fmtDate(s);
 }
 function dateRange(first: string | null, last: string | null) {
   if (!first && !last) return 'Date unknown';

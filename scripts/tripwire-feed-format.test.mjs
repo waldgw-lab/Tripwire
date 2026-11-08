@@ -11,15 +11,15 @@ test('photography credits stay separate from compact reporting bylines', () => {
   ]), 'Rabinowitz, Perez');
 });
 test('current-year feed date omits year and clock is colonless Eastern time', () => {
-  assert.deepEqual(feedPublication('2026-11-05T14:18:33Z', now), { date: '05 NOV', time: '0918', label: '05 NOV · 0918' });
+  assert.deepEqual(feedPublication('2026-11-05T14:18:33Z', now), { date: '5 NOV', time: '0918', label: '5 NOV · 0918' });
 });
 test('older feed date includes year', () => {
-  assert.equal(feedPublication('2025-12-05T14:18:00Z', now).label, '05 DEC 2025 · 0918');
+  assert.equal(feedPublication('2025-12-05T14:18:00Z', now).label, '5 DEC 2025 · 0918');
 });
 test('Eastern year comparison works across UTC New Year', () => {
   const newYearUTC = new Date('2027-01-01T02:00:00Z');
   assert.equal(feedPublication('2027-01-01T01:30:00Z', newYearUTC).label, '31 DEC · 2030');
-  assert.equal(feedPublication('2026-01-01T05:30:00Z', newYearUTC).label, '01 JAN · 0030');
+  assert.equal(feedPublication('2026-01-01T05:30:00Z', newYearUTC).label, '1 JAN · 0030');
 });
 test('daylight time and midnight use correct four-digit clock', () => {
   assert.equal(feedPublication('2026-07-05T14:18:00Z', now).time, '1018');

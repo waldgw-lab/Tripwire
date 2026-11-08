@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { formatDate } from './date-format';
 import {
   getGetEntityAutomationQueryKey,
   getHealthCheckQueryKey,
@@ -39,6 +40,6 @@ export function useInvalidateEntities() {
   ]);
 }
 
-export const fmtWhen = (v?: string | null) => v ? new Date(v).toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : '—';
+export const fmtWhen = (v?: string | null) => formatDate(v, true);
 export const shortHash = (h?: string) => h ? h.slice(0, 12) : '—';
 export const micros = (n?: number) => `$${((n ?? 0) / 1_000_000).toFixed(2)}`;

@@ -67,7 +67,7 @@ export function RelationTag({ value }: { value: string }) {
 }
 
 const unknownN = (v: number | null | undefined) => (v == null ? 'unknown' : v.toLocaleString('en-US'));
-const coverageDate = (o: ReportingClaim) => o.publishedAt ? fmtDate(o.publishedAt) : o.suppliedDate ? o.suppliedDate : 'date unknown';
+const coverageDate = (o: ReportingClaim) => o.publishedAt ? fmtDate(o.publishedAt) : o.suppliedDate ? fmtDate(o.suppliedDate) : 'date unknown';
 
 const useInvalidateProvenance = useInvalidateClaims;
 

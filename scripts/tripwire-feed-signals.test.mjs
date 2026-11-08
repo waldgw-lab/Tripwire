@@ -5,14 +5,14 @@ import { impactRating, contentStatus, publicationET } from '../artifacts/tripwir
 const primary = { title: 'Donald Trump', individual: 'Donald Trump', aliases: ['Trump'], watchType: 'position', tier: 1, enabled: true };
 const secondary = { title: 'Marco Rubio', aliases: ['Rubio'], watchType: 'position', tier: 2, enabled: true };
 test('publication uses Eastern standard time and 24-hour hours', () => {
-  assert.equal(publicationET('2026-11-05T14:18:33Z').label, 'Nov 05, 2026 · 09:18 ET');
+  assert.equal(publicationET('2026-11-05T14:18:33Z', new Date('2026-11-08T15:00:00Z')).label, '5 NOV · 09:18 ET');
 });
 test('publication follows Eastern daylight saving time', () => {
   assert.equal(publicationET('2026-07-05T14:18:00Z').time, '10:18 ET');
 });
 test('midnight and previous-day conversion are correct', () => {
   assert.equal(publicationET('2026-11-05T05:00:00Z').time, '00:00 ET');
-  assert.equal(publicationET('2026-11-05T02:30:00Z').label, 'Nov 04, 2026 · 21:30 ET');
+  assert.equal(publicationET('2026-11-05T02:30:00Z', new Date('2026-11-08T15:00:00Z')).label, '4 NOV · 21:30 ET');
 });
 test('unknown publication time does not invent an intake timestamp', () => {
   assert.equal(publicationET().label, 'Publication time unknown');

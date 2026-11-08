@@ -1,16 +1,13 @@
 import type { ArticleCredit } from '@workspace/api-client-react';
 import { nameKey } from './media-coverage.ts';
+import { formatDate, formatTime } from './date-format';
 
 /** Compact metadata, using Eastern time for both publication and current-year comparison. */
 export function feedPublication(value?: string, now = new Date()) {
   const date = value ? new Date(value) : null;
   if (!date || Number.isNaN(date.getTime())) return { date: 'Date unknown', time: 'Time unknown', label: 'Publication time unknown' };
-  const options = { timeZone: 'America/New_York' } as const;
-  const parts = new Intl.DateTimeFormat('en-GB', { ...options, day: '2-digit', month: 'short', year: 'numeric' }).formatToParts(date);
-  const part = (type: string) => parts.find(p => p.type === type)?.value ?? '';
-  const currentYear = new Intl.DateTimeFormat('en-GB', { ...options, year: 'numeric' }).format(now);
-  const day = `${part('day')} ${part('month').toUpperCase()}${part('year') === currentYear ? '' : ` ${part('year')}`}`;
-  const clock = new Intl.DateTimeFormat('en-GB', { ...options, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date).replace(':', '');
+  const day = formatDate(value, false, now);
+  const clock = /^\d{4}-\d{2}-\d{2}$/.test(value!) ? 'Time unknown' : formatTime(value!, true);
   return { date: day, time: clock, label: `${day} · ${clock}` };
 }
 

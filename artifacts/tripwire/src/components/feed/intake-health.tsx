@@ -1,4 +1,4 @@
-import { useRefresh, useWorkspace } from '@/lib/workspace';
+import { fmtDate, useRefresh, useWorkspace } from '@/lib/workspace';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -33,7 +33,7 @@ export function IntakeHealth() {
                   <span className="text-muted-foreground">{source.message}</span>
                 </div>
                 <a href={source.url} target="_blank" rel="noreferrer" className="mt-0.5 block break-all font-mono text-[10px] text-muted-foreground underline underline-offset-2">{source.url}</a>
-                {source.nextAttemptAt && <span className="mt-0.5 block text-muted-foreground">Retry {new Date(source.nextAttemptAt).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })} ET</span>}
+                {source.nextAttemptAt && <span className="mt-0.5 block text-muted-foreground">Retry {fmtDate(source.nextAttemptAt, true)}</span>}
               </div>
             ))}
             {outlet.title === 'Reuters' && <p className="text-xs text-muted-foreground">No working publisher RSS verified. Paste or upload publisher content to enrich a discovered item.</p>}

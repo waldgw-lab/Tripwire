@@ -96,14 +96,7 @@ export function toInput(r: TrackedRecord): RecordInput {
 export const byKind = (records: TrackedRecord[] | undefined, kind: TrackedRecord['kind']) =>
   (records ?? []).filter((r) => r.kind === kind);
 
-export function fmtDate(s?: string | null, withTime = false) {
-  if (!s) return '—';
-  const d = new Date(s);
-  if (isNaN(d.getTime())) return s;
-  return d.toLocaleString(undefined, withTime
-    ? { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }
-    : { month: 'short', day: 'numeric', year: 'numeric' });
-}
+export { formatDate as fmtDate } from './date-format';
 
 export function toLocalInput(s?: string) {
   if (!s) return '';
