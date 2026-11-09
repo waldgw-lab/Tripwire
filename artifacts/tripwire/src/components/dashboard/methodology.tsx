@@ -45,6 +45,25 @@ function Section({ s, index }: { s: MethodologySection; index: number }) {
           </div>
         ))}
       </dl>
+      {s.views && (
+        <div className="mt-7 space-y-7" data-testid="section-methodology-feed-views">
+          {s.views.map(view => (
+            <section key={view.id} id={`methodology-feed-${view.id}`} className="scroll-mt-24 rounded-lg border border-border bg-card/40 p-4 md:p-5"
+              aria-labelledby={`methodology-feed-${view.id}-heading`} data-testid={`section-methodology-feed-${view.id}`}>
+              <h4 id={`methodology-feed-${view.id}-heading`} className="font-display text-2xl font-semibold">{view.title}</h4>
+              <p className="mt-1 max-w-[76ch] text-sm leading-relaxed">{view.introduction}</p>
+              <dl className="mt-4 space-y-4">
+                {view.concepts.map(c => (
+                  <div key={c.title} className="grid gap-1 md:grid-cols-[220px_1fr] md:gap-6">
+                    <dt className="text-sm font-semibold">{c.title}</dt>
+                    <dd className="max-w-[68ch] text-sm leading-relaxed text-muted-foreground">{c.text}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
+        </div>
+      )}
       {s.id === 'claims' && <ClaimCategories />}
     </section>
   );

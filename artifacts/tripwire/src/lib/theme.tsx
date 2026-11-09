@@ -11,7 +11,7 @@ function initialTheme(): Theme {
   } catch {
     // Storage can be unavailable in privacy-restricted browsers.
   }
-  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -30,7 +30,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme]);
   useEffect(() => {
     const sync = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEY || event.key === null) updateTheme(event.newValue === 'dark' ? 'dark' : 'light');
+      if (event.key === STORAGE_KEY || event.key === null) updateTheme(event.newValue === 'light' ? 'light' : 'dark');
     };
     window.addEventListener('storage', sync);
     return () => window.removeEventListener('storage', sync);

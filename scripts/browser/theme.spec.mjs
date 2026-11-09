@@ -3,7 +3,7 @@ import { test, expect } from './claims-fixture.mjs';
 test('appearance switch is above Refresh, survives navigation/reload and works collapsed and on mobile', async ({ page }) => {
   await page.goto('/feed');
   const root = page.locator('html');
-  await expect(root).toHaveAttribute('data-theme', 'light');
+  await expect(root).toHaveAttribute('data-theme', 'dark');
   const dark = page.getByTestId('button-theme-dark');
   const refresh = page.getByTestId('button-refresh-feeds');
   await expect(dark).toBeVisible();
@@ -17,6 +17,10 @@ test('appearance switch is above Refresh, survives navigation/reload and works c
   await expect(root).toHaveAttribute('data-theme', 'dark');
   await page.reload();
   await expect(root).toHaveAttribute('data-theme', 'dark');
+  await page.getByTestId('button-theme-light').click();
+  await page.reload();
+  await expect(root).toHaveAttribute('data-theme', 'light');
+  await page.getByTestId('button-theme-dark').click();
   await page.getByTestId('button-toggle-sidebar').click();
   await page.getByTestId('button-theme-collapsed').click();
   await expect(root).toHaveAttribute('data-theme', 'light');
@@ -32,6 +36,7 @@ test('switching still works if browser storage is unavailable', async ({ page })
     Storage.prototype.setItem = () => { throw new DOMException('Blocked', 'SecurityError'); };
   });
   await page.goto('/feed');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.getByTestId('button-theme-dark').click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.getByTestId('button-theme-light').click();

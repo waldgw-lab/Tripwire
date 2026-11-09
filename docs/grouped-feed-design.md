@@ -36,6 +36,14 @@ existing article reader, with publisher links, flags, editing and deletion.
 Fresh `/feed` navigation defaults to Chronological. An explicit grouped URL can
 restore a layout; this does not change the default.
 
+Briefing and Compare include a publication-based overview using an explicitly
+attributed retained source summary or original headline, not generated consensus.
+The last 6 hours and preceding 6–24 hours form the rolling 24-hour total; earlier,
+unknown and future-dated records remain distinct. Wide Briefing panels place the
+overview alongside reporting; Compare uses a compact overview band. Explanations
+and grouping safeguards live under each view in Dashboard → Methodology → Feed,
+not in persistent Feed instructions or “Why grouped” disclosures.
+
 ## Grouping and ordering
 
 - Use the already-filtered Feed articles, not a Claims-only subset. Default Low

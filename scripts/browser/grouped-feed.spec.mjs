@@ -35,6 +35,10 @@ test('grouped layouts preserve all eligible reporting, expand fully, restore URL
   for (const layout of ['briefing','compare','board']) {
     await page.getByTestId(`button-layout-${layout}`).click();
     await expect(page.getByTestId(`grouped-feed-${layout}`)).toBeVisible();
+    await expect(page.getByTestId('text-layout-explainer')).toHaveCount(0);
+    await expect(page.getByText('How grouping works',{exact:true})).toHaveCount(0);
+    await expect(page.locator('[data-testid^="button-group-basis-"]')).toHaveCount(0);
+    if (layout !== 'board') await expect(page.locator('[data-testid^="overview-group-"]').first()).toBeVisible();
     const more = page.locator('[data-testid^="button-group-showall-"]');
     if (await more.count()) await more.click();
     await expect.poll(()=>groupedIds(page)).toEqual(expectedIds);
@@ -49,6 +53,19 @@ test('grouped layouts preserve all eligible reporting, expand fully, restore URL
   expect(new URL(page.url()).searchParams.has('view')).toBe(false);
   await page.goto('/feed');
   await expect(page.getByTestId('button-view-chronological')).toHaveAttribute('aria-checked','true');
+});
+
+test('Feed methodology is organized beneath the actual view types in Dashboard',async({page})=>{
+  await page.goto('/dashboard?tab=methodology');
+  const feed=page.getByTestId('section-methodology-feed');
+  await expect(feed).toBeVisible();
+  for(const view of ['chronological','briefing','compare','board']){
+    await expect(feed.getByTestId(`section-methodology-feed-${view}`)).toBeVisible();
+  }
+  await expect(feed.getByTestId('section-methodology-feed-briefing')).toContainText('How grouping works');
+  await expect(feed.getByTestId('section-methodology-feed-compare')).toContainText('Last 6h is included in Last 24h');
+  await expect(feed.getByTestId('section-methodology-feed-board')).toContainText('not a verified shared claim');
+  await expect(page.getByTestId('section-methodology-principles')).not.toContainText('Chronological and Grouped views');
 });
 
 test('grouped cards open the shared reader; narrow and reader-width grids do not overflow', async ({page})=>{

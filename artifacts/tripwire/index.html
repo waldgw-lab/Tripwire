@@ -6,8 +6,8 @@
     <script>
       // Apply the saved appearance before the app and its styles paint.
       (() => {
-        let theme = 'light';
-        try { theme = localStorage.getItem('tripwire:theme') === 'dark' ? 'dark' : 'light'; } catch {}
+        let theme = 'dark';
+        try { theme = localStorage.getItem('tripwire:theme') === 'light' ? 'light' : 'dark'; } catch {}
         const root = document.documentElement;
         root.classList.toggle('dark', theme === 'dark');
         root.dataset.theme = theme;

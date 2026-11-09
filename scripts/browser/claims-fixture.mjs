@@ -70,6 +70,10 @@ export const test = base.extend({
       else if (p === '/api/tripwire/provenance/summaries') json = summaries;
       else if (p === '/api/tripwire/claim-categories') json = categories;
       else if (p === '/api/tripwire/claims/processing') json = { pending: 0, failed: 0, recent: [], policy: 'local' };
+      // Operations intentionally stays mounted to retain in-progress intake drafts.
+      // Methodology tests therefore also intercept these background reads.
+      else if (p === '/api/tripwire/quick-enrichment') json = { items: [], jobs: [] };
+      else if (p === '/api/tripwire/retrieval') json = { outlets: [], storage: { blobs: 0, characters: 0 } };
       else if (p === '/api/tripwire/developments') json = { items: [], total: 0, offset: 0 };
       else if (p === '/api/tripwire/provenance') json = {
         claims: [], sources: [], matches: [], context: [], counts: {}, total: 0, offset: 0,

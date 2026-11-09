@@ -486,3 +486,11 @@
 .dark span.bg-white[role='img'],.dark span.rounded-sm.bg-white{box-shadow:0 0 0 1px hsl(0 0% 100%/.12)}
 /* X tile: bg-foreground would become light; keep it a dark tile with a visible edge */
 .dark span.bg-foreground.text-background[role='img']{background:hsl(0 0% 4%);color:hsl(0 0% 96%);box-shadow:0 0 0 1px hsl(0 0% 100%/.18)}
+/* grouped feed: development overview */
+.tw-overview{background:hsl(var(--card)/.55)}
+.tw-group-bundle{container-type:inline-size}
+@container (min-width:900px){.tw-brief-split{grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr);align-items:start;gap:20px}.tw-brief-overview{order:2}.tw-brief-reporting{order:1}}
+@container (min-width:800px){.tw-overview-band{display:grid;grid-template-columns:250px minmax(0,1fr);column-gap:20px;align-items:start}.tw-overview-band>figure{grid-column:2;grid-row:1 / span 2;margin-top:0}}
+@keyframes tw-overview-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.tw-overview-pulse{animation:tw-overview-pulse 2.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.tw-overview-pulse{animation:none}}
