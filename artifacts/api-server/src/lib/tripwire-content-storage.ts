@@ -4,6 +4,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { RecordData } from "./tripwire-store";
 import type { Capture } from "./tripwire-content";
 import { assessArticle } from "./tripwire-impact-policy";
+import { automaticArticleFocus, FOCUS_POLICY } from "./article-focus";
 
 type ContentReader = Pick<typeof db, "select">;
 type ContentStore = Pick<typeof db, "select" | "insert">;
@@ -36,12 +37,14 @@ export async function archiveArticle<T extends RecordData>(article: T, database:
   const { fullText, ...metadata } = article;
   const body = fullText ?? (fullTextHash ? (await readContent(fullTextHash, database)).text : "");
   const automaticAssessment = assessArticle({ ...article, fullText: body, fullTextHash });
+  const articleId = article.id;
+  const automaticFocus = articleId ? automaticArticleFocus({ ...article, fullText: body }, articleId) : undefined;
   // Legacy explicit impact is retained as an analyst override, never overwritten
   // by a new automatic policy. Topics become explicit overrides on correction.
   const impactMode = article.impactMode ?? (article.impact ? "manual" : "auto");
   const topicMode = article.topicMode ?? "auto";
   return { ...metadata, retainedContent, fullTextHash, fullTextLength: fullText?.length ?? article.fullTextLength ?? article.retainedCharacters ?? 0,
-    automaticAssessment, impactMode, topicMode,
+    automaticAssessment, impactMode, topicMode, automaticFocus, focusPolicy: automaticFocus ? FOCUS_POLICY : undefined, sharedFocus: undefined,
     impactOverrideOrigin: impactMode === "manual" ? article.impactOverrideOrigin ?? "legacy-unknown" : undefined,
     topicOverrideOrigin: topicMode === "manual" ? article.topicOverrideOrigin ?? "legacy-unknown" : undefined,
     impact: impactMode === "manual" ? article.impact : automaticAssessment.impact,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useSearch } from 'wouter';
 import { useWorkspaceAccess } from '@/lib/workspace-access';
 import { type TrackedRecord } from '@workspace/api-client-react';
@@ -9,13 +9,17 @@ import { Empty, ErrorState, PageHead, RowsSkeleton } from '@/components/bits';
 import { ClaimEditor, ConfirmDelete } from '@/components/editors';
 import { Disclosure, ProvenancePanel, TONE } from '@/components/provenance/provenance-panel';
 import { OutletBrand } from '@/components/outlet-brand';
-import { ClaimProcessingStatus } from '@/components/provenance/claim-processing';
+import { RecentDevelopmentAlerts } from '@/components/provenance/recent-development-alerts';
 import { FocusContext } from '@/components/provenance/focus-context';
 import { FocusOverview } from '@/components/provenance/focus-overview';
 import { STAGES, byKind, fmtDate, useWorkspace } from '@/lib/workspace';
 import {
   UNCATEGORIZED, categoryKey, groupClaimsByArticle, categoryLabel, compareClaims, groupKey, reportTime, topicKey, topicLabel, summariesForClaim, useClaimLinkage, type ClaimSummary,
 } from '@/lib/claim-groups';
+
+import { FocusCorrection } from '@/components/feed/focus-correction';
+
+import { FocusGroupEditor } from '@/components/feed/focus-group-editor';
 
 const isImportNote = (s?: string) => !!s && /supplied analysis|unreviewed claim-family/i.test(s);
 
@@ -248,6 +252,7 @@ export default function ClaimsPage() {
                     </span>
                   </span>
                 </button>
+                {art && isSignedIn && <div className="mt-2 shrink-0"><FocusCorrection article={art} compact /></div>}
                 <Link href={`/feed?article=${encodeURIComponent(articleId)}`} title="Open article in feed" aria-label="Open article in feed" data-testid={`link-article-feed-${articleId}`}
                   className="mt-2 flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground">
                   <ExternalLink className="h-3.5 w-3.5" />
@@ -270,7 +275,8 @@ export default function ClaimsPage() {
           ? <button onClick={() => setCreating(true)} data-testid="button-new-claim" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground"><Plus className="h-3.5 w-3.5" /> Claim</button>
           : null}
       </PageHead>
-      <ClaimProcessingStatus canRetry={isSignedIn} />
+      <RecentDevelopmentAlerts articles={articles} summaries={sumQ.data as ClaimSummary[] | undefined} loading={isLoading} error={isError} onRetry={() => refetch()}
+        summariesLoading={sumQ.isLoading} summariesError={sumQ.isError} />
 
       <div className="tw-glass sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-border px-5 py-2.5 backdrop-blur md:px-8" data-testid="bar-claim-filters">
         <div className="relative min-w-[200px] flex-1">
@@ -335,6 +341,10 @@ export default function ClaimsPage() {
                             </span>
                           </span>
                         </button>
+                        {isSignedIn && g.topic !== '_unassigned' && g.total.articleCount > 0 && <div className="px-6"><FocusGroupEditor topicId={g.topic}
+                          onSaved={d => { if (st.topic === g.topic || st.focus === g.key || (!st.claim && !st.focus && currentGroup === g.key)) update({ category: st.category ? d.effective.categoryId : '', topic: st.topic ? d.effective.topicId : '', focus: `${d.effective.categoryId}::${d.effective.topicId}` }); }}
+                          onArticlesSaved={r => r.focus ? update({ claim: null, focus: `${r.focus.categoryId}::${r.focus.topicId}`, category: r.focus.categoryId, topic: r.focus.topicId, q: '', recency: 'all' }, true)
+                            : update({ claim: null, focus: null, category: '', topic: '', q: '', recency: 'all' }, true)} /></div>}
                         {open && <div className="pb-1">{articleList(g)}</div>}
                       </li>
                     );
@@ -350,24 +360,29 @@ export default function ClaimsPage() {
               focusArticleCount={wholeByGroup.get(groupKey(currentSummary))?.articleCount}
               claimArticleCount={summaryById.get(current.id)?.articleIds?.length}
               onFocusOverview={() => update({ claim: null, focus: groupKey(currentSummary), category: categoryKey(currentSummary), topic: topicKey(currentSummary), q: '', recency: 'all' }, true)}
+              scopeLine={<span data-testid="text-claim-scope-counts">{sumQ.isLoading ? <span className="inline-block h-2.5 w-28 animate-pulse rounded bg-muted align-middle" />
+                : sumQ.isError ? 'Articles unknown' : !currentSummary ? 'No article attributions'
+                : <>{currentSummary.articleIds ? plural(new Set(currentSummary.articleIds).size, 'article') : 'Articles unknown'} in this focus · {plural(currentSummary.attributions, 'attribution')} · {dateRange(currentSummary.firstDate, currentSummary.lastDate)}</>}</span>}
               legacy={legacy} articleById={articleById} />
           ) : st.claim ? (
             <Empty title="Claim not found"><button onClick={() => update({ claim: null })} className="text-xs text-accent underline" data-testid="button-claim-missing-clear">Show claims</button></Empty>
           ) : selectedFocus ? <FocusOverview key={selectedFocus.key} title={selectedFocus.title} category={categoryLabel(selectedFocus.cat, categoryById)} topic={selectedFocus.topic}
               articles={selectedFocus.byArticle.articles} unattributed={selectedFocus.byArticle.unattributed} totalArticles={selectedFocus.total.articleCount}
               complete={selectedFocus.byArticle.complete} summaries={selectedFocus.summaries} articleById={articleById}
+              stats={topicStats(selectedFocus)} range={sumQ.isLoading ? '…' : sumQ.isError ? 'Date unknown' : dateRange(selectedFocus.first, selectedFocus.last)}
               loading={sumQ.isLoading} error={sumQ.isError} onRetry={() => sumQ.refetch()}
               onClaim={(c, scope) => update({ claim: c.id, focus: null, category: categoryKey(scope), topic: topicKey(scope) }, true)} />
             : st.focus ? <Empty title="Focus group not available with these filters"><button className="text-xs underline" data-testid="button-clear-focus" onClick={() => update({ focus: null })}>Show matching groups</button></Empty> : null}
         </div>
       )}
-      <ClaimEditor open={creating || !!editing} onOpenChange={(o) => { if (!o) { setCreating(false); setEditing(null); } }} record={editing} articles={articles} />
+      {(creating || !!editing) && <ClaimEditor open onOpenChange={(o) => { if (!o) { setCreating(false); setEditing(null); } }} record={editing} articles={articles} />}
       <ConfirmDelete target={deleting} onClose={() => { setDeleting(null); update({ claim: null }); }} />
     </div>
   );
 }
 
-function ClaimDetail({ current, summary, catLabel, isSignedIn, onEdit, onDelete, onTopic, onFocusOverview, focusArticleCount, claimArticleCount, legacy, articleById }: {
+function ClaimDetail({ current, summary, catLabel, isSignedIn, onEdit, onDelete, onTopic, onFocusOverview, focusArticleCount, claimArticleCount, legacy, articleById, scopeLine }: {
+  scopeLine?: ReactNode;
   current: TrackedRecord; summary?: ClaimSummary; catLabel: string; isSignedIn: boolean; onEdit: () => void; onDelete: () => void; onTopic: () => void;
   onFocusOverview: () => void; focusArticleCount?: number; claimArticleCount?: number;
   legacy: NonNullable<TrackedRecord['observations']>; articleById: Map<string, TrackedRecord>;
@@ -378,6 +393,7 @@ function ClaimDetail({ current, summary, catLabel, isSignedIn, onEdit, onDelete,
         <span className="text-muted-foreground">Primary category:</span><span>{catLabel}</span><ChevronRight className="h-3 w-3" />
         <button onClick={onTopic} className="uppercase hover:text-foreground hover:underline" data-testid="button-claim-topic-filter">{topicLabel(summary)}</button>
       </nav>
+      {scopeLine && <p className="mb-1 font-mono text-[10px] text-muted-foreground">{scopeLine}</p>}
       <FocusContext summary={summary} />
       {summary?.classificationReason && <Disclosure label="Why this category" testId="details-category-assignment" className="mb-2 max-w-3xl">
         <p className="text-[11px] text-muted-foreground" data-testid="text-classification-reason">{summary.classificationReason}</p>
@@ -392,8 +408,8 @@ function ClaimDetail({ current, summary, catLabel, isSignedIn, onEdit, onDelete,
         </div>
         {isSignedIn && (
           <div className="flex shrink-0 gap-1">
-            <button onClick={onEdit} className="flex h-8 w-8 items-center justify-center rounded-md border border-input text-muted-foreground hover:text-foreground" data-testid="button-edit-claim"><Pencil className="h-4 w-4" /></button>
-            <button onClick={onDelete} className="flex h-8 w-8 items-center justify-center rounded-md border border-input text-muted-foreground hover:text-destructive" data-testid="button-delete-claim"><Trash2 className="h-4 w-4" /></button>
+            <button onClick={onEdit} aria-label="Edit claim wording and notes" title="Edit claim wording and notes" className="flex h-8 w-8 items-center justify-center rounded-md border border-input text-muted-foreground hover:text-foreground" data-testid="button-edit-claim"><Pencil className="h-4 w-4" /></button>
+            <button onClick={onDelete} aria-label="Remove claim from workspace" title="Remove claim from workspace" className="flex h-8 w-8 items-center justify-center rounded-md border border-input text-muted-foreground hover:text-destructive" data-testid="button-delete-claim"><Trash2 className="h-4 w-4" /></button>
           </div>
         )}
       </div>

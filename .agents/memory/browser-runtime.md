@@ -5,10 +5,8 @@ description: Choosing a compatible browser for repeatable local regression check
 Prefer the environment-provided Chromium for browser checks on Replit; do not
 assume downloading Playwright's Chromium also supplies a usable Linux runtime.
 
-**Why:** A downloaded browser failed before any assertions with a missing
-`libglib-2.0.so.0`, while the provided Chromium launched successfully. This was
-an environment dependency issue, not a failed navigation test.
+**Why:** Browser binaries and their host libraries are separate dependencies;
+download success does not establish compatibility with the workspace runtime.
 
-**How to apply:** Check for the provided executable before attempting OS library
-installation. Keep an explicit executable override and the standard Playwright
-browser fallback for other development environments.
+**How to apply:** Prefer the workspace browser when available, preserving an
+explicit executable override and the standard browser fallback for other environments.

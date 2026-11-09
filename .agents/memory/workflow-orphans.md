@@ -6,9 +6,8 @@ A failed managed workflow can coexist with an older, still-serving service
 process tree after workspace changes. Check process ownership before changing
 ports or starting another server.
 
-**Why:** Both app workflows failed with address-in-use errors while older pnpm
-and Node process trees still held their expected ports. The running preview did
-not mean the managed workflows had picked up current server code.
+**Why:** A responding preview alone does not prove it serves the current build;
+an older process can still hold the service port after a managed restart fails.
 
 **How to apply:** Confirm the stale processes belong to the affected app service,
 stop only those process trees, then restart the existing managed workflows.

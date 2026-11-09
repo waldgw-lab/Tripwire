@@ -5,7 +5,12 @@ import { claimCoverageSummaries } from "../lib/reporting-summary";
 import { claimProcessing, queueArticleClaims, LiveClaimInputError } from "../lib/live-claims";
 import { correctDirection } from "../lib/claim-direction";
 import { CLAIM_CATEGORIES } from "../lib/claim-taxonomy";
+import { correctLink } from "../lib/claim-corrections";
+import { FeedbackError } from "../lib/tripwire-feedback";
 const router = Router();
+router.post("/tripwire/provenance/link-corrections", async (req, res): Promise<void> => {
+  res.json(api.CorrectClaimLinkResponse.parse(await correctLink(api.CorrectClaimLinkBody.parse(req.body))));
+});
 router.get("/tripwire/claim-categories", (_req,res):void => {
   res.json(api.GetClaimCategoriesResponse.parse(CLAIM_CATEGORIES));
 });
@@ -33,7 +38,7 @@ router.post("/tripwire/provenance/reviews", async (req, res): Promise<void> => {
   res.json(api.ReviewReportingLineageResponse.parse(await reviewLineage(api.ReviewReportingLineageBody.parse(req.body))));
 });
 const errors: ErrorRequestHandler = (err, req, res, _next) => {
-  if (err instanceof ProvenanceError) res.status(err.status).json({ error: err.message });
+  if (err instanceof ProvenanceError || err instanceof FeedbackError) res.status(err.status).json({ error: err.message });
   else if(err instanceof LiveClaimInputError)res.status(400).json({error:err.message});
   else if (err?.issues) res.status(400).json({ error: "Invalid provenance request" });
   else { req.log.error({ err }, "Reporting provenance operation failed"); res.status(503).json({ error: "Provenance unavailable; retained history is unchanged" }); }

@@ -26,6 +26,8 @@ import { ErrorLine, Mono, btnCls, inputCls, primaryCls } from '@/components/enti
 import { ArticleHeading } from '@/components/article-heading';
 import { ClaimDirection } from './claim-direction';
 
+import { ClaimLinkCorrection } from './claim-link-correction';
+
 /** Muted complementary tones for compact statuses and disclosures. */
 export const TONE = { sage: 'bg-[hsl(150_18%_92%)] text-[hsl(150_22%_28%)]', slate: 'bg-[hsl(212_20%_93%)] text-[hsl(212_24%_32%)]', clay: 'bg-[hsl(20_28%_92%)] text-[hsl(18_30%_34%)]' };
 export function Disclosure({ label, count, children, testId, className }: { label: string; count?: number; children: ReactNode; testId?: string; className?: string }) {
@@ -232,7 +234,8 @@ function ContextRowInner({ c }: { c: ReportingContext }) {
 }
 
 function ClaimObservation({ o, editable, onReview, onFocusEvent, highlight, sourceById }: { o: ReportingClaim; editable: boolean; onReview: (t: ReviewTarget) => void; onFocusEvent: (id: string) => void; highlight?: boolean; sourceById: Map<string, ReportingSource> }) {
-  const cur = currentReview(o.reviews);
+  const correction = o.linkHistory?.at(-1);
+  const cur = o.linkExcluded ? undefined : currentReview(o.reviews.filter(r => (r.associationCorrectionId ?? null) === (o.linkCorrectionId ?? null)));
   const own = o.sourceIds.map(id => sourceById.get(id)).filter(Boolean) as ReportingSource[];
   return <li className={cn('tw-feed-item relative rounded-xl px-3 py-3.5 sm:px-4', highlight && 'bg-[hsl(150_18%_94%)]')} data-testid={`row-coverage-${o.id}`}>
         <ArticleHeading outlet={o.outlet ?? 'Unknown outlet'} title={o.title} date={coverageDate(o)}
@@ -240,7 +243,8 @@ function ClaimObservation({ o, editable, onReview, onFocusEvent, highlight, sour
           {cur ? <RelationTag value={cur.relation} /> : <span className={cn('rounded-sm px-1.5 py-0.5 text-[10px]', TONE.sage)} data-testid={`status-attribution-${o.id}`}>Article attribution</span>}
         </ArticleHeading>
       <div className="mt-3 min-w-0 sm:pl-20">
-        <ClaimDirection o={o} editable={editable} />
+        <ClaimDirection o={o} editable={editable && !o.linkExcluded} />
+        <ClaimLinkCorrection observation={o} editable={editable} />
         <p className="mt-1 text-[11px] font-medium" data-testid={`claim-evidence-scope-${o.id}`}>{VERSION_LABEL[o.evidenceScope ?? 'unknown']}</p>
         {o.excerpt && <blockquote className="mt-1 border-l-2 border-[hsl(212_20%_70%)] pl-2 font-serif text-sm">{o.excerpt}</blockquote>}
         <VersionContext version={o.displayedEvidenceVersion} />
@@ -274,8 +278,9 @@ function ClaimObservation({ o, editable, onReview, onFocusEvent, highlight, sour
         </Disclosure>
         {(editable || o.reviews.length > 0) && <Disclosure label="Advanced: relation and independence" count={o.reviews.length || undefined} testId={`details-review-${o.id}`}>
           <p className="text-[11px] text-muted-foreground">Optional. Records how this coverage relates to others; nothing is marked verified automatically.</p>
-          <ReviewHistory reviews={o.reviews} onCorrect={editable ? (r) => onReview({ kind: 'claim', observation: o, supersedes: r }) : undefined} />
-          {editable && !cur && <button className="mt-1 text-[11px] underline" onClick={() => onReview({ kind: 'claim', observation: o })} data-testid={`button-review-coverage-${o.id}`}>Record relation</button>}
+          <ReviewHistory reviews={o.reviews} onCorrect={editable && !o.linkExcluded ? (r) => onReview({ kind: 'claim', observation: o, supersedes: r }) : undefined} />
+          {correction && <p className="text-[11px] text-muted-foreground">Reviews before the association correction are retained as history, not carried forward as independent support.</p>}
+          {editable && !o.linkExcluded && !cur && <button className="mt-1 text-[11px] underline" onClick={() => onReview({ kind: 'claim', observation: o, supersedes: currentReview(o.reviews) })} data-testid={`button-review-coverage-${o.id}`}>Record relation</button>}
         </Disclosure>}
       </div>
   </li>;
@@ -331,7 +336,10 @@ export function ProvenancePanel({ params, editable, heading = 'Source lineage', 
     {q.isLoading ? <div className="space-y-2" aria-busy data-testid="provenance-loading">{[80, 95, 60].map((w, i) => <div key={i} className="h-3 animate-pulse rounded bg-muted" style={{ width: `${w}%` }} />)}</div>
       : q.isError || !d ? <div className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-xs" data-testid="provenance-error"><span className="text-muted-foreground">Lineage could not be loaded. {errText(q.error)}</span><button className="underline" onClick={() => q.refetch()}>Retry</button></div>
       : <>
-        <Disclosure label="Lineage counts across all retained history" testId="details-provenance-counts">
+        {params.claimId && !!d.counts.historicalPassages && <p className="mb-2 rounded border border-border px-2 py-1.5 text-xs text-muted-foreground" data-testid="provenance-history-notice">
+          {d.counts.historicalPassages} historical passage{d.counts.historicalPassages === 1 ? '' : 's'} retained below, with original quotations and source context. Reassigned or excluded associations do not count as current claim coverage.
+        </p>}
+        <Disclosure label={params.claimId ? 'Current claim coverage counts' : 'Lineage counts across retained article history'} testId="details-provenance-counts">
         <dl className="grid grid-cols-2 gap-2" data-testid="provenance-counts">
           {([['Articles', d.counts.articles], ['Occurrences', d.counts.occurrences], ['Min. anonymous humans', d.counts.minimumAnonymousHumans], ['Supplied provisional records', d.counts.provisionalSourceRecords], ['Reviewed independent paths', d.counts.independentPaths]] as const).map(([k, v]) =>
             <div key={k} className="rounded-md border border-border px-2 py-1.5"><dt><Mono>{k}</Mono></dt><dd className={cn('font-mono text-sm', v == null && 'text-muted-foreground')}>{unknownN(v)}</dd></div>)}

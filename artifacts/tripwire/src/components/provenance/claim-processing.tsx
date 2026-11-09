@@ -9,7 +9,7 @@ import { Disclosure, TONE } from './provenance-panel';
 const STATUS_TONE: Record<string, string> = { pending: TONE.slate, complete: TONE.sage, 'no-claims': 'bg-muted text-muted-foreground', failed: TONE.clay, superseded: 'bg-muted text-muted-foreground line-through' };
 const STATUS_LABEL: Record<string, string> = { pending: 'queued', complete: 'processed', 'no-claims': 'no matching statements', failed: 'failed', superseded: 'superseded', 'not-processed': 'not processed' };
 
-/** Compact local-processing status for /claims. Polls every 10s; invalidates claim data only when recent activity changes. */
+/** Compact local-processing status, shown in Dashboard Operations under Claims processing. Polls every 10s; invalidates claim data only when recent activity changes. */
 export function ClaimProcessingStatus({ canRetry }: { canRetry: boolean }) {
   const q = useGetClaimProcessing({ query: { queryKey: getGetClaimProcessingQueryKey(), refetchInterval: 10_000, staleTime: 5_000, retry: 1 } });
   const invalidate = useInvalidateClaims();
@@ -33,7 +33,7 @@ export function ClaimProcessingStatus({ canRetry }: { canRetry: boolean }) {
   };
   const d = q.data;
   return (
-    <div className="border-b border-border px-5 py-2 text-xs" data-testid="panel-claim-processing">
+    <div className="px-4 py-2.5 text-xs" data-testid="panel-claim-processing">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="text-muted-foreground">New retained articles are read locally into passage-backed claims. No model or publisher requests.</span>
         {q.isLoading ? <span className="inline-block h-2.5 w-24 animate-pulse rounded bg-muted" />

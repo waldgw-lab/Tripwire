@@ -5,12 +5,32 @@ type Row = { id: string; data: Data };
 type Link = { claim_id: string; article_id: string; proposition?: string };
 type Summary = { claimId: string; latestReportAt?: string | null; ongoing?: boolean };
 type Focus = { categoryId: CategoryId; topicId: string; topicTitle: string; classificationReason: string };
+export const FOCUS_POLICY = "article-focus-2026-11-09";
 const reason = "Grouped by the article's headline, subheading and retained lead—not individual claim actions. Development labels describe reporting, not verified outcomes. Source links and claim identities remain unchanged.";
 const named = (categoryId: CategoryId, topicId: string, topicTitle: string): Focus =>
   ({ categoryId, topicId, topicTitle, classificationReason: reason });
 
 /** One deterministic home per article; no models, identity guesses or registry writes. */
 export function articleFocus(article: Data, id: string): Focus {
+  const base = baseArticleFocus(article, id);
+  const shared = article.sharedFocus;
+  return shared?.topicId === base.topicId && CLAIM_CATEGORIES.some(c => c.id === shared.categoryId)
+    ? { ...base, ...shared, classificationReason: "Shared focus label/category corrected by an analyst. Article identity and evidence are unchanged." } : base;
+}
+
+function baseArticleFocus(article: Data, id: string): Focus {
+  const override = article.focusOverride;
+  if (override && CLAIM_CATEGORIES.some(c => c.id === override.categoryId) &&
+      typeof override.topicId === "string" && override.topicId.trim() &&
+      typeof override.topicTitle === "string" && override.topicTitle.trim()) {
+    return { ...named(override.categoryId, override.topicId, override.topicTitle),
+      classificationReason: "Analyst correction for this article only. Shared labels, claim identities and exact source links are unchanged." };
+  }
+  return article.focusPolicy === FOCUS_POLICY && article.automaticFocus
+    ? { ...article.automaticFocus, classificationReason: reason } : automaticArticleFocus(article, id);
+}
+
+export function automaticArticleFocus(article: Data, id: string): Focus {
   const headline = String(article.title || "").trim();
   const lead = [article.subheading, article.description, article.summary, article.focusLead, article.fullText?.slice(0, 2400)]
     .filter(v => typeof v === "string").join(" ").slice(0, 3000);
@@ -91,7 +111,11 @@ export function organizeArticleFocus<T extends Summary>(records: Row[], links: L
   for (const l of links) add(l.claim_id, l.article_id, l.proposition || claims.get(l.claim_id)?.title || "");
   for (const s of summaries) for (const o of claims.get(s.claimId)?.observations ?? [])
     add(s.claimId, o.articleId, claims.get(s.claimId)?.title || "");
-  const homes = new Map([...articles].map(([id, a]) => [id, articleFocus(a, id)]));
+  const groups = new Map(records.filter(r => r.data.kind === "focus-group" && r.data.override).map(r => [r.data.topicId, r.data.override]));
+  const homes = new Map([...articles].map(([id, a]) => {
+    const base = articleFocus({ ...a, sharedFocus: undefined }, id);
+    return [id, articleFocus({ ...a, sharedFocus: groups.get(base.topicId) ?? a.sharedFocus }, id)];
+  }));
   const metadata = new Map<string, { developments: Set<string>; categories: Set<CategoryId>; subjects: Set<string> }>();
   for (const byArticle of sourceLinks.values()) for (const [id, texts] of byArticle) {
     const focus = homes.get(id)!;

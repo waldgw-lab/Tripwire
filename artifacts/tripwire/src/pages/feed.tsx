@@ -67,7 +67,6 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
     : linkage.summaries.data && linkage.linkageKnown ? (linkage.summaries.isError ? 'stale' : 'ok')
     : linkage.summaries.isLoading ? 'loading' : linkage.summaries.isError ? 'error' : 'unavailable';
   const claimFilterLive = claimStatus === 'ok' || claimStatus === 'stale';
-  const claimBlocked = claimStatus === 'loading' || claimStatus === 'error' || claimStatus === 'unavailable';
   const [flaggedOnly, setFlaggedOnlyState] = useState(() => mode === 'saved' || readFlagged());
   const setFlaggedOnly = useCallback((v: boolean) => { setFlaggedOnlyState(v); writeFlagged(v); }, []);
   const [flaggedFirst, setFlaggedFirst] = useState(false);
@@ -103,9 +102,8 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
       return [a.title, a.summary, a.fullText, a.outlet, a.contentType, a.contentFormat, a.topic, a.byline, ...articleCredits(a).map(c => c.name), ...(a.entities ?? [])]
         .some((s) => s?.toLowerCase().includes(needle));
     });
-    if (claimBlocked) return [];
     return flaggedFirst ? out.sort((x, y) => Number(isFlagged(y)) - Number(isFlagged(x))) : out;
-  }, [articles, impacts, q, bodyHits, filters, flaggedOnly, flaggedFirst, claimFilter, claimFilterLive, claimBlocked, linkage.claimsByArticle, linkage.summaryById]);
+  }, [articles, impacts, q, bodyHits, filters, flaggedOnly, flaggedFirst, claimFilter, claimFilterLive, linkage.claimsByArticle, linkage.summaryById]);
 
   const groups = useMemo(() => view.grouped ? groupFeedArticles(rows, { impacts, summaries: (linkage.summaries.data ?? []) as ClaimSummary[], order, flaggedFirst }) : [],
     [view.grouped, rows, impacts, linkage.summaries.data, order, flaggedFirst]);
@@ -179,8 +177,8 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
         <div role="status" className="mx-3 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs md:mx-5" data-testid={`notice-claim-filter-${claimStatus}`}>
           <span className="text-muted-foreground">
             {claimStatus === 'loading' ? 'Loading claim links; claim filters will apply once loaded.'
-              : claimStatus === 'error' ? 'Claim links could not be loaded, so claim filters cannot be applied. No results are shown.'
-              : claimStatus === 'unavailable' ? 'Claim linkage is not available yet, so claim filters cannot be applied. No results are shown.'
+              : claimStatus === 'error' ? 'Claim links could not be loaded. Showing articles without applying claim filters.'
+              : claimStatus === 'unavailable' ? 'Claim linkage is not available yet. Showing articles without applying claim filters.'
               : 'Claim links failed to refresh; filtering with the last loaded links, which may be stale.'}
           </span>
           <span className="flex items-center gap-3">
@@ -189,7 +187,7 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
           </span>
         </div>
       )}
-      {isLoading || claimStatus === 'loading' ? <RowsSkeleton /> : isError ? <ErrorState onRetry={() => refetch()} /> : claimBlocked ? null : rows.length === 0 ? (
+      {isLoading ? <RowsSkeleton /> : isError ? <ErrorState onRetry={() => refetch()} /> : rows.length === 0 ? (
         filtered ? <Empty title="No matches"><button onClick={clear} className="text-xs text-accent underline" data-testid="button-empty-clear">Clear filters</button></Empty>
           : <Empty title="No articles yet">
               <button onClick={() => refresh.mutate()} disabled={refresh.isPending} data-testid="button-empty-refresh" className="rounded-md bg-accent px-3 py-1.5 text-xs text-accent-foreground disabled:opacity-60">

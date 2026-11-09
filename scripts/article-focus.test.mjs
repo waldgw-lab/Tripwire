@@ -7,6 +7,23 @@ const article = (id, title, more = {}) => ({ id, data: { kind: 'article', title,
 const claim = (id, title) => ({ id, data: { kind: 'claim', title } });
 const summary = claimId => ({ claimId, attributions: 1, firstDate: '2026-11-08', lastDate: '2026-11-08', latestReportAt: '2026-11-08T12:00:00Z' });
 
+test('an analyst home moves only one article without rewriting shared claims or source links', () => {
+  const override = { categoryId: 'courts-legal', topicId: 'analyst-court', topicTitle: 'Court oversight — corrected label' };
+  const rows = [article('a', 'Pete Hegseth faces possible removal', { focusOverride: override }),
+    article('b', 'Pete Hegseth faces possible removal'), claim('shared', 'Congress opened an investigation.')];
+  const links = [{ claim_id: 'shared', article_id: 'a' }, { claim_id: 'shared', article_id: 'b' }];
+  const before = structuredClone({ rows, links });
+  const [out] = organizeArticleFocus(rows, links, [summary('shared')], now);
+  assert.equal(out.claimId, 'shared');
+  assert.equal(out.placements.length, 2);
+  assert.deepEqual(summaryForArticle(out, 'a').articleIds, ['a']);
+  assert.equal(summaryForArticle(out, 'a').topicTitle, override.topicTitle);
+  assert.equal(summaryForArticle(out, 'b').topicTitle, 'Pentagon leadership — Pete Hegseth');
+  assert.deepEqual({ rows, links }, before);
+  assert.equal(articleFocus({ ...rows[0].data, focusOverride: null }, 'a').topicTitle, 'Pentagon leadership — Pete Hegseth');
+  assert.equal(articleFocus({ ...rows[0].data, focusOverride: { ...override, categoryId: 'not-real' } }, 'a').categoryId, 'leadership-staffing');
+});
+
 test('impeachment, confidence and incidental background stay under their article focus', () => {
   const rows = [article('a', 'House poised to impeach Pete Hegseth'), claim('c1', 'Congress opened an impeachment inquiry into Hegseth.'), claim('c2', 'The president expressed confidence in Pete Hegseth.'), claim('c3', 'The judge was appointed to the court by former President Barack Obama.')];
   const before = structuredClone(rows);

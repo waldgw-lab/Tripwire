@@ -166,6 +166,17 @@ export interface ReportingReviewInput {
   rationale: string;
 }
 
+export interface ClaimLinkCorrection {
+  id: string;
+  observationId: string;
+  /** @nullable */
+  targetClaimId: string | null;
+  /** @nullable */
+  supersedesId: string | null;
+  rationale: string;
+  createdAt: string;
+}
+
 export type ReportingClaimDirection = typeof ReportingClaimDirection[keyof typeof ReportingClaimDirection];
 
 
@@ -229,6 +240,8 @@ export interface ReportingEvidenceVersion {
 }
 
 export interface ReportingReview {
+  /** @nullable */
+  associationCorrectionId?: string | null;
   id: string;
   relation: string;
   rationale: string;
@@ -244,6 +257,11 @@ export interface ReportingReview {
 }
 
 export interface ReportingClaim {
+  originalClaimId?: string;
+  /** @nullable */
+  linkCorrectionId?: string | null;
+  linkExcluded?: boolean;
+  linkHistory?: ClaimLinkCorrection[];
   direction?: ReportingClaimDirection;
   /** @nullable */
   directionSubject?: string | null;
@@ -335,6 +353,7 @@ export interface ReportingContext {
 export interface ReportingCounts {
   articles: number;
   occurrences: number;
+  historicalPassages?: number;
   /** @nullable */
   minimumAnonymousHumans: number | null;
   /** @nullable */
@@ -581,6 +600,21 @@ export const RecordInputTopicOverrideOrigin = {
   'legacy-unknown': 'legacy-unknown',
 } as const;
 
+export interface ArticleFocus {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  categoryId: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  topicId: string;
+  /** @minLength 1 */
+  topicTitle: string;
+}
+
 export type RecordInputSentiment = typeof RecordInputSentiment[keyof typeof RecordInputSentiment];
 
 
@@ -745,6 +779,14 @@ export interface RecordInput {
   impactOverrideOrigin?: RecordInputImpactOverrideOrigin;
   topicOverrideOrigin?: RecordInputTopicOverrideOrigin;
   classificationRevision?: number;
+  focusOverride?: ArticleFocus | null;
+  /** @minimum 0 */
+  focusRevision?: number;
+  /** @minimum 0 */
+  claimRevision?: number;
+  automaticFocus?: ArticleFocus;
+  focusPolicy?: string;
+  sharedFocus?: ArticleFocus;
   classificationReason?: string;
   classificationNotes?: string;
   expectedClassificationRevision?: number;
@@ -1438,6 +1480,212 @@ export interface ArticleDismissalInput {
   requestId: string;
 }
 
+export interface ClaimLinkInput {
+  /** @minLength 1 */
+  observationId: string;
+  /** @nullable */
+  targetClaimId: string | null;
+  /** @nullable */
+  supersedesId: string | null;
+  /**
+     * @minLength 5
+     * @maxLength 4000
+     */
+  rationale: string;
+  /**
+     * @minLength 8
+     * @maxLength 100
+     */
+  requestId: string;
+}
+
+export interface ClaimCorrectionInput {
+  record: RecordInput;
+  /** @minimum 0 */
+  expectedRevision: number;
+  /**
+     * @minLength 5
+     * @maxLength 4000
+     */
+  rationale: string;
+  /**
+     * @minLength 8
+     * @maxLength 100
+     */
+  requestId: string;
+}
+
+export interface FocusGroupPage {
+  groups: ArticleFocus[];
+  hasMore: boolean;
+  offset: number;
+}
+
+export interface FocusGroupArticle {
+  id: string;
+  title: string;
+}
+
+export interface FocusGroupArticlesPage {
+  token: string;
+  count: number;
+  articles: FocusGroupArticle[];
+  offset: number;
+  hasMore: boolean;
+}
+
+export type FocusGroupArticlesInputMode = typeof FocusGroupArticlesInputMode[keyof typeof FocusGroupArticlesInputMode];
+
+
+export const FocusGroupArticlesInputMode = {
+  manual: 'manual',
+  auto: 'auto',
+} as const;
+
+export interface FocusGroupArticlesInput {
+  /**
+     * @minItems 1
+     * @maxItems 100
+     * @items.minLength 1
+     */
+  articleIds: string[];
+  mode: FocusGroupArticlesInputMode;
+  categoryId?: string;
+  topicId?: string;
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  topicTitle?: string;
+  /** @minLength 1 */
+  expectedToken: string;
+  /**
+     * @minLength 5
+     * @maxLength 4000
+     */
+  reason: string;
+  /**
+     * @minLength 8
+     * @maxLength 100
+     */
+  requestId: string;
+}
+
+export interface FocusGroupArticlesResult {
+  updated: number;
+  articleIds: string[];
+  focus: ArticleFocus | null;
+}
+
+export type FocusGroupDetailMode = typeof FocusGroupDetailMode[keyof typeof FocusGroupDetailMode];
+
+
+export const FocusGroupDetailMode = {
+  auto: 'auto',
+  manual: 'manual',
+} as const;
+
+export interface FocusGroupEvent {
+  id: string;
+  timestamp: string;
+  reason: string;
+  mode: string;
+  before?: ArticleFocus;
+  after?: ArticleFocus;
+}
+
+export interface FocusGroupDetail {
+  effective: ArticleFocus;
+  automatic: ArticleFocus;
+  mode: FocusGroupDetailMode;
+  token: string;
+  count: number;
+  articles: FocusGroupArticle[];
+  history: FocusGroupEvent[];
+}
+
+export type FocusGroupInputMode = typeof FocusGroupInputMode[keyof typeof FocusGroupInputMode];
+
+
+export const FocusGroupInputMode = {
+  auto: 'auto',
+  manual: 'manual',
+} as const;
+
+export interface FocusGroupInput {
+  mode: FocusGroupInputMode;
+  categoryId?: string;
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  topicTitle?: string;
+  /** @minLength 1 */
+  expectedToken: string;
+  confirmed: boolean;
+  /**
+     * @minLength 5
+     * @maxLength 4000
+     */
+  reason: string;
+  /**
+     * @minLength 8
+     * @maxLength 100
+     */
+  requestId: string;
+}
+
+export type ArticleFocusStateMode = typeof ArticleFocusStateMode[keyof typeof ArticleFocusStateMode];
+
+
+export const ArticleFocusStateMode = {
+  auto: 'auto',
+  manual: 'manual',
+} as const;
+
+export interface ArticleFocusState {
+  effective: ArticleFocus;
+  automatic: ArticleFocus;
+  mode: ArticleFocusStateMode;
+  /** @minimum 0 */
+  revision: number;
+  groups: ArticleFocus[];
+}
+
+export type ArticleFocusInputMode = typeof ArticleFocusInputMode[keyof typeof ArticleFocusInputMode];
+
+
+export const ArticleFocusInputMode = {
+  auto: 'auto',
+  manual: 'manual',
+} as const;
+
+export interface ArticleFocusInput {
+  mode: ArticleFocusInputMode;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  categoryId?: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  topicId?: string;
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  topicTitle?: string;
+  /** @minimum 0 */
+  expectedRevision: number;
+  /**
+     * @minLength 8
+     * @maxLength 100
+     */
+  requestId: string;
+}
+
 export type ArticleCorrectionInputField = typeof ArticleCorrectionInputField[keyof typeof ArticleCorrectionInputField];
 
 
@@ -1791,6 +2039,24 @@ export type EnqueueEnrichmentBody = {
 
 export type EnqueueEnrichment200 = {
   queued: number;
+};
+
+export type ListFocusGroupsParams = {
+/**
+ * @maxLength 300
+ */
+q?: string;
+/**
+ * @minimum 0
+ */
+offset?: number;
+};
+
+export type GetFocusGroupArticlesParams = {
+/**
+ * @minimum 0
+ */
+offset?: number;
 };
 
 export type GetArticleFeedbackParams = {

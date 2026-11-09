@@ -44,7 +44,7 @@ export function feedbackSnapshot(data: RecordData) {
   return { ...snapshot, retainedContent: snapshot.retainedContent?.map(({ text: _text, raw: _raw, ...capture }) => capture) };
 }
 export async function appendFeedback(tx: FeedbackTx, owner: string, articleId: string, data: RecordData,
-  event: { action: string; reason: string; notes?: string; field?: string; before?: unknown; after?: unknown; duplicateOf?: string; requestId: string; actor?: string }) {
+  event: { action: string; reason: string; notes?: string; field?: string; before?: unknown; after?: unknown; duplicateOf?: string; requestId: string; actor?: string; focusDecision?: string }) {
   const id = `feedback:${owner}:${articleId}:${event.requestId}`;
   const timestamp = new Date().toISOString();
   await tx.insert(tripwireRecords).values({ id, owner, kind: "feedback", data: {

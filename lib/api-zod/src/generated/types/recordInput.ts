@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { ArticleCredit } from './articleCredit';
+import type { ArticleFocus } from './articleFocus';
 import type { AutomaticAssessment } from './automaticAssessment';
 import type { ClassificationEvidence } from './classificationEvidence';
 import type { ContentCapture } from './contentCapture';
@@ -61,6 +62,14 @@ export interface RecordInput {
   impactOverrideOrigin?: RecordInputImpactOverrideOrigin;
   topicOverrideOrigin?: RecordInputTopicOverrideOrigin;
   classificationRevision?: number;
+  focusOverride?: ArticleFocus | null;
+  /** @minimum 0 */
+  focusRevision?: number;
+  /** @minimum 0 */
+  claimRevision?: number;
+  automaticFocus?: ArticleFocus;
+  focusPolicy?: string;
+  sharedFocus?: ArticleFocus;
   classificationReason?: string;
   classificationNotes?: string;
   expectedClassificationRevision?: number;

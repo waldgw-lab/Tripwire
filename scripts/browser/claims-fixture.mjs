@@ -44,9 +44,11 @@ const summaries = [
   { claimId: 'older', attributions: 1, ...staffOld, placements: [staffOld] },
 ];
 const categories = [staffing, policy].map(h => ({ id: h.category, label: h.label, description: h.label }));
+export const fixtureData = () => structuredClone({ records, summaries, categories });
 
 export const test = base.extend({
-  page: async ({ page, context, baseURL }, use) => {
+  faults: async ({}, use) => use({ summaries: 'ok', omit: [] }),
+  page: async ({ page, context, baseURL, faults }, use) => {
     const unexpected = [];
     const errors = [];
     const origin = new URL(baseURL).origin;
@@ -65,9 +67,13 @@ export const test = base.extend({
       const p = url.pathname;
       let json;
       if (p === '/api/tripwire/workspace') json = {
-        records, stats: { articles: 4, claims: 3, journalists: 0, watches: 0, flagged: 0 }, lastRefreshed: null,
+        records: records.filter(r => !faults.omit.includes(r.id)), stats: { articles: 4, claims: 3, journalists: 0, watches: 0, flagged: 0 }, lastRefreshed: null,
       };
-      else if (p === '/api/tripwire/provenance/summaries') json = summaries;
+      else if (p === '/api/tripwire/provenance/summaries') {
+        if (faults.summaries === 'error') return route.fulfill({ status: 503, json: { error: 'Fixture unavailable' } });
+        if (faults.summaries === 'loading') await new Promise(resolve => setTimeout(resolve, 1200));
+        json = faults.summaries === 'unknown' ? summaries.map(({ articleIds, placements, ...s }) => s) : summaries;
+      }
       else if (p === '/api/tripwire/claim-categories') json = categories;
       else if (p === '/api/tripwire/claims/processing') json = { pending: 0, failed: 0, recent: [], policy: 'local' };
       // Operations intentionally stays mounted to retain in-progress intake drafts.

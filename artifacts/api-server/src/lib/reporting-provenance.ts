@@ -3,6 +3,8 @@ import { ConnectReportingPassageBody, ReviewReportingLineageBody } from "@worksp
 import { WORKSPACE_OWNER as W } from "./tripwire-access";
 import { grammaticalMinimum, conservativeMinimum, sourceKey, suppliedDate } from "./source-search-rules";
 import { evidenceVersion, claimEvidenceScope, type EvidenceScope } from "./reporting-versions";
+import { currentLinkJoin, effectiveClaimSql } from "./claim-corrections";
+import type { ClaimLinkCorrection } from "@workspace/api-zod";
 
 type Row = Record<string, any>;
 function byField(rows: Row[], field: string) {
@@ -19,6 +21,7 @@ function byField(rows: Row[], field: string) {
 const latestSql = `select r.* from tripwire_provenance_reviews r where r.workspace=$1
  and not exists(select 1 from tripwire_provenance_reviews n where n.workspace=r.workspace and n.supersedes_id=r.id)`;
 const review = (r: Row) => ({ id: r.id, relation: r.relation, rationale: r.rationale, createdAt: r.created_at.toISOString(),
+  associationCorrectionId: r.association_correction_id ?? null,
   evidenceId: r.evidence_id, pathKey: r.path_key, targetClaimId: r.target_claim_id, supersedesId: r.supersedes_id });
 export class ProvenanceError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -28,7 +31,9 @@ export async function reportingProvenance(q: { articleId?: string; claimId?: str
   const add = (value: string) => { params.push(value); return `$${params.length}`; };
   const filters = [];
   if (q.articleId) filters.push(`c.article_id=${add(q.articleId)}`);
-  if (q.claimId) filters.push(`f.claim_id=${add(q.claimId)}`);
+  if (q.claimId) { const p = add(q.claimId); filters.push(`(${effectiveClaimSql}=${p} or f.claim_id=${p}
+    or c.id in(select h.data->>'observationId' from tripwire_records h
+      where h.owner=$1 and h.kind='claim-link-correction' and h.data->>'targetClaimId'=${p}))`); }
   if (q.eventId) filters.push(`(f.event_id=${add(q.eventId)} or f.entity_event_id=$${params.length})`);
   if (q.evidenceId) {
     const p = add(q.evidenceId);
@@ -48,8 +53,9 @@ export async function reportingProvenance(q: { articleId?: string; claimId?: str
     order by identity.article_id,(r.owner=$1) desc
   )`;
   const from = `from tripwire_attributed_claims c join tripwire_claim_families f on f.workspace=c.workspace and f.id=c.family_id
+    ${currentLinkJoin}
     left join article_lookup a on a.article_id=c.article_id`;
-  const all = (await pool.query(`${articleLookup} select c.*, f.claim_id legacy_claim_id,f.event_id,f.entity_event_id,a.data article ${from} where ${where}
+  const all = (await pool.query(`${articleLookup} select c.*, f.claim_id legacy_claim_id,${effectiveClaimSql} effective_claim_id,lc.data link_correction,f.event_id,f.entity_event_id,a.data article ${from} where ${where}
     and coalesce(a.data->>'hidden','false')<>'true' order by a.data->>'publishedAt' nulls last,c.id`, params)).rows;
   all.sort((a, b) => (a.article?.publishedAt ?? suppliedDate(a.article?.sourceSearch?.date) ?? "9999").localeCompare(
     b.article?.publishedAt ?? suppliedDate(b.article?.sourceSearch?.date) ?? "9999") || a.id.localeCompare(b.id));
@@ -88,8 +94,10 @@ export async function reportingProvenance(q: { articleId?: string; claimId?: str
     familyHypothesis: s.family_hypothesis, evidenceId: s.evidence_id, excerpt: s.excerpt ?? null, captureId: s.capture_id }));
   const sourceIds = sources.map(s => s.id);
   const matched = sourceIds.length ? (await pool.query("select * from tripwire_source_matches where workspace=$1 and (source_a=any($2::text[]) or source_b=any($2::text[])) limit 500", [W, sourceIds])).rows : [];
-  const reviews = (await pool.query(`select * from tripwire_provenance_reviews where workspace=$1 and
-    (claim_id=any($2::text[]) or source_match_id=any($3::text[])) order by created_at,id`, [W, all.map(c => c.id), matched.map(m => m.id)])).rows;
+  const reviews = (await pool.query(`select r.*,ctx.data->>'linkCorrectionId' association_correction_id from tripwire_provenance_reviews r
+    left join tripwire_records ctx on ctx.id='review-link-context:'||r.workspace||':'||r.id and ctx.owner=r.workspace
+    where r.workspace=$1 and (r.claim_id=any($2::text[]) or r.source_match_id=any($3::text[]))
+    order by r.created_at,r.id`, [W, all.map(c => c.id), matched.map(m => m.id)])).rows;
   const superseded = new Set(reviews.map(r => r.supersedes_id).filter(Boolean));
   const current = reviews.filter(r => !superseded.has(r.id));
   const versions=all.length ? (await pool.query(`select * from tripwire_claim_capture_links where workspace=$1 and claim_id=any($2::text[])
@@ -118,7 +126,11 @@ export async function reportingProvenance(q: { articleId?: string; claimId?: str
     const refs = reviewsByClaim.get(c.id) ?? [];
     const last = currentByClaim.get(c.id)?.[0];
     const e = displayedEvidence.get(last ? last.evidence_id : c.evidence_id);
-    return { id: c.id, claimId: c.legacy_claim_id, familyId: c.family_id, proposition: c.proposition, articleId: c.article_id,
+    return { id: c.id, claimId: c.effective_claim_id ?? c.legacy_claim_id, originalClaimId: c.legacy_claim_id,
+      linkCorrectionId: c.link_correction?.id ?? null,
+      linkExcluded: !c.effective_claim_id || !!q.claimId && c.effective_claim_id !== q.claimId,
+      linkHistory: [] as ClaimLinkCorrection[],
+      familyId: c.family_id, proposition: c.proposition, articleId: c.article_id,
       direction: correction?.direction ?? assessment?.direction ?? "unassessed",
       directionSubject: correction?.subject ?? assessment?.subject ?? null,
       directionReason: correction?.rationale ?? assessment?.reason ?? null,
@@ -133,19 +145,38 @@ export async function reportingProvenance(q: { articleId?: string; claimId?: str
       start: e?.start ?? null, end: e?.end ?? null, captureId: e?.capture_id ?? null, supplied: c.supplied,
       externalId: c.external_id, sourceIds: (linksByClaim.get(c.id) ?? []).map(l => l.source_id), reviews: refs.map(review) };
   });
+  const linkHistory = page.length ? (await pool.query(`select data from tripwire_records where owner=$1
+    and kind='claim-link-correction' and data->>'observationId'=any($2::text[]) order by created_at,id`, [W, page.map(c => c.id)])).rows : [];
+  for (const claim of claims) {
+    const events = linkHistory.filter(r => r.data.observationId === claim.id).map(r => r.data as ClaimLinkCorrection);
+    let previous: string | null = null;
+    for (let i = 0; i < events.length; i++) {
+      const next = events.find(e => e.supersedesId === previous);
+      if (!next) break;
+      claim.linkHistory.push(next); previous = next.id;
+    }
+  }
   const context = articleIds.length ? (await pool.query(`select sheet,row_key,data,resolution from tripwire_source_inputs i
     join tripwire_source_batches b on b.id=i.batch_id and b.status='applied'
     where i.resolution->>'articleId'=any($1::text[])
     order by i.sheet,i.row_key limit 100`, [articleIds])).rows.map(r => ({ sheet: r.sheet, row: r.row_key, data: r.data, resolution: r.resolution })) : [];
-  // Never sum anonymous groups. Only analyst-recorded grammar bounds enter this count.
-  const reviewedSources = sourceRows.filter(s => !s.supplied);
+  // Historical associations stay inspectable, but cannot inflate current claim coverage.
+  // Article-scoped inventory remains article-wide, independent of claim association.
+  const activeClaims = all.filter(c => c.effective_claim_id && (!q.claimId || c.effective_claim_id === q.claimId));
+  const countArticleIds = q.claimId ? new Set(activeClaims.map(c => c.article_id)) : new Set(articleIds);
+  const currentSourceRows = sourceRows.filter(s => countArticleIds.has(s.article_id));
+  const reviewedSources = currentSourceRows.filter(s => !s.supplied);
+  const activePath = (r: Row) => r.claim_id && r.path_key && all.some(c => c.id === r.claim_id && c.effective_claim_id &&
+    (!q.claimId || c.effective_claim_id === q.claimId) &&
+    (r.association_correction_id ?? null) === (c.link_correction?.id ?? null));
   return { claims, sources, matches: matched.map(m => ({ id: m.id, sourceA: m.source_a, sourceB: m.source_b,
     hypothesis: m.hypothesis, rationale: m.rationale, conflicts: m.conflicts, supplied: m.supplied,
     reviews: (reviewsByMatch.get(m.id) ?? []).map(review) })), context,
-    counts: { articles: articleIds.length, occurrences: sources.length, minimumAnonymousHumans: conservativeMinimum(reviewedSources),
+    counts: { articles: countArticleIds.size, occurrences: currentSourceRows.length,
+      historicalPassages: all.length - activeClaims.length, minimumAnonymousHumans: conservativeMinimum(reviewedSources),
       provisionalSourceRecords: q.articleId ? (selectedArticle?.sourceSearch?.provisionalSourceRecords ?? null) : null,
       suppliedMinimumAnonymousHumans: q.articleId ? (selectedArticle?.sourceSearch?.minimumAnonymousHumans ?? null) : null,
-      independentPaths: current.some(r => r.path_key) ? new Set(current.filter(r => r.claim_id && r.path_key).map(r => r.path_key)).size : null },
+      independentPaths: current.some(activePath) ? new Set(current.filter(activePath).map(r => r.path_key)).size : null },
     total: filtered.length, offset: q.offset ?? 0 };
 }
 
@@ -244,12 +275,24 @@ export async function reviewLineage(input: typeof ReviewReportingLineageBody._ou
     }
     if (input.targetClaimId) {
       const target = (await client.query("select * from tripwire_attributed_claims where workspace=$1 and id=$2", [W, input.targetClaimId])).rows[0];
-      if (!isClaim || !target || target.family_id !== row.family_id || target.id === row.id) throw new ProvenanceError(400, "Lineage must reference a different observation of the same proposition");
+      if (!isClaim || !target || target.id === row.id) throw new ProvenanceError(400, "Choose a different related observation.");
+      const active = (await client.query(`select c.id,${effectiveClaimSql} claim_id from tripwire_attributed_claims c
+        join tripwire_claim_families f on f.workspace=c.workspace and f.id=c.family_id ${currentLinkJoin}
+        where c.workspace=$1 and c.id=any($2::text[])`, [W, [row.id, target.id]])).rows;
+      const ownClaim = active.find(c => c.id === row.id)?.claim_id;
+      if (!ownClaim || ownClaim !== active.find(c => c.id === target.id)?.claim_id)
+        throw new ProvenanceError(400, "Related observations must support the same proposition through their active claim association.");
     }
     const id = crypto.randomUUID();
     await client.query(`insert into tripwire_provenance_reviews(workspace,id,claim_id,source_match_id,target_claim_id,supersedes_id,relation,evidence_id,path_key,rationale,actor)
       values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NULL)`, [W, id, input.claimObservationId ?? null, input.sourceMatchId ?? null,
       input.targetClaimId ?? null, input.supersedesId ?? null, input.relation, evidenceId, input.pathKey ?? null, input.rationale]);
+    if (isClaim) {
+      const context = (await client.query(`select lc.data->>'id' link_id from tripwire_attributed_claims c ${currentLinkJoin}
+        where c.workspace=$1 and c.id=$2`, [W, row.id])).rows[0];
+      await client.query(`insert into tripwire_records(id,owner,kind,data) values($1,$2,'review-link-context',$3)`,
+        [`review-link-context:${W}:${id}`, W, { reviewId: id, linkCorrectionId: context?.link_id ?? null }]);
+    }
     return { id };
   });
 }

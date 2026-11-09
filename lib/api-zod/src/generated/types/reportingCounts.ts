@@ -8,6 +8,7 @@
 export interface ReportingCounts {
   articles: number;
   occurrences: number;
+  historicalPassages?: number;
   /** @nullable */
   minimumAnonymousHumans: number | null;
   /** @nullable */

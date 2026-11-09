@@ -23,6 +23,25 @@ as tags in the item's details, not as duplicate topic groups in other areas.
 
 **How to apply:** Assign the topic's home before filtering the overview. Show
 secondary context in Claims and the feed item's linked-claims details.
+Mirror preview counts and date ranges in the corresponding detail scope. Keep
+secondary topic tags and related subjects collapsed below Developments.
+
+**Why:** The user wants the preview information available in detail without
+letting secondary context dominate the reporting.
+
+**How to apply:** Keep summary/detail counts in the same reporting scope and make
+secondary context available on demand beneath the development summary.
+
+Keep operational extraction/processing information on Dashboard, not in the
+Claims header area. That space is for linked noteworthy reporting developments
+from the last 12 hours, when such developments exist.
+
+**Why:** The user wants Claims to lead with relevant developments rather than
+processing status.
+
+**How to apply:** Keep processing history and recovery controls accessible on
+Dashboard. Use publication times for the alert window and exact article or
+focus navigation; recent ingestion alone is not a new development.
 
 Group first by article focus or larger category, then characterize that grouping
 by its developments. Do not let an individual development steer the grouping.
@@ -68,3 +87,33 @@ article and reasonably thought the other reporting was missing.
 
 **How to apply:** Treat group overview and individual claim evidence as separate
 navigation states; preserve that distinction through reload and browser history.
+
+Analyst focus corrections are article-local, including their readable labels.
+Choosing an existing focus joins that home; changing a label does not rename
+the shared group or silently move its other reporting.
+
+**Why:** Unusual stories need correction without changing unrelated articles,
+claim identities or sourcing judgments.
+
+**How to apply:** Keep shared-group management separate from article correction.
+Clearing a correction returns only that article to current automatic placement.
+
+Shared-group label/category edits are a separate, explicitly confirmed action
+with an affected-article preview; resetting the shared correction leaves
+article-only choices intact.
+
+**Why:** The user approved expanding Claims editing beyond article placement
+while keeping the scope of changes understandable.
+
+**How to apply:** Preserve the group identity when renaming or changing its
+primary category. Do not silently turn an article edit into a bulk action.
+
+Correcting a passage's claim association must keep its original quotation,
+capture, offsets and previous associations. Prior sourcing reviews must not
+automatically establish independent support for the newly linked claim.
+
+**Why:** Organization and analyst corrections are not new reporting or verified
+independence.
+
+**How to apply:** Use append-only association history and active projections;
+require a fresh sourcing assessment after an association changes.

@@ -135,6 +135,17 @@ export const GetReportingProvenanceQueryParams = zod.object({
 
 export const GetReportingProvenanceResponse = zod.object({
   "claims": zod.array(zod.object({
+  "originalClaimId": zod.string().optional(),
+  "linkCorrectionId": zod.string().nullish(),
+  "linkExcluded": zod.boolean().optional(),
+  "linkHistory": zod.array(zod.object({
+  "id": zod.string(),
+  "observationId": zod.string(),
+  "targetClaimId": zod.string().nullable(),
+  "supersedesId": zod.string().nullable(),
+  "rationale": zod.string(),
+  "createdAt": zod.string()
+})).optional(),
   "direction": zod.enum(['positive', 'negative', 'neutral', 'mixed', 'unassessed']).optional(),
   "directionSubject": zod.string().nullish(),
   "directionReason": zod.string().nullish(),
@@ -185,6 +196,7 @@ export const GetReportingProvenanceResponse = zod.object({
   "externalId": zod.string().nullish(),
   "sourceIds": zod.array(zod.string()),
   "reviews": zod.array(zod.object({
+  "associationCorrectionId": zod.string().nullish(),
   "id": zod.string(),
   "relation": zod.string(),
   "rationale": zod.string(),
@@ -230,6 +242,7 @@ export const GetReportingProvenanceResponse = zod.object({
   "conflicts": zod.string(),
   "supplied": zod.boolean(),
   "reviews": zod.array(zod.object({
+  "associationCorrectionId": zod.string().nullish(),
   "id": zod.string(),
   "relation": zod.string(),
   "rationale": zod.string(),
@@ -249,6 +262,7 @@ export const GetReportingProvenanceResponse = zod.object({
   "counts": zod.object({
   "articles": zod.number().int(),
   "occurrences": zod.number().int(),
+  "historicalPassages": zod.number().int().optional(),
   "minimumAnonymousHumans": zod.number().int().nullable(),
   "suppliedMinimumAnonymousHumans": zod.number().int().nullish(),
   "provisionalSourceRecords": zod.number().int().nullable(),
@@ -1034,6 +1048,25 @@ export const HealthCheckResponse = zod.object({
 
 
 
+export const getWorkspaceResponseRecordsItemOneFocusOverrideOneCategoryIdMax = 100;
+
+export const getWorkspaceResponseRecordsItemOneFocusOverrideOneTopicIdMax = 200;
+
+
+export const getWorkspaceResponseRecordsItemOneFocusRevisionMin = 0;
+
+export const getWorkspaceResponseRecordsItemOneClaimRevisionMin = 0;
+
+export const getWorkspaceResponseRecordsItemOneAutomaticFocusCategoryIdMax = 100;
+
+export const getWorkspaceResponseRecordsItemOneAutomaticFocusTopicIdMax = 200;
+
+
+export const getWorkspaceResponseRecordsItemOneSharedFocusCategoryIdMax = 100;
+
+export const getWorkspaceResponseRecordsItemOneSharedFocusTopicIdMax = 200;
+
+
 export const getWorkspaceResponseRecordsItemOneTierMax = 3;
 
 
@@ -1131,6 +1164,24 @@ export const GetWorkspaceResponse = zod.object({
   "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "classificationRevision": zod.number().int().optional(),
+  "focusOverride": zod.union([zod.object({
+  "categoryId": zod.string().min(1).max(getWorkspaceResponseRecordsItemOneFocusOverrideOneCategoryIdMax),
+  "topicId": zod.string().min(1).max(getWorkspaceResponseRecordsItemOneFocusOverrideOneTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),zod.null()]).optional(),
+  "focusRevision": zod.number().int().min(getWorkspaceResponseRecordsItemOneFocusRevisionMin).optional(),
+  "claimRevision": zod.number().int().min(getWorkspaceResponseRecordsItemOneClaimRevisionMin).optional(),
+  "automaticFocus": zod.object({
+  "categoryId": zod.string().min(1).max(getWorkspaceResponseRecordsItemOneAutomaticFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(getWorkspaceResponseRecordsItemOneAutomaticFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "focusPolicy": zod.string().optional(),
+  "sharedFocus": zod.object({
+  "categoryId": zod.string().min(1).max(getWorkspaceResponseRecordsItemOneSharedFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(getWorkspaceResponseRecordsItemOneSharedFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
   "classificationReason": zod.string().optional(),
   "classificationNotes": zod.string().optional(),
   "expectedClassificationRevision": zod.number().int().optional(),
@@ -1205,6 +1256,25 @@ export const GetWorkspaceResponse = zod.object({
 })
 
 
+
+
+export const getQuickEnrichmentResponseItemsItemOneFocusOverrideOneCategoryIdMax = 100;
+
+export const getQuickEnrichmentResponseItemsItemOneFocusOverrideOneTopicIdMax = 200;
+
+
+export const getQuickEnrichmentResponseItemsItemOneFocusRevisionMin = 0;
+
+export const getQuickEnrichmentResponseItemsItemOneClaimRevisionMin = 0;
+
+export const getQuickEnrichmentResponseItemsItemOneAutomaticFocusCategoryIdMax = 100;
+
+export const getQuickEnrichmentResponseItemsItemOneAutomaticFocusTopicIdMax = 200;
+
+
+export const getQuickEnrichmentResponseItemsItemOneSharedFocusCategoryIdMax = 100;
+
+export const getQuickEnrichmentResponseItemsItemOneSharedFocusTopicIdMax = 200;
 
 
 export const getQuickEnrichmentResponseItemsItemOneTierMax = 3;
@@ -1304,6 +1374,24 @@ export const GetQuickEnrichmentResponse = zod.object({
   "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "classificationRevision": zod.number().int().optional(),
+  "focusOverride": zod.union([zod.object({
+  "categoryId": zod.string().min(1).max(getQuickEnrichmentResponseItemsItemOneFocusOverrideOneCategoryIdMax),
+  "topicId": zod.string().min(1).max(getQuickEnrichmentResponseItemsItemOneFocusOverrideOneTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),zod.null()]).optional(),
+  "focusRevision": zod.number().int().min(getQuickEnrichmentResponseItemsItemOneFocusRevisionMin).optional(),
+  "claimRevision": zod.number().int().min(getQuickEnrichmentResponseItemsItemOneClaimRevisionMin).optional(),
+  "automaticFocus": zod.object({
+  "categoryId": zod.string().min(1).max(getQuickEnrichmentResponseItemsItemOneAutomaticFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(getQuickEnrichmentResponseItemsItemOneAutomaticFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "focusPolicy": zod.string().optional(),
+  "sharedFocus": zod.object({
+  "categoryId": zod.string().min(1).max(getQuickEnrichmentResponseItemsItemOneSharedFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(getQuickEnrichmentResponseItemsItemOneSharedFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
   "classificationReason": zod.string().optional(),
   "classificationNotes": zod.string().optional(),
   "expectedClassificationRevision": zod.number().int().optional(),
@@ -1485,6 +1573,25 @@ export const EnqueueEnrichmentResponse = zod.object({
 
 
 
+export const saveRecordBodyFocusOverrideOneCategoryIdMax = 100;
+
+export const saveRecordBodyFocusOverrideOneTopicIdMax = 200;
+
+
+export const saveRecordBodyFocusRevisionMin = 0;
+
+export const saveRecordBodyClaimRevisionMin = 0;
+
+export const saveRecordBodyAutomaticFocusCategoryIdMax = 100;
+
+export const saveRecordBodyAutomaticFocusTopicIdMax = 200;
+
+
+export const saveRecordBodySharedFocusCategoryIdMax = 100;
+
+export const saveRecordBodySharedFocusTopicIdMax = 200;
+
+
 export const saveRecordBodyTierMax = 3;
 
 
@@ -1581,6 +1688,24 @@ export const SaveRecordBody = zod.object({
   "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "classificationRevision": zod.number().int().optional(),
+  "focusOverride": zod.union([zod.object({
+  "categoryId": zod.string().min(1).max(saveRecordBodyFocusOverrideOneCategoryIdMax),
+  "topicId": zod.string().min(1).max(saveRecordBodyFocusOverrideOneTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),zod.null()]).optional(),
+  "focusRevision": zod.number().int().min(saveRecordBodyFocusRevisionMin).optional(),
+  "claimRevision": zod.number().int().min(saveRecordBodyClaimRevisionMin).optional(),
+  "automaticFocus": zod.object({
+  "categoryId": zod.string().min(1).max(saveRecordBodyAutomaticFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(saveRecordBodyAutomaticFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "focusPolicy": zod.string().optional(),
+  "sharedFocus": zod.object({
+  "categoryId": zod.string().min(1).max(saveRecordBodySharedFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(saveRecordBodySharedFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
   "classificationReason": zod.string().optional(),
   "classificationNotes": zod.string().optional(),
   "expectedClassificationRevision": zod.number().int().optional(),
@@ -1634,6 +1759,25 @@ export const SaveRecordBody = zod.object({
 })).optional()
 })
 
+
+
+export const saveRecordResponseOneFocusOverrideOneCategoryIdMax = 100;
+
+export const saveRecordResponseOneFocusOverrideOneTopicIdMax = 200;
+
+
+export const saveRecordResponseOneFocusRevisionMin = 0;
+
+export const saveRecordResponseOneClaimRevisionMin = 0;
+
+export const saveRecordResponseOneAutomaticFocusCategoryIdMax = 100;
+
+export const saveRecordResponseOneAutomaticFocusTopicIdMax = 200;
+
+
+export const saveRecordResponseOneSharedFocusCategoryIdMax = 100;
+
+export const saveRecordResponseOneSharedFocusTopicIdMax = 200;
 
 
 export const saveRecordResponseOneTierMax = 3;
@@ -1732,6 +1876,24 @@ export const SaveRecordResponse = zod.object({
   "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "classificationRevision": zod.number().int().optional(),
+  "focusOverride": zod.union([zod.object({
+  "categoryId": zod.string().min(1).max(saveRecordResponseOneFocusOverrideOneCategoryIdMax),
+  "topicId": zod.string().min(1).max(saveRecordResponseOneFocusOverrideOneTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),zod.null()]).optional(),
+  "focusRevision": zod.number().int().min(saveRecordResponseOneFocusRevisionMin).optional(),
+  "claimRevision": zod.number().int().min(saveRecordResponseOneClaimRevisionMin).optional(),
+  "automaticFocus": zod.object({
+  "categoryId": zod.string().min(1).max(saveRecordResponseOneAutomaticFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(saveRecordResponseOneAutomaticFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "focusPolicy": zod.string().optional(),
+  "sharedFocus": zod.object({
+  "categoryId": zod.string().min(1).max(saveRecordResponseOneSharedFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(saveRecordResponseOneSharedFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
   "classificationReason": zod.string().optional(),
   "classificationNotes": zod.string().optional(),
   "expectedClassificationRevision": zod.number().int().optional(),
@@ -1811,6 +1973,943 @@ export const DeleteRecordBody = zod.object({
 export const DeleteRecordResponse = zod.void()
 
 
+export const listFocusGroupsQueryQMax = 300;
+
+export const listFocusGroupsQueryOffsetDefault = 0;
+export const listFocusGroupsQueryOffsetMin = 0;
+
+
+
+export const ListFocusGroupsQueryParams = zod.object({
+  "q": zod.coerce.string().max(listFocusGroupsQueryQMax).optional(),
+  "offset": zod.coerce.number().int().min(listFocusGroupsQueryOffsetMin).default(listFocusGroupsQueryOffsetDefault)
+})
+
+export const listFocusGroupsResponseGroupsItemCategoryIdMax = 100;
+
+export const listFocusGroupsResponseGroupsItemTopicIdMax = 200;
+
+
+
+
+export const ListFocusGroupsResponse = zod.object({
+  "groups": zod.array(zod.object({
+  "categoryId": zod.string().min(1).max(listFocusGroupsResponseGroupsItemCategoryIdMax),
+  "topicId": zod.string().min(1).max(listFocusGroupsResponseGroupsItemTopicIdMax),
+  "topicTitle": zod.string().min(1)
+})),
+  "hasMore": zod.boolean(),
+  "offset": zod.number().int()
+})
+
+
+export const GetFocusGroupArticlesParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const getFocusGroupArticlesQueryOffsetDefault = 0;
+export const getFocusGroupArticlesQueryOffsetMin = 0;
+
+
+
+export const GetFocusGroupArticlesQueryParams = zod.object({
+  "offset": zod.coerce.number().int().min(getFocusGroupArticlesQueryOffsetMin).default(getFocusGroupArticlesQueryOffsetDefault)
+})
+
+export const GetFocusGroupArticlesResponse = zod.object({
+  "token": zod.string(),
+  "count": zod.number().int(),
+  "articles": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string()
+})),
+  "offset": zod.number().int(),
+  "hasMore": zod.boolean()
+})
+
+
+export const CorrectFocusGroupArticlesParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+export const correctFocusGroupArticlesBodyArticleIdsMax = 100;
+
+export const correctFocusGroupArticlesBodyTopicTitleMax = 300;
+
+
+export const correctFocusGroupArticlesBodyReasonMin = 5;
+export const correctFocusGroupArticlesBodyReasonMax = 4000;
+
+export const correctFocusGroupArticlesBodyRequestIdMin = 8;
+export const correctFocusGroupArticlesBodyRequestIdMax = 100;
+
+
+
+export const CorrectFocusGroupArticlesBody = zod.object({
+  "articleIds": zod.array(zod.string().min(1)).min(1).max(correctFocusGroupArticlesBodyArticleIdsMax),
+  "mode": zod.enum(['manual', 'auto']),
+  "categoryId": zod.string().optional(),
+  "topicId": zod.string().optional(),
+  "topicTitle": zod.string().min(1).max(correctFocusGroupArticlesBodyTopicTitleMax).optional(),
+  "expectedToken": zod.string().min(1),
+  "reason": zod.string().min(correctFocusGroupArticlesBodyReasonMin).max(correctFocusGroupArticlesBodyReasonMax),
+  "requestId": zod.string().min(correctFocusGroupArticlesBodyRequestIdMin).max(correctFocusGroupArticlesBodyRequestIdMax)
+})
+
+export const correctFocusGroupArticlesResponseFocusOneCategoryIdMax = 100;
+
+export const correctFocusGroupArticlesResponseFocusOneTopicIdMax = 200;
+
+
+
+
+export const CorrectFocusGroupArticlesResponse = zod.object({
+  "updated": zod.number().int(),
+  "articleIds": zod.array(zod.string()),
+  "focus": zod.union([zod.object({
+  "categoryId": zod.string().min(1).max(correctFocusGroupArticlesResponseFocusOneCategoryIdMax),
+  "topicId": zod.string().min(1).max(correctFocusGroupArticlesResponseFocusOneTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),zod.null()])
+})
+
+
+export const GetFocusGroupParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const getFocusGroupResponseEffectiveCategoryIdMax = 100;
+
+export const getFocusGroupResponseEffectiveTopicIdMax = 200;
+
+
+export const getFocusGroupResponseAutomaticCategoryIdMax = 100;
+
+export const getFocusGroupResponseAutomaticTopicIdMax = 200;
+
+
+export const getFocusGroupResponseHistoryItemBeforeCategoryIdMax = 100;
+
+export const getFocusGroupResponseHistoryItemBeforeTopicIdMax = 200;
+
+
+export const getFocusGroupResponseHistoryItemAfterCategoryIdMax = 100;
+
+export const getFocusGroupResponseHistoryItemAfterTopicIdMax = 200;
+
+
+
+
+export const GetFocusGroupResponse = zod.object({
+  "effective": zod.object({
+  "categoryId": zod.string().min(1).max(getFocusGroupResponseEffectiveCategoryIdMax),
+  "topicId": zod.string().min(1).max(getFocusGroupResponseEffectiveTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),
+  "automatic": zod.object({
+  "categoryId": zod.string().min(1).max(getFocusGroupResponseAutomaticCategoryIdMax),
+  "topicId": zod.string().min(1).max(getFocusGroupResponseAutomaticTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),
+  "mode": zod.enum(['auto', 'manual']),
+  "token": zod.string(),
+  "count": zod.number().int(),
+  "articles": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string()
+})),
+  "history": zod.array(zod.object({
+  "id": zod.string(),
+  "timestamp": zod.string(),
+  "reason": zod.string(),
+  "mode": zod.string(),
+  "before": zod.object({
+  "categoryId": zod.string().min(1).max(getFocusGroupResponseHistoryItemBeforeCategoryIdMax),
+  "topicId": zod.string().min(1).max(getFocusGroupResponseHistoryItemBeforeTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "after": zod.object({
+  "categoryId": zod.string().min(1).max(getFocusGroupResponseHistoryItemAfterCategoryIdMax),
+  "topicId": zod.string().min(1).max(getFocusGroupResponseHistoryItemAfterTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional()
+}))
+})
+
+
+export const UpdateFocusGroupParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const updateFocusGroupBodyTopicTitleMax = 300;
+
+
+export const updateFocusGroupBodyReasonMin = 5;
+export const updateFocusGroupBodyReasonMax = 4000;
+
+export const updateFocusGroupBodyRequestIdMin = 8;
+export const updateFocusGroupBodyRequestIdMax = 100;
+
+
+
+export const UpdateFocusGroupBody = zod.object({
+  "mode": zod.enum(['auto', 'manual']),
+  "categoryId": zod.string().optional(),
+  "topicTitle": zod.string().min(1).max(updateFocusGroupBodyTopicTitleMax).optional(),
+  "expectedToken": zod.string().min(1),
+  "confirmed": zod.boolean(),
+  "reason": zod.string().min(updateFocusGroupBodyReasonMin).max(updateFocusGroupBodyReasonMax),
+  "requestId": zod.string().min(updateFocusGroupBodyRequestIdMin).max(updateFocusGroupBodyRequestIdMax)
+})
+
+export const updateFocusGroupResponseEffectiveCategoryIdMax = 100;
+
+export const updateFocusGroupResponseEffectiveTopicIdMax = 200;
+
+
+export const updateFocusGroupResponseAutomaticCategoryIdMax = 100;
+
+export const updateFocusGroupResponseAutomaticTopicIdMax = 200;
+
+
+export const updateFocusGroupResponseHistoryItemBeforeCategoryIdMax = 100;
+
+export const updateFocusGroupResponseHistoryItemBeforeTopicIdMax = 200;
+
+
+export const updateFocusGroupResponseHistoryItemAfterCategoryIdMax = 100;
+
+export const updateFocusGroupResponseHistoryItemAfterTopicIdMax = 200;
+
+
+
+
+export const UpdateFocusGroupResponse = zod.object({
+  "effective": zod.object({
+  "categoryId": zod.string().min(1).max(updateFocusGroupResponseEffectiveCategoryIdMax),
+  "topicId": zod.string().min(1).max(updateFocusGroupResponseEffectiveTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),
+  "automatic": zod.object({
+  "categoryId": zod.string().min(1).max(updateFocusGroupResponseAutomaticCategoryIdMax),
+  "topicId": zod.string().min(1).max(updateFocusGroupResponseAutomaticTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),
+  "mode": zod.enum(['auto', 'manual']),
+  "token": zod.string(),
+  "count": zod.number().int(),
+  "articles": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string()
+})),
+  "history": zod.array(zod.object({
+  "id": zod.string(),
+  "timestamp": zod.string(),
+  "reason": zod.string(),
+  "mode": zod.string(),
+  "before": zod.object({
+  "categoryId": zod.string().min(1).max(updateFocusGroupResponseHistoryItemBeforeCategoryIdMax),
+  "topicId": zod.string().min(1).max(updateFocusGroupResponseHistoryItemBeforeTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "after": zod.object({
+  "categoryId": zod.string().min(1).max(updateFocusGroupResponseHistoryItemAfterCategoryIdMax),
+  "topicId": zod.string().min(1).max(updateFocusGroupResponseHistoryItemAfterTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional()
+}))
+})
+
+
+export const UpdateClaimParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+
+export const updateClaimBodyRecordFocusOverrideOneCategoryIdMax = 100;
+
+export const updateClaimBodyRecordFocusOverrideOneTopicIdMax = 200;
+
+
+export const updateClaimBodyRecordFocusRevisionMin = 0;
+
+export const updateClaimBodyRecordClaimRevisionMin = 0;
+
+export const updateClaimBodyRecordAutomaticFocusCategoryIdMax = 100;
+
+export const updateClaimBodyRecordAutomaticFocusTopicIdMax = 200;
+
+
+export const updateClaimBodyRecordSharedFocusCategoryIdMax = 100;
+
+export const updateClaimBodyRecordSharedFocusTopicIdMax = 200;
+
+
+export const updateClaimBodyRecordTierMax = 3;
+
+export const updateClaimBodyExpectedRevisionMin = 0;
+
+export const updateClaimBodyRationaleMin = 5;
+export const updateClaimBodyRationaleMax = 4000;
+
+export const updateClaimBodyRequestIdMin = 8;
+export const updateClaimBodyRequestIdMax = 100;
+
+
+
+export const UpdateClaimBody = zod.object({
+  "record": zod.object({
+  "id": zod.string().optional(),
+  "kind": zod.enum(['article', 'claim', 'watch', 'outlet']),
+  "title": zod.string().min(1),
+  "verifiedHeadlines": zod.array(zod.object({
+  "title": zod.string(),
+  "outlet": zod.string(),
+  "articleUrl": zod.string(),
+  "sourceUrl": zod.string(),
+  "observedAt": zod.string(),
+  "source": zod.enum(['publisher-page', 'publisher-rss', 'publisher-sitemap']),
+  "captureId": zod.string()
+})).optional().describe('Server-observed publisher headlines; client edits cannot establish verified identity.'),
+  "url": zod.string().optional(),
+  "outlet": zod.string().optional(),
+  "journalists": zod.array(zod.string()).optional(),
+  "byline": zod.string().optional(),
+  "credits": zod.array(zod.object({
+  "name": zod.string().min(1),
+  "role": zod.enum(['author', 'contributor', 'reporting', 'research', 'photography', 'editing', 'other']),
+  "attribution": zod.string().optional()
+})).optional(),
+  "publishedAt": zod.string().optional(),
+  "publicationSource": zod.enum(['publisher', 'google-news', 'manual']).optional(),
+  "publicationSourceUrl": zod.string().optional(),
+  "fullText": zod.string().optional(),
+  "fullTextHash": zod.string().optional(),
+  "fullTextLength": zod.number().int().optional(),
+  "contentNormalization": zod.object({
+  "method": zod.string(),
+  "sourceCharacters": zod.number().int(),
+  "articleCharacters": zod.number().int()
+}).optional(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "classificationEvidence": zod.array(zod.object({
+  "signal": zod.string(),
+  "value": zod.string(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "rank": zod.number().int().optional()
+})).optional(),
+  "retrieval": zod.object({
+  "status": zod.string().optional(),
+  "method": zod.string().optional(),
+  "lastAttempt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "message": zod.string().optional(),
+  "characters": zod.number().int().optional(),
+  "rawCharacters": zod.number().int().optional(),
+  "attempts": zod.number().int().optional(),
+  "manualRequested": zod.boolean().optional()
+}).optional(),
+  "fullTextComplete": zod.boolean().optional(),
+  "retainedContent": zod.array(zod.object({
+  "id": zod.string(),
+  "text": zod.string().optional(),
+  "raw": zod.string().optional(),
+  "source": zod.string(),
+  "sourceUrl": zod.string().optional(),
+  "capturedAt": zod.string(),
+  "fileName": zod.string().optional(),
+  "uploadId": zod.string().optional(),
+  "bodyHash": zod.string().optional(),
+  "textLength": zod.number().int().optional(),
+  "rawLength": zod.number().int().optional()
+})).optional(),
+  "contentRetained": zod.boolean().optional(),
+  "retainedCharacters": zod.number().int().optional(),
+  "impact": zod.enum(['critical', 'high', 'low']).optional(),
+  "automaticAssessment": zod.object({
+  "policyVersion": zod.string(),
+  "impact": zod.enum(['critical', 'high', 'low']),
+  "topic": zod.string(),
+  "relevance": zod.enum(['relevant', 'unrelated', 'review']),
+  "confidence": zod.enum(['high', 'limited']),
+  "explanation": zod.string(),
+  "evidence": zod.array(zod.string()),
+  "evidenceRefs": zod.array(zod.object({
+  "source": zod.enum(['headline', 'summary', 'body']),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "contentHash": zod.string().optional()
+})).optional(),
+  "contentHash": zod.string().optional()
+}).optional(),
+  "impactMode": zod.enum(['auto', 'manual']).optional(),
+  "topicMode": zod.enum(['auto', 'manual']).optional(),
+  "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "classificationRevision": zod.number().int().optional(),
+  "focusOverride": zod.union([zod.object({
+  "categoryId": zod.string().min(1).max(updateClaimBodyRecordFocusOverrideOneCategoryIdMax),
+  "topicId": zod.string().min(1).max(updateClaimBodyRecordFocusOverrideOneTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),zod.null()]).optional(),
+  "focusRevision": zod.number().int().min(updateClaimBodyRecordFocusRevisionMin).optional(),
+  "claimRevision": zod.number().int().min(updateClaimBodyRecordClaimRevisionMin).optional(),
+  "automaticFocus": zod.object({
+  "categoryId": zod.string().min(1).max(updateClaimBodyRecordAutomaticFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(updateClaimBodyRecordAutomaticFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "focusPolicy": zod.string().optional(),
+  "sharedFocus": zod.object({
+  "categoryId": zod.string().min(1).max(updateClaimBodyRecordSharedFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(updateClaimBodyRecordSharedFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "classificationReason": zod.string().optional(),
+  "classificationNotes": zod.string().optional(),
+  "expectedClassificationRevision": zod.number().int().optional(),
+  "summary": zod.string().optional(),
+  "topic": zod.string().optional(),
+  "entities": zod.array(zod.string()).optional(),
+  "sentiment": zod.enum(['negative', 'positive', 'neutral', 'unassessed']).optional(),
+  "focus": zod.enum(['blame', 'performance', 'replacement', 'decision-making', 'institutional', 'other']).optional(),
+  "reportingType": zod.enum(['unassessed', 'original', 'independent', 'republication', 'commentary', 'official-response']).optional(),
+  "sourceType": zod.enum(['article', 'x', 'statement', 'document']).optional(),
+  "saved": zod.boolean().optional(),
+  "flagged": zod.boolean().optional(),
+  "flaggedAt": zod.string().optional(),
+  "articleId": zod.string().optional(),
+  "tier": zod.number().int().min(1).max(updateClaimBodyRecordTierMax).optional(),
+  "watchType": zod.enum(['person', 'position', 'organization', 'journalist', 'x-account', 'attribution', 'topic']).optional(),
+  "organization": zod.string().optional(),
+  "position": zod.string().optional(),
+  "individual": zod.string().optional(),
+  "aliases": zod.array(zod.string()).optional(),
+  "enabled": zod.boolean().optional(),
+  "feedUrl": zod.string().optional(),
+  "lastChecked": zod.string().optional(),
+  "feedStatus": zod.string().optional(),
+  "feedHealth": zod.array(zod.object({
+  "url": zod.string(),
+  "kind": zod.enum(['rss', 'sitemap', 'google-news']),
+  "role": zod.enum(['primary', 'supplement', 'fallback']),
+  "status": zod.enum(['connected', 'failed', 'stale', 'empty', 'standby']),
+  "checkedAt": zod.string().optional(),
+  "message": zod.string(),
+  "items": zod.number().int(),
+  "latestItemAt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "failures": zod.number().int().optional()
+})).optional(),
+  "intakeMethod": zod.enum(['rss', 'sitemap', 'google-news']).optional(),
+  "intakeUrl": zod.string().optional(),
+  "discoveryOnly": zod.boolean().optional(),
+  "discoveredAt": zod.string().optional(),
+  "observations": zod.array(zod.object({
+  "id": zod.string(),
+  "stage": zod.enum(['origin', 'sourcing', 'addition', 'republication']),
+  "articleId": zod.string(),
+  "journalist": zod.string(),
+  "attribution": zod.string(),
+  "evidence": zod.string(),
+  "observedAt": zod.string(),
+  "verified": zod.boolean(),
+  "url": zod.string().optional()
+})).optional()
+}),
+  "expectedRevision": zod.number().int().min(updateClaimBodyExpectedRevisionMin),
+  "rationale": zod.string().min(updateClaimBodyRationaleMin).max(updateClaimBodyRationaleMax),
+  "requestId": zod.string().min(updateClaimBodyRequestIdMin).max(updateClaimBodyRequestIdMax)
+})
+
+
+
+export const updateClaimResponseOneFocusOverrideOneCategoryIdMax = 100;
+
+export const updateClaimResponseOneFocusOverrideOneTopicIdMax = 200;
+
+
+export const updateClaimResponseOneFocusRevisionMin = 0;
+
+export const updateClaimResponseOneClaimRevisionMin = 0;
+
+export const updateClaimResponseOneAutomaticFocusCategoryIdMax = 100;
+
+export const updateClaimResponseOneAutomaticFocusTopicIdMax = 200;
+
+
+export const updateClaimResponseOneSharedFocusCategoryIdMax = 100;
+
+export const updateClaimResponseOneSharedFocusTopicIdMax = 200;
+
+
+export const updateClaimResponseOneTierMax = 3;
+
+
+
+export const UpdateClaimResponse = zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['article', 'claim', 'watch', 'outlet']),
+  "title": zod.string().min(1),
+  "verifiedHeadlines": zod.array(zod.object({
+  "title": zod.string(),
+  "outlet": zod.string(),
+  "articleUrl": zod.string(),
+  "sourceUrl": zod.string(),
+  "observedAt": zod.string(),
+  "source": zod.enum(['publisher-page', 'publisher-rss', 'publisher-sitemap']),
+  "captureId": zod.string()
+})).optional().describe('Server-observed publisher headlines; client edits cannot establish verified identity.'),
+  "url": zod.string().optional(),
+  "outlet": zod.string().optional(),
+  "journalists": zod.array(zod.string()).optional(),
+  "byline": zod.string().optional(),
+  "credits": zod.array(zod.object({
+  "name": zod.string().min(1),
+  "role": zod.enum(['author', 'contributor', 'reporting', 'research', 'photography', 'editing', 'other']),
+  "attribution": zod.string().optional()
+})).optional(),
+  "publishedAt": zod.string().optional(),
+  "publicationSource": zod.enum(['publisher', 'google-news', 'manual']).optional(),
+  "publicationSourceUrl": zod.string().optional(),
+  "fullText": zod.string().optional(),
+  "fullTextHash": zod.string().optional(),
+  "fullTextLength": zod.number().int().optional(),
+  "contentNormalization": zod.object({
+  "method": zod.string(),
+  "sourceCharacters": zod.number().int(),
+  "articleCharacters": zod.number().int()
+}).optional(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "classificationEvidence": zod.array(zod.object({
+  "signal": zod.string(),
+  "value": zod.string(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "rank": zod.number().int().optional()
+})).optional(),
+  "retrieval": zod.object({
+  "status": zod.string().optional(),
+  "method": zod.string().optional(),
+  "lastAttempt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "message": zod.string().optional(),
+  "characters": zod.number().int().optional(),
+  "rawCharacters": zod.number().int().optional(),
+  "attempts": zod.number().int().optional(),
+  "manualRequested": zod.boolean().optional()
+}).optional(),
+  "fullTextComplete": zod.boolean().optional(),
+  "retainedContent": zod.array(zod.object({
+  "id": zod.string(),
+  "text": zod.string().optional(),
+  "raw": zod.string().optional(),
+  "source": zod.string(),
+  "sourceUrl": zod.string().optional(),
+  "capturedAt": zod.string(),
+  "fileName": zod.string().optional(),
+  "uploadId": zod.string().optional(),
+  "bodyHash": zod.string().optional(),
+  "textLength": zod.number().int().optional(),
+  "rawLength": zod.number().int().optional()
+})).optional(),
+  "contentRetained": zod.boolean().optional(),
+  "retainedCharacters": zod.number().int().optional(),
+  "impact": zod.enum(['critical', 'high', 'low']).optional(),
+  "automaticAssessment": zod.object({
+  "policyVersion": zod.string(),
+  "impact": zod.enum(['critical', 'high', 'low']),
+  "topic": zod.string(),
+  "relevance": zod.enum(['relevant', 'unrelated', 'review']),
+  "confidence": zod.enum(['high', 'limited']),
+  "explanation": zod.string(),
+  "evidence": zod.array(zod.string()),
+  "evidenceRefs": zod.array(zod.object({
+  "source": zod.enum(['headline', 'summary', 'body']),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "contentHash": zod.string().optional()
+})).optional(),
+  "contentHash": zod.string().optional()
+}).optional(),
+  "impactMode": zod.enum(['auto', 'manual']).optional(),
+  "topicMode": zod.enum(['auto', 'manual']).optional(),
+  "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "classificationRevision": zod.number().int().optional(),
+  "focusOverride": zod.union([zod.object({
+  "categoryId": zod.string().min(1).max(updateClaimResponseOneFocusOverrideOneCategoryIdMax),
+  "topicId": zod.string().min(1).max(updateClaimResponseOneFocusOverrideOneTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),zod.null()]).optional(),
+  "focusRevision": zod.number().int().min(updateClaimResponseOneFocusRevisionMin).optional(),
+  "claimRevision": zod.number().int().min(updateClaimResponseOneClaimRevisionMin).optional(),
+  "automaticFocus": zod.object({
+  "categoryId": zod.string().min(1).max(updateClaimResponseOneAutomaticFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(updateClaimResponseOneAutomaticFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "focusPolicy": zod.string().optional(),
+  "sharedFocus": zod.object({
+  "categoryId": zod.string().min(1).max(updateClaimResponseOneSharedFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(updateClaimResponseOneSharedFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "classificationReason": zod.string().optional(),
+  "classificationNotes": zod.string().optional(),
+  "expectedClassificationRevision": zod.number().int().optional(),
+  "summary": zod.string().optional(),
+  "topic": zod.string().optional(),
+  "entities": zod.array(zod.string()).optional(),
+  "sentiment": zod.enum(['negative', 'positive', 'neutral', 'unassessed']).optional(),
+  "focus": zod.enum(['blame', 'performance', 'replacement', 'decision-making', 'institutional', 'other']).optional(),
+  "reportingType": zod.enum(['unassessed', 'original', 'independent', 'republication', 'commentary', 'official-response']).optional(),
+  "sourceType": zod.enum(['article', 'x', 'statement', 'document']).optional(),
+  "saved": zod.boolean().optional(),
+  "flagged": zod.boolean().optional(),
+  "flaggedAt": zod.string().optional(),
+  "articleId": zod.string().optional(),
+  "tier": zod.number().int().min(1).max(updateClaimResponseOneTierMax).optional(),
+  "watchType": zod.enum(['person', 'position', 'organization', 'journalist', 'x-account', 'attribution', 'topic']).optional(),
+  "organization": zod.string().optional(),
+  "position": zod.string().optional(),
+  "individual": zod.string().optional(),
+  "aliases": zod.array(zod.string()).optional(),
+  "enabled": zod.boolean().optional(),
+  "feedUrl": zod.string().optional(),
+  "lastChecked": zod.string().optional(),
+  "feedStatus": zod.string().optional(),
+  "feedHealth": zod.array(zod.object({
+  "url": zod.string(),
+  "kind": zod.enum(['rss', 'sitemap', 'google-news']),
+  "role": zod.enum(['primary', 'supplement', 'fallback']),
+  "status": zod.enum(['connected', 'failed', 'stale', 'empty', 'standby']),
+  "checkedAt": zod.string().optional(),
+  "message": zod.string(),
+  "items": zod.number().int(),
+  "latestItemAt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "failures": zod.number().int().optional()
+})).optional(),
+  "intakeMethod": zod.enum(['rss', 'sitemap', 'google-news']).optional(),
+  "intakeUrl": zod.string().optional(),
+  "discoveryOnly": zod.boolean().optional(),
+  "discoveredAt": zod.string().optional(),
+  "observations": zod.array(zod.object({
+  "id": zod.string(),
+  "stage": zod.enum(['origin', 'sourcing', 'addition', 'republication']),
+  "articleId": zod.string(),
+  "journalist": zod.string(),
+  "attribution": zod.string(),
+  "evidence": zod.string(),
+  "observedAt": zod.string(),
+  "verified": zod.boolean(),
+  "url": zod.string().optional()
+})).optional()
+}).and(zod.object({
+  "id": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+
+
+
+export const correctClaimLinkBodyRationaleMin = 5;
+export const correctClaimLinkBodyRationaleMax = 4000;
+
+export const correctClaimLinkBodyRequestIdMin = 8;
+export const correctClaimLinkBodyRequestIdMax = 100;
+
+
+
+export const CorrectClaimLinkBody = zod.object({
+  "observationId": zod.string().min(1),
+  "targetClaimId": zod.string().nullable(),
+  "supersedesId": zod.string().nullable(),
+  "rationale": zod.string().min(correctClaimLinkBodyRationaleMin).max(correctClaimLinkBodyRationaleMax),
+  "requestId": zod.string().min(correctClaimLinkBodyRequestIdMin).max(correctClaimLinkBodyRequestIdMax)
+})
+
+export const CorrectClaimLinkResponse = zod.object({
+  "id": zod.string(),
+  "observationId": zod.string(),
+  "targetClaimId": zod.string().nullable(),
+  "supersedesId": zod.string().nullable(),
+  "rationale": zod.string(),
+  "createdAt": zod.string()
+})
+
+
+export const GetArticleFocusParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const getArticleFocusResponseEffectiveCategoryIdMax = 100;
+
+export const getArticleFocusResponseEffectiveTopicIdMax = 200;
+
+
+export const getArticleFocusResponseAutomaticCategoryIdMax = 100;
+
+export const getArticleFocusResponseAutomaticTopicIdMax = 200;
+
+
+export const getArticleFocusResponseRevisionMin = 0;
+
+export const getArticleFocusResponseGroupsItemCategoryIdMax = 100;
+
+export const getArticleFocusResponseGroupsItemTopicIdMax = 200;
+
+
+
+
+export const GetArticleFocusResponse = zod.object({
+  "effective": zod.object({
+  "categoryId": zod.string().min(1).max(getArticleFocusResponseEffectiveCategoryIdMax),
+  "topicId": zod.string().min(1).max(getArticleFocusResponseEffectiveTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),
+  "automatic": zod.object({
+  "categoryId": zod.string().min(1).max(getArticleFocusResponseAutomaticCategoryIdMax),
+  "topicId": zod.string().min(1).max(getArticleFocusResponseAutomaticTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),
+  "mode": zod.enum(['auto', 'manual']),
+  "revision": zod.number().int().min(getArticleFocusResponseRevisionMin),
+  "groups": zod.array(zod.object({
+  "categoryId": zod.string().min(1).max(getArticleFocusResponseGroupsItemCategoryIdMax),
+  "topicId": zod.string().min(1).max(getArticleFocusResponseGroupsItemTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}))
+})
+
+
+export const CorrectArticleFocusParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const correctArticleFocusBodyCategoryIdMax = 100;
+
+export const correctArticleFocusBodyTopicIdMax = 200;
+
+export const correctArticleFocusBodyTopicTitleMax = 300;
+
+export const correctArticleFocusBodyExpectedRevisionMin = 0;
+
+export const correctArticleFocusBodyRequestIdMin = 8;
+export const correctArticleFocusBodyRequestIdMax = 100;
+
+
+
+export const CorrectArticleFocusBody = zod.object({
+  "mode": zod.enum(['auto', 'manual']),
+  "categoryId": zod.string().min(1).max(correctArticleFocusBodyCategoryIdMax).optional(),
+  "topicId": zod.string().min(1).max(correctArticleFocusBodyTopicIdMax).optional(),
+  "topicTitle": zod.string().min(1).max(correctArticleFocusBodyTopicTitleMax).optional(),
+  "expectedRevision": zod.number().int().min(correctArticleFocusBodyExpectedRevisionMin),
+  "requestId": zod.string().min(correctArticleFocusBodyRequestIdMin).max(correctArticleFocusBodyRequestIdMax)
+})
+
+
+
+export const correctArticleFocusResponseOneFocusOverrideOneCategoryIdMax = 100;
+
+export const correctArticleFocusResponseOneFocusOverrideOneTopicIdMax = 200;
+
+
+export const correctArticleFocusResponseOneFocusRevisionMin = 0;
+
+export const correctArticleFocusResponseOneClaimRevisionMin = 0;
+
+export const correctArticleFocusResponseOneAutomaticFocusCategoryIdMax = 100;
+
+export const correctArticleFocusResponseOneAutomaticFocusTopicIdMax = 200;
+
+
+export const correctArticleFocusResponseOneSharedFocusCategoryIdMax = 100;
+
+export const correctArticleFocusResponseOneSharedFocusTopicIdMax = 200;
+
+
+export const correctArticleFocusResponseOneTierMax = 3;
+
+
+
+export const CorrectArticleFocusResponse = zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['article', 'claim', 'watch', 'outlet']),
+  "title": zod.string().min(1),
+  "verifiedHeadlines": zod.array(zod.object({
+  "title": zod.string(),
+  "outlet": zod.string(),
+  "articleUrl": zod.string(),
+  "sourceUrl": zod.string(),
+  "observedAt": zod.string(),
+  "source": zod.enum(['publisher-page', 'publisher-rss', 'publisher-sitemap']),
+  "captureId": zod.string()
+})).optional().describe('Server-observed publisher headlines; client edits cannot establish verified identity.'),
+  "url": zod.string().optional(),
+  "outlet": zod.string().optional(),
+  "journalists": zod.array(zod.string()).optional(),
+  "byline": zod.string().optional(),
+  "credits": zod.array(zod.object({
+  "name": zod.string().min(1),
+  "role": zod.enum(['author', 'contributor', 'reporting', 'research', 'photography', 'editing', 'other']),
+  "attribution": zod.string().optional()
+})).optional(),
+  "publishedAt": zod.string().optional(),
+  "publicationSource": zod.enum(['publisher', 'google-news', 'manual']).optional(),
+  "publicationSourceUrl": zod.string().optional(),
+  "fullText": zod.string().optional(),
+  "fullTextHash": zod.string().optional(),
+  "fullTextLength": zod.number().int().optional(),
+  "contentNormalization": zod.object({
+  "method": zod.string(),
+  "sourceCharacters": zod.number().int(),
+  "articleCharacters": zod.number().int()
+}).optional(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "classificationEvidence": zod.array(zod.object({
+  "signal": zod.string(),
+  "value": zod.string(),
+  "contentType": zod.string().optional(),
+  "contentFormat": zod.string().optional(),
+  "rank": zod.number().int().optional()
+})).optional(),
+  "retrieval": zod.object({
+  "status": zod.string().optional(),
+  "method": zod.string().optional(),
+  "lastAttempt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "message": zod.string().optional(),
+  "characters": zod.number().int().optional(),
+  "rawCharacters": zod.number().int().optional(),
+  "attempts": zod.number().int().optional(),
+  "manualRequested": zod.boolean().optional()
+}).optional(),
+  "fullTextComplete": zod.boolean().optional(),
+  "retainedContent": zod.array(zod.object({
+  "id": zod.string(),
+  "text": zod.string().optional(),
+  "raw": zod.string().optional(),
+  "source": zod.string(),
+  "sourceUrl": zod.string().optional(),
+  "capturedAt": zod.string(),
+  "fileName": zod.string().optional(),
+  "uploadId": zod.string().optional(),
+  "bodyHash": zod.string().optional(),
+  "textLength": zod.number().int().optional(),
+  "rawLength": zod.number().int().optional()
+})).optional(),
+  "contentRetained": zod.boolean().optional(),
+  "retainedCharacters": zod.number().int().optional(),
+  "impact": zod.enum(['critical', 'high', 'low']).optional(),
+  "automaticAssessment": zod.object({
+  "policyVersion": zod.string(),
+  "impact": zod.enum(['critical', 'high', 'low']),
+  "topic": zod.string(),
+  "relevance": zod.enum(['relevant', 'unrelated', 'review']),
+  "confidence": zod.enum(['high', 'limited']),
+  "explanation": zod.string(),
+  "evidence": zod.array(zod.string()),
+  "evidenceRefs": zod.array(zod.object({
+  "source": zod.enum(['headline', 'summary', 'body']),
+  "excerpt": zod.string(),
+  "start": zod.number().int(),
+  "end": zod.number().int(),
+  "contentHash": zod.string().optional()
+})).optional(),
+  "contentHash": zod.string().optional()
+}).optional(),
+  "impactMode": zod.enum(['auto', 'manual']).optional(),
+  "topicMode": zod.enum(['auto', 'manual']).optional(),
+  "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
+  "classificationRevision": zod.number().int().optional(),
+  "focusOverride": zod.union([zod.object({
+  "categoryId": zod.string().min(1).max(correctArticleFocusResponseOneFocusOverrideOneCategoryIdMax),
+  "topicId": zod.string().min(1).max(correctArticleFocusResponseOneFocusOverrideOneTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),zod.null()]).optional(),
+  "focusRevision": zod.number().int().min(correctArticleFocusResponseOneFocusRevisionMin).optional(),
+  "claimRevision": zod.number().int().min(correctArticleFocusResponseOneClaimRevisionMin).optional(),
+  "automaticFocus": zod.object({
+  "categoryId": zod.string().min(1).max(correctArticleFocusResponseOneAutomaticFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(correctArticleFocusResponseOneAutomaticFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "focusPolicy": zod.string().optional(),
+  "sharedFocus": zod.object({
+  "categoryId": zod.string().min(1).max(correctArticleFocusResponseOneSharedFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(correctArticleFocusResponseOneSharedFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "classificationReason": zod.string().optional(),
+  "classificationNotes": zod.string().optional(),
+  "expectedClassificationRevision": zod.number().int().optional(),
+  "summary": zod.string().optional(),
+  "topic": zod.string().optional(),
+  "entities": zod.array(zod.string()).optional(),
+  "sentiment": zod.enum(['negative', 'positive', 'neutral', 'unassessed']).optional(),
+  "focus": zod.enum(['blame', 'performance', 'replacement', 'decision-making', 'institutional', 'other']).optional(),
+  "reportingType": zod.enum(['unassessed', 'original', 'independent', 'republication', 'commentary', 'official-response']).optional(),
+  "sourceType": zod.enum(['article', 'x', 'statement', 'document']).optional(),
+  "saved": zod.boolean().optional(),
+  "flagged": zod.boolean().optional(),
+  "flaggedAt": zod.string().optional(),
+  "articleId": zod.string().optional(),
+  "tier": zod.number().int().min(1).max(correctArticleFocusResponseOneTierMax).optional(),
+  "watchType": zod.enum(['person', 'position', 'organization', 'journalist', 'x-account', 'attribution', 'topic']).optional(),
+  "organization": zod.string().optional(),
+  "position": zod.string().optional(),
+  "individual": zod.string().optional(),
+  "aliases": zod.array(zod.string()).optional(),
+  "enabled": zod.boolean().optional(),
+  "feedUrl": zod.string().optional(),
+  "lastChecked": zod.string().optional(),
+  "feedStatus": zod.string().optional(),
+  "feedHealth": zod.array(zod.object({
+  "url": zod.string(),
+  "kind": zod.enum(['rss', 'sitemap', 'google-news']),
+  "role": zod.enum(['primary', 'supplement', 'fallback']),
+  "status": zod.enum(['connected', 'failed', 'stale', 'empty', 'standby']),
+  "checkedAt": zod.string().optional(),
+  "message": zod.string(),
+  "items": zod.number().int(),
+  "latestItemAt": zod.string().optional(),
+  "nextAttemptAt": zod.string().optional(),
+  "failures": zod.number().int().optional()
+})).optional(),
+  "intakeMethod": zod.enum(['rss', 'sitemap', 'google-news']).optional(),
+  "intakeUrl": zod.string().optional(),
+  "discoveryOnly": zod.boolean().optional(),
+  "discoveredAt": zod.string().optional(),
+  "observations": zod.array(zod.object({
+  "id": zod.string(),
+  "stage": zod.enum(['origin', 'sourcing', 'addition', 'republication']),
+  "articleId": zod.string(),
+  "journalist": zod.string(),
+  "attribution": zod.string(),
+  "evidence": zod.string(),
+  "observedAt": zod.string(),
+  "verified": zod.boolean(),
+  "url": zod.string().optional()
+})).optional()
+}).and(zod.object({
+  "id": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+
+
 export const CorrectArticleClassificationParams = zod.object({
   "id": zod.coerce.string()
 })
@@ -1836,6 +2935,25 @@ export const CorrectArticleClassificationBody = zod.object({
   "expectedRevision": zod.number().int().min(correctArticleClassificationBodyExpectedRevisionMin)
 })
 
+
+
+export const correctArticleClassificationResponseOneFocusOverrideOneCategoryIdMax = 100;
+
+export const correctArticleClassificationResponseOneFocusOverrideOneTopicIdMax = 200;
+
+
+export const correctArticleClassificationResponseOneFocusRevisionMin = 0;
+
+export const correctArticleClassificationResponseOneClaimRevisionMin = 0;
+
+export const correctArticleClassificationResponseOneAutomaticFocusCategoryIdMax = 100;
+
+export const correctArticleClassificationResponseOneAutomaticFocusTopicIdMax = 200;
+
+
+export const correctArticleClassificationResponseOneSharedFocusCategoryIdMax = 100;
+
+export const correctArticleClassificationResponseOneSharedFocusTopicIdMax = 200;
 
 
 export const correctArticleClassificationResponseOneTierMax = 3;
@@ -1934,6 +3052,24 @@ export const CorrectArticleClassificationResponse = zod.object({
   "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "classificationRevision": zod.number().int().optional(),
+  "focusOverride": zod.union([zod.object({
+  "categoryId": zod.string().min(1).max(correctArticleClassificationResponseOneFocusOverrideOneCategoryIdMax),
+  "topicId": zod.string().min(1).max(correctArticleClassificationResponseOneFocusOverrideOneTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),zod.null()]).optional(),
+  "focusRevision": zod.number().int().min(correctArticleClassificationResponseOneFocusRevisionMin).optional(),
+  "claimRevision": zod.number().int().min(correctArticleClassificationResponseOneClaimRevisionMin).optional(),
+  "automaticFocus": zod.object({
+  "categoryId": zod.string().min(1).max(correctArticleClassificationResponseOneAutomaticFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(correctArticleClassificationResponseOneAutomaticFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "focusPolicy": zod.string().optional(),
+  "sharedFocus": zod.object({
+  "categoryId": zod.string().min(1).max(correctArticleClassificationResponseOneSharedFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(correctArticleClassificationResponseOneSharedFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
   "classificationReason": zod.string().optional(),
   "classificationNotes": zod.string().optional(),
   "expectedClassificationRevision": zod.number().int().optional(),
@@ -1996,6 +3132,25 @@ export const RestoreArticleParams = zod.object({
   "id": zod.coerce.string()
 })
 
+
+
+export const restoreArticleResponseOneFocusOverrideOneCategoryIdMax = 100;
+
+export const restoreArticleResponseOneFocusOverrideOneTopicIdMax = 200;
+
+
+export const restoreArticleResponseOneFocusRevisionMin = 0;
+
+export const restoreArticleResponseOneClaimRevisionMin = 0;
+
+export const restoreArticleResponseOneAutomaticFocusCategoryIdMax = 100;
+
+export const restoreArticleResponseOneAutomaticFocusTopicIdMax = 200;
+
+
+export const restoreArticleResponseOneSharedFocusCategoryIdMax = 100;
+
+export const restoreArticleResponseOneSharedFocusTopicIdMax = 200;
 
 
 export const restoreArticleResponseOneTierMax = 3;
@@ -2094,6 +3249,24 @@ export const RestoreArticleResponse = zod.object({
   "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "classificationRevision": zod.number().int().optional(),
+  "focusOverride": zod.union([zod.object({
+  "categoryId": zod.string().min(1).max(restoreArticleResponseOneFocusOverrideOneCategoryIdMax),
+  "topicId": zod.string().min(1).max(restoreArticleResponseOneFocusOverrideOneTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),zod.null()]).optional(),
+  "focusRevision": zod.number().int().min(restoreArticleResponseOneFocusRevisionMin).optional(),
+  "claimRevision": zod.number().int().min(restoreArticleResponseOneClaimRevisionMin).optional(),
+  "automaticFocus": zod.object({
+  "categoryId": zod.string().min(1).max(restoreArticleResponseOneAutomaticFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(restoreArticleResponseOneAutomaticFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "focusPolicy": zod.string().optional(),
+  "sharedFocus": zod.object({
+  "categoryId": zod.string().min(1).max(restoreArticleResponseOneSharedFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(restoreArticleResponseOneSharedFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
   "classificationReason": zod.string().optional(),
   "classificationNotes": zod.string().optional(),
   "expectedClassificationRevision": zod.number().int().optional(),
@@ -2167,6 +3340,25 @@ export const GetArticleFeedbackQueryParams = zod.object({
   "page": zod.coerce.number().int().min(1).default(getArticleFeedbackQueryPageDefault)
 })
 
+
+
+export const getArticleFeedbackResponseEventsItemSnapshotFocusOverrideOneCategoryIdMax = 100;
+
+export const getArticleFeedbackResponseEventsItemSnapshotFocusOverrideOneTopicIdMax = 200;
+
+
+export const getArticleFeedbackResponseEventsItemSnapshotFocusRevisionMin = 0;
+
+export const getArticleFeedbackResponseEventsItemSnapshotClaimRevisionMin = 0;
+
+export const getArticleFeedbackResponseEventsItemSnapshotAutomaticFocusCategoryIdMax = 100;
+
+export const getArticleFeedbackResponseEventsItemSnapshotAutomaticFocusTopicIdMax = 200;
+
+
+export const getArticleFeedbackResponseEventsItemSnapshotSharedFocusCategoryIdMax = 100;
+
+export const getArticleFeedbackResponseEventsItemSnapshotSharedFocusTopicIdMax = 200;
 
 
 export const getArticleFeedbackResponseEventsItemSnapshotTierMax = 3;
@@ -2325,6 +3517,24 @@ export const GetArticleFeedbackResponse = zod.object({
   "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "classificationRevision": zod.number().int().optional(),
+  "focusOverride": zod.union([zod.object({
+  "categoryId": zod.string().min(1).max(getArticleFeedbackResponseEventsItemSnapshotFocusOverrideOneCategoryIdMax),
+  "topicId": zod.string().min(1).max(getArticleFeedbackResponseEventsItemSnapshotFocusOverrideOneTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),zod.null()]).optional(),
+  "focusRevision": zod.number().int().min(getArticleFeedbackResponseEventsItemSnapshotFocusRevisionMin).optional(),
+  "claimRevision": zod.number().int().min(getArticleFeedbackResponseEventsItemSnapshotClaimRevisionMin).optional(),
+  "automaticFocus": zod.object({
+  "categoryId": zod.string().min(1).max(getArticleFeedbackResponseEventsItemSnapshotAutomaticFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(getArticleFeedbackResponseEventsItemSnapshotAutomaticFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "focusPolicy": zod.string().optional(),
+  "sharedFocus": zod.object({
+  "categoryId": zod.string().min(1).max(getArticleFeedbackResponseEventsItemSnapshotSharedFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(getArticleFeedbackResponseEventsItemSnapshotSharedFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
   "classificationReason": zod.string().optional(),
   "classificationNotes": zod.string().optional(),
   "expectedClassificationRevision": zod.number().int().optional(),
@@ -2389,6 +3599,25 @@ export const GetFeedbackArticleParams = zod.object({
   "id": zod.coerce.string()
 })
 
+
+
+export const getFeedbackArticleResponseOneFocusOverrideOneCategoryIdMax = 100;
+
+export const getFeedbackArticleResponseOneFocusOverrideOneTopicIdMax = 200;
+
+
+export const getFeedbackArticleResponseOneFocusRevisionMin = 0;
+
+export const getFeedbackArticleResponseOneClaimRevisionMin = 0;
+
+export const getFeedbackArticleResponseOneAutomaticFocusCategoryIdMax = 100;
+
+export const getFeedbackArticleResponseOneAutomaticFocusTopicIdMax = 200;
+
+
+export const getFeedbackArticleResponseOneSharedFocusCategoryIdMax = 100;
+
+export const getFeedbackArticleResponseOneSharedFocusTopicIdMax = 200;
 
 
 export const getFeedbackArticleResponseOneTierMax = 3;
@@ -2487,6 +3716,24 @@ export const GetFeedbackArticleResponse = zod.object({
   "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "classificationRevision": zod.number().int().optional(),
+  "focusOverride": zod.union([zod.object({
+  "categoryId": zod.string().min(1).max(getFeedbackArticleResponseOneFocusOverrideOneCategoryIdMax),
+  "topicId": zod.string().min(1).max(getFeedbackArticleResponseOneFocusOverrideOneTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),zod.null()]).optional(),
+  "focusRevision": zod.number().int().min(getFeedbackArticleResponseOneFocusRevisionMin).optional(),
+  "claimRevision": zod.number().int().min(getFeedbackArticleResponseOneClaimRevisionMin).optional(),
+  "automaticFocus": zod.object({
+  "categoryId": zod.string().min(1).max(getFeedbackArticleResponseOneAutomaticFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(getFeedbackArticleResponseOneAutomaticFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "focusPolicy": zod.string().optional(),
+  "sharedFocus": zod.object({
+  "categoryId": zod.string().min(1).max(getFeedbackArticleResponseOneSharedFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(getFeedbackArticleResponseOneSharedFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
   "classificationReason": zod.string().optional(),
   "classificationNotes": zod.string().optional(),
   "expectedClassificationRevision": zod.number().int().optional(),
@@ -2561,6 +3808,25 @@ export const FlagArticleBody = zod.object({
   "flagged": zod.boolean()
 })
 
+
+
+export const flagArticleResponseOneFocusOverrideOneCategoryIdMax = 100;
+
+export const flagArticleResponseOneFocusOverrideOneTopicIdMax = 200;
+
+
+export const flagArticleResponseOneFocusRevisionMin = 0;
+
+export const flagArticleResponseOneClaimRevisionMin = 0;
+
+export const flagArticleResponseOneAutomaticFocusCategoryIdMax = 100;
+
+export const flagArticleResponseOneAutomaticFocusTopicIdMax = 200;
+
+
+export const flagArticleResponseOneSharedFocusCategoryIdMax = 100;
+
+export const flagArticleResponseOneSharedFocusTopicIdMax = 200;
 
 
 export const flagArticleResponseOneTierMax = 3;
@@ -2659,6 +3925,24 @@ export const FlagArticleResponse = zod.object({
   "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "classificationRevision": zod.number().int().optional(),
+  "focusOverride": zod.union([zod.object({
+  "categoryId": zod.string().min(1).max(flagArticleResponseOneFocusOverrideOneCategoryIdMax),
+  "topicId": zod.string().min(1).max(flagArticleResponseOneFocusOverrideOneTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),zod.null()]).optional(),
+  "focusRevision": zod.number().int().min(flagArticleResponseOneFocusRevisionMin).optional(),
+  "claimRevision": zod.number().int().min(flagArticleResponseOneClaimRevisionMin).optional(),
+  "automaticFocus": zod.object({
+  "categoryId": zod.string().min(1).max(flagArticleResponseOneAutomaticFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(flagArticleResponseOneAutomaticFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "focusPolicy": zod.string().optional(),
+  "sharedFocus": zod.object({
+  "categoryId": zod.string().min(1).max(flagArticleResponseOneSharedFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(flagArticleResponseOneSharedFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
   "classificationReason": zod.string().optional(),
   "classificationNotes": zod.string().optional(),
   "expectedClassificationRevision": zod.number().int().optional(),
@@ -2744,6 +4028,25 @@ export const AnalyzeImportBody = zod.object({
   "targetId": zod.string().optional()
 })
 
+
+
+export const analyzeImportResponseCandidateFocusOverrideOneCategoryIdMax = 100;
+
+export const analyzeImportResponseCandidateFocusOverrideOneTopicIdMax = 200;
+
+
+export const analyzeImportResponseCandidateFocusRevisionMin = 0;
+
+export const analyzeImportResponseCandidateClaimRevisionMin = 0;
+
+export const analyzeImportResponseCandidateAutomaticFocusCategoryIdMax = 100;
+
+export const analyzeImportResponseCandidateAutomaticFocusTopicIdMax = 200;
+
+
+export const analyzeImportResponseCandidateSharedFocusCategoryIdMax = 100;
+
+export const analyzeImportResponseCandidateSharedFocusTopicIdMax = 200;
 
 
 export const analyzeImportResponseCandidateTierMax = 3;
@@ -2844,6 +4147,24 @@ export const AnalyzeImportResponse = zod.object({
   "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "classificationRevision": zod.number().int().optional(),
+  "focusOverride": zod.union([zod.object({
+  "categoryId": zod.string().min(1).max(analyzeImportResponseCandidateFocusOverrideOneCategoryIdMax),
+  "topicId": zod.string().min(1).max(analyzeImportResponseCandidateFocusOverrideOneTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),zod.null()]).optional(),
+  "focusRevision": zod.number().int().min(analyzeImportResponseCandidateFocusRevisionMin).optional(),
+  "claimRevision": zod.number().int().min(analyzeImportResponseCandidateClaimRevisionMin).optional(),
+  "automaticFocus": zod.object({
+  "categoryId": zod.string().min(1).max(analyzeImportResponseCandidateAutomaticFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(analyzeImportResponseCandidateAutomaticFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "focusPolicy": zod.string().optional(),
+  "sharedFocus": zod.object({
+  "categoryId": zod.string().min(1).max(analyzeImportResponseCandidateSharedFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(analyzeImportResponseCandidateSharedFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
   "classificationReason": zod.string().optional(),
   "classificationNotes": zod.string().optional(),
   "expectedClassificationRevision": zod.number().int().optional(),
@@ -2922,6 +4243,25 @@ export const CommitImportBody = zod.object({
   "fullTextComplete": zod.boolean().optional()
 })
 
+
+
+export const commitImportResponseOneFocusOverrideOneCategoryIdMax = 100;
+
+export const commitImportResponseOneFocusOverrideOneTopicIdMax = 200;
+
+
+export const commitImportResponseOneFocusRevisionMin = 0;
+
+export const commitImportResponseOneClaimRevisionMin = 0;
+
+export const commitImportResponseOneAutomaticFocusCategoryIdMax = 100;
+
+export const commitImportResponseOneAutomaticFocusTopicIdMax = 200;
+
+
+export const commitImportResponseOneSharedFocusCategoryIdMax = 100;
+
+export const commitImportResponseOneSharedFocusTopicIdMax = 200;
 
 
 export const commitImportResponseOneTierMax = 3;
@@ -3020,6 +4360,24 @@ export const CommitImportResponse = zod.object({
   "impactOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "topicOverrideOrigin": zod.enum(['analyst', 'legacy-unknown']).optional(),
   "classificationRevision": zod.number().int().optional(),
+  "focusOverride": zod.union([zod.object({
+  "categoryId": zod.string().min(1).max(commitImportResponseOneFocusOverrideOneCategoryIdMax),
+  "topicId": zod.string().min(1).max(commitImportResponseOneFocusOverrideOneTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}),zod.null()]).optional(),
+  "focusRevision": zod.number().int().min(commitImportResponseOneFocusRevisionMin).optional(),
+  "claimRevision": zod.number().int().min(commitImportResponseOneClaimRevisionMin).optional(),
+  "automaticFocus": zod.object({
+  "categoryId": zod.string().min(1).max(commitImportResponseOneAutomaticFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(commitImportResponseOneAutomaticFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
+  "focusPolicy": zod.string().optional(),
+  "sharedFocus": zod.object({
+  "categoryId": zod.string().min(1).max(commitImportResponseOneSharedFocusCategoryIdMax),
+  "topicId": zod.string().min(1).max(commitImportResponseOneSharedFocusTopicIdMax),
+  "topicTitle": zod.string().min(1)
+}).optional(),
   "classificationReason": zod.string().optional(),
   "classificationNotes": zod.string().optional(),
   "expectedClassificationRevision": zod.number().int().optional(),

@@ -4,6 +4,7 @@
  * Api
  * OpenAPI spec version: 1.0.0
  */
+import type { ClaimLinkCorrection } from './claimLinkCorrection';
 import type { ReportingClaimDirection } from './reportingClaimDirection';
 import type { ReportingClaimDirectionOrigin } from './reportingClaimDirectionOrigin';
 import type { ReportingClaimEvidenceScope } from './reportingClaimEvidenceScope';
@@ -11,6 +12,11 @@ import type { ReportingEvidenceVersion } from './reportingEvidenceVersion';
 import type { ReportingReview } from './reportingReview';
 
 export interface ReportingClaim {
+  originalClaimId?: string;
+  /** @nullable */
+  linkCorrectionId?: string | null;
+  linkExcluded?: boolean;
+  linkHistory?: ClaimLinkCorrection[];
   direction?: ReportingClaimDirection;
   /** @nullable */
   directionSubject?: string | null;

@@ -7,6 +7,15 @@ import { CorrectArticleClassificationBody, DeleteRecordBody, GetArticleFeedbackQ
 import { correctArticle, dismissArticle, restoreArticleState, currentArticle, FeedbackError } from "../lib/tripwire-feedback";
 import { db, tripwireRecords } from "@workspace/db";
 import { and, eq, sql, desc } from "drizzle-orm";
+import { GetArticleFocusParams, GetArticleFocusResponse, CorrectArticleFocusParams, CorrectArticleFocusBody, CorrectArticleFocusResponse } from "@workspace/api-zod";
+import { focusState, correctFocus } from "../lib/article-focus-feedback";
+import { ListFocusGroupsQueryParams, ListFocusGroupsResponse, GetFocusGroupParams, GetFocusGroupResponse, UpdateFocusGroupBody, UpdateFocusGroupResponse } from "@workspace/api-zod";
+import { searchFocusGroups, groupDetail, editGroup, groupArticlesPage } from "../lib/focus-catalog";
+import { GetFocusGroupArticlesParams, GetFocusGroupArticlesQueryParams, GetFocusGroupArticlesResponse,
+  CorrectFocusGroupArticlesParams, CorrectFocusGroupArticlesBody, CorrectFocusGroupArticlesResponse } from "@workspace/api-zod";
+import { correctGroupArticles } from "../lib/focus-batch";
+import { UpdateClaimBody, UpdateClaimResponse } from "@workspace/api-zod";
+import { editClaim } from "../lib/claim-corrections";
 
 const router: IRouter = Router();
 router.get("/tripwire/workspace", async (req, res): Promise<void> => {
@@ -47,6 +56,12 @@ router.post("/tripwire/records", async (req, res): Promise<void> => {
     res.status(400).json({error: "Each observation needs a valid time and source URL"}); return;
   }
   const records = await recordsFor(userId);
+  if (data.kind === "claim" && data.id) {
+    const existing = await db.select({ id: tripwireRecords.id }).from(tripwireRecords).where(and(eq(tripwireRecords.kind, "claim"),
+      sql`${tripwireRecords.id} in (${data.id},${`${userId}:${data.id}`})`));
+    if (existing.length) { res.status(400).json({ error: "Use the claim correction editor so concurrent changes and history are preserved." }); return; }
+  }
+  if (data.kind === "claim") data.claimRevision = 0;
   if (data.observations?.some(o => o.articleId && !records.some(r => r.id === o.articleId && r.kind === "article"))) {
     res.status(400).json({error: "Observation references an article outside this workspace"}); return;
   }
@@ -67,6 +82,48 @@ router.delete("/tripwire/records/:id", async (req, res): Promise<void> => {
   const removed = await removeRecord(userId, params.id);
   if (!removed) { res.status(404).json({error: "Record not found"}); return; }
   res.status(204).end();
+});
+router.patch("/tripwire/claims/:id/correction", async (req, res): Promise<void> => {
+  const input = UpdateClaimBody.safeParse(req.body);
+  if (!input.success) { res.status(400).json({ error: "Enter valid claim fields and a reason." }); return; }
+  res.json(UpdateClaimResponse.parse(await editClaim(workspaceIdentity(req).userId, String(req.params.id), input.data)));
+});
+router.get("/tripwire/focus-groups", async (req, res): Promise<void> => {
+  const q = ListFocusGroupsQueryParams.safeParse(req.query);
+  if (!q.success) { res.status(400).json({ error: "Invalid focus search." }); return; }
+  res.json(ListFocusGroupsResponse.parse(await searchFocusGroups(workspaceIdentity(req).userId, q.data.q, q.data.offset)));
+});
+router.get("/tripwire/focus-groups/:id/articles", async (req, res): Promise<void> => {
+  const p = GetFocusGroupArticlesParams.safeParse(req.params), q = GetFocusGroupArticlesQueryParams.safeParse(req.query);
+  if (!p.success || !q.success) { res.status(400).json({ error: "Invalid article selection page." }); return; }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(GetFocusGroupArticlesResponse.parse(await groupArticlesPage(workspaceIdentity(req).userId, p.data.id, q.data.offset)));
+});
+router.post("/tripwire/focus-groups/:id/article-corrections", async (req, res): Promise<void> => {
+  const p = CorrectFocusGroupArticlesParams.safeParse(req.params), b = CorrectFocusGroupArticlesBody.safeParse(req.body);
+  if (!p.success || !b.success) { res.status(400).json({ error: "Choose articles and review the correction fields." }); return; }
+  res.json(CorrectFocusGroupArticlesResponse.parse(await correctGroupArticles(workspaceIdentity(req).userId, p.data.id, b.data)));
+});
+router.get("/tripwire/focus-groups/:id", async (req, res): Promise<void> => {
+  const p = GetFocusGroupParams.parse(req.params);
+  res.json(GetFocusGroupResponse.parse(await groupDetail(workspaceIdentity(req).userId, p.id)));
+});
+router.patch("/tripwire/focus-groups/:id", async (req, res): Promise<void> => {
+  const p = GetFocusGroupParams.parse(req.params), b = UpdateFocusGroupBody.safeParse(req.body);
+  if (!b.success) { res.status(400).json({ error: "Review the group correction fields." }); return; }
+  res.json(UpdateFocusGroupResponse.parse(await editGroup(workspaceIdentity(req).userId, p.id, b.data)));
+});
+router.get("/tripwire/records/:id/focus", async (req, res): Promise<void> => {
+  const params = GetArticleFocusParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(GetArticleFocusResponse.parse(await focusState(workspaceIdentity(req).userId, params.data.id)));
+});
+router.patch("/tripwire/records/:id/focus", async (req, res): Promise<void> => {
+  const params = CorrectArticleFocusParams.safeParse(req.params);
+  const input = CorrectArticleFocusBody.safeParse(req.body);
+  if (!params.success || !input.success) { res.status(400).json({ error: "Invalid article focus correction." }); return; }
+  res.json(CorrectArticleFocusResponse.parse(await correctFocus(workspaceIdentity(req).userId, params.data.id, input.data)));
 });
 router.patch("/tripwire/records/:id/classification", async (req, res): Promise<void> => {
   const input = CorrectArticleClassificationBody.safeParse(req.body);

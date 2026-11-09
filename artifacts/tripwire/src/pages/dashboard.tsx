@@ -10,6 +10,8 @@ import { useEnrich } from '@/lib/workspace';
 import { IntakeHealth } from '@/components/feed/intake-health';
 import { CriticalEnrichmentQueue } from '@/components/dashboard/critical-enrichment-queue';
 import { FeedbackLog } from '@/components/dashboard/feedback-log';
+import { ClaimProcessingStatus } from '@/components/provenance/claim-processing';
+import { useWorkspaceAccess } from '@/lib/workspace-access';
 
 const n = (v: number) => v.toLocaleString('en-US');
 
@@ -81,6 +83,7 @@ function RetrievalTable() {
 }
 
 export default function DashboardPage() {
+  const { canEdit } = useWorkspaceAccess();
   const search = useSearch();
   const [location, setLocation] = useLocation();
   const tab = new URLSearchParams(search).get('tab') === 'methodology' ? 'methodology' : 'operations';
@@ -103,6 +106,10 @@ export default function DashboardPage() {
           <CriticalEnrichmentQueue />
           <IntakeHealth />
           <RetrievalTable />
+          <section className="tw-glass mt-6 rounded-xl border border-border" data-testid="section-claim-processing">
+            <h2 className="border-b border-border px-4 py-2.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Claims processing</h2>
+            <ClaimProcessingStatus canRetry={canEdit} />
+          </section>
           <FeedbackLog />
         </TabsContent>
         <TabsContent value="methodology" className="mt-6">

@@ -9,6 +9,7 @@ import { mergeClassification } from "./tripwire-classification";
 import { publicationUpdate } from "./tripwire-publication";
 import { articleLock, currentArticle, FeedbackError, canonicalArticleUrl, classificationSnapshot, appendFeedback, CORRECTION_REASONS } from "./tripwire-feedback";
 import { mergeHeadlines, publisherIdentityUpdate } from "./tripwire-headlines";
+import { articleFocus } from "./article-focus";
 
 export type RecordData = typeof SaveRecordBody._output;
 export async function seedConfig() {
@@ -32,6 +33,7 @@ export async function recordsFor(userId?: string | null, includeContent = true, 
   const rows = await database.select().from(tripwireRecords).where(inArray(tripwireRecords.owner, userId ? ["public", userId] : ["public"]));
   const privateIds = new Set(rows.filter(r => r.owner !== "public").map(r => String(r.data.baseId ?? r.id)));
   const publicRows = new Map(rows.filter(r => r.owner === "public").map(r => [r.id, r]));
+  const sharedGroups = new Map(rows.filter(r => r.owner === userId && r.kind === "focus-group").map(r => [r.data.topicId, r.data.override]));
   const records = rows.filter(r => ["article", "claim", "watch", "outlet"].includes(r.kind) && (r.owner !== "public" || !privateIds.has(r.id)) && r.data.hidden !== true).map(r => {
     const base = publicRows.get(String(r.data.baseId ?? r.id));
     const data = { ...r.data };
@@ -48,6 +50,8 @@ export async function recordsFor(userId?: string | null, includeContent = true, 
       const content = mergeArticleContent((r.owner !== "public" ? data : base?.data ?? {}) as { fullText?: string; retainedContent?: Capture[]; fullTextComplete?: boolean },
         (r.owner !== "public" ? base?.data ?? {} : data) as { fullText?: string; retainedContent?: Capture[]; fullTextComplete?: boolean }, { background: true });
       Object.assign(data, content, { flagged: data.flagged ?? data.saved ?? false });
+      const focus = articleFocus({ ...data, sharedFocus: undefined }, String(r.data.baseId ?? r.id));
+      data.sharedFocus = sharedGroups.get(focus.topicId) ?? undefined;
       // Raw publisher content and complete article bodies are never returned anonymously.
       if (!userId) { delete data.fullText; delete data.retainedContent; data.fullTextComplete = false; }
     }
@@ -78,7 +82,10 @@ export async function writeRecord(userId: string, data: RecordData, protectMetad
       throw new FeedbackError(409, "This article is dismissed. Restore it from Dashboard feedback before updating it.");
     }
     try { original = (await currentArticle(tx, userId, baseId)).data; } catch (error) { if (!(error instanceof FeedbackError && error.status === 404)) throw error; }
-    data = { ...data, verifiedHeadlines: mergeHeadlines(data, original?.verifiedHeadlines, incomingHeadlines) };
+    // Only the dedicated focus endpoint may change analyst placement. Stale
+    // editors, enrichment jobs and publisher refreshes cannot set or clear it.
+    data = { ...data, focusOverride: original?.focusOverride ?? null, focusRevision: original?.focusRevision ?? 0,
+      verifiedHeadlines: mergeHeadlines(data, original?.verifiedHeadlines, incomingHeadlines) };
     if (original) {
       const incoming = data;
       data = { ...original, ...data, ...mergeArticleContent(original, data, { background: protectMetadata || analystEdit }), automaticAssessment: original.automaticAssessment, impact: original.impact, topic: original.topic,
@@ -127,7 +134,7 @@ export async function writeRecord(userId: string, data: RecordData, protectMetad
     }
     data.verifiedHeadlines = mergeHeadlines(data, original?.verifiedHeadlines, incomingHeadlines);
   }
-  data = await archiveArticle(data, tx);
+  data = await archiveArticle({ ...data, id: baseId }, tx);
   for (const event of correctionEvents) {
     await appendFeedback(tx, userId, baseId, original!, { ...event, action: "correction", after: classificationSnapshot(data, event.field),
       reason: data.classificationReason!, notes: data.classificationNotes, requestId: `editor:${data.classificationRevision}:${event.field}` });

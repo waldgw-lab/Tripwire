@@ -6,6 +6,8 @@
  */
 
 export interface ReportingReview {
+  /** @nullable */
+  associationCorrectionId?: string | null;
   id: string;
   relation: string;
   rationale: string;

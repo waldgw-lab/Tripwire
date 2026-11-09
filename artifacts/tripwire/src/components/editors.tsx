@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ArticleCorrectionInputReason, ArticleDismissalInputReason, type ArticleCredit, type Observation, type RecordInput, type TrackedRecord } from '@workspace/api-client-react';
+import { ArticleCorrectionInputReason, ArticleDismissalInputReason, useUpdateClaim, type ArticleCredit, type Observation, type RecordInput, type TrackedRecord } from '@workspace/api-client-react';
 import { articleCredits, creditRoles } from '@/lib/media-coverage';
 import { Plus, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FieldLabel } from '@/components/bits';
 import {
-  FOCUS, REPORTING, SENTIMENT, STAGES, WATCH_TYPES, errText, fromLocalInput, isConflict, newRequestId, useInvalidateWorkspace, splitList, toInput, toLocalInput, useRemove, useSave, useWorkspace, byKind,
+  FOCUS, REPORTING, SENTIMENT, STAGES, WATCH_TYPES, errText, fromLocalInput, isConflict, newRequestId, useInvalidateClaims, useInvalidateWorkspace, splitList, toInput, toLocalInput, useRemove, useSave, useWorkspace, byKind,
 } from '@/lib/workspace';
 
 function F({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
@@ -166,6 +166,14 @@ const blankObs = (): Observation => ({ id: crypto.randomUUID(), stage: 'origin',
 
 export function ClaimEditor({ open, onOpenChange, record, articles }: EditorProps & { articles: TrackedRecord[] }) {
   const save = useSave();
+  const correction = useUpdateClaim();
+  const invalidate = useInvalidateClaims();
+  const { data: workspace } = useWorkspace();
+  const [baseRevision, setBaseRevision] = useState(0);
+  const [rationale, setRationale] = useState('');
+  const [error, setError] = useState('');
+  const current = record ? workspace?.records.find(r => r.id === record.id && r.kind === 'claim') : undefined;
+  const changed = !!record && !!current && (current.claimRevision ?? 0) !== baseRevision;
   const [title, setTitle] = useState('');
   const [topic, setTopic] = useState('');
   const [summary, setSummary] = useState('');
@@ -173,9 +181,10 @@ export function ClaimEditor({ open, onOpenChange, record, articles }: EditorProp
   const [obs, setObs] = useState<Observation[]>([]);
   useEffect(() => {
     if (!open) return;
+    setBaseRevision(record?.claimRevision ?? 0); setRationale(''); setError('');
     setTitle(record?.title ?? ''); setTopic(record?.topic ?? ''); setSummary(record?.summary ?? '');
     setEntities((record?.entities ?? []).join(', ')); setObs(record?.observations ?? []);
-  }, [open, record]);
+  }, [open, record?.id]);
   const patch = (i: number, p: Partial<Observation>) => setObs((o) => o.map((x, j) => (j === i ? { ...x, ...p } : x)));
 
   const linkArticle = (i: number, id: string) => {
@@ -189,20 +198,29 @@ export function ClaimEditor({ open, onOpenChange, record, articles }: EditorProp
       ...(record ? toInput(record) : {}), kind: 'claim', title: title.trim(), topic: topic || undefined, summary: summary || undefined,
       entities: splitList(entities), observations: obs.map((o) => ({ ...o, url: o.url || undefined })),
     };
-    save.mutate({ data }, { onSuccess: () => onOpenChange(false) });
+    if (record) {
+      correction.mutate({ id: record.id, data: { record: data, expectedRevision: baseRevision, rationale: rationale.trim(), requestId: newRequestId() } }, {
+        onSuccess: async () => { await invalidate(); onOpenChange(false); },
+        onError: e => { setError(errText(e)); void invalidate(); },
+      });
+    } else save.mutate({ data }, { onSuccess: async () => { await invalidate(); onOpenChange(false); }, onError: e => setError(errText(e)) });
   };
 
   return (
-    <Shell open={open} onOpenChange={onOpenChange} title={record ? 'Edit claim' : 'New claim'} onSubmit={submit} pending={save.isPending} canSubmit={!!title.trim()} wide>
-      <F label="Claim" className="block"><Textarea rows={2} className="font-serif text-base" data-testid="input-claim-title" value={title} onChange={(e) => setTitle(e.target.value)} /></F>
+    <Shell open={open} onOpenChange={onOpenChange} title={record ? 'Edit claim' : 'New claim'} onSubmit={submit} pending={save.isPending || correction.isPending} canSubmit={!!title.trim() && !changed && (!record || rationale.trim().length >= 5)} wide>
+      <p className="text-xs text-muted-foreground">Edits apply to this shared claim’s wording, notes and manual observations. They do not rewrite publisher quotations, retained evidence, article focus groups or extracted passages.</p>
+      <F label="Claim wording" className="block"><Textarea rows={2} className="font-serif text-base" data-testid="input-claim-title" value={title} onChange={(e) => setTitle(e.target.value)} /></F>
       <div className="grid gap-3 sm:grid-cols-2">
-        <F label="Topic"><Input data-testid="input-claim-topic" value={topic} onChange={(e) => setTopic(e.target.value)} /></F>
+        <F label="Claim tag (not article placement)"><Input data-testid="input-claim-topic" value={topic} onChange={(e) => setTopic(e.target.value)} /></F>
         <F label="Entities, comma separated"><Input data-testid="input-claim-entities" value={entities} onChange={(e) => setEntities(e.target.value)} /></F>
       </div>
-      <F label="Notes" className="block"><Textarea rows={2} data-testid="input-claim-summary" value={summary} onChange={(e) => setSummary(e.target.value)} /></F>
+      <F label="Analyst notes" className="block"><Textarea rows={2} data-testid="input-claim-summary" value={summary} onChange={(e) => setSummary(e.target.value)} /></F>
+      {record && <F label="Correction reason" className="block"><Textarea rows={2} maxLength={4000} value={rationale} onChange={e => setRationale(e.target.value)} data-testid="input-claim-reason" /></F>}
+      {changed && <p role="alert" className="text-xs text-destructive">This claim changed elsewhere. Close and reopen to review before saving.</p>}
+      {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <FieldLabel>Observations</FieldLabel>
+          <FieldLabel>Manual observations (legacy assessments)</FieldLabel>
           <button type="button" onClick={() => setObs((o) => [...o, blankObs()])} data-testid="button-add-observation" className="inline-flex items-center gap-1 text-xs text-accent hover:underline"><Plus className="h-3.5 w-3.5" /> Observation</button>
         </div>
         <div className="space-y-3">

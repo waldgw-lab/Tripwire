@@ -447,6 +447,146 @@ paths:
             schema: { $ref: "#/components/schemas/ArticleDismissalInput" }
       responses:
         "204": { description: Deleted }
+  /tripwire/focus-groups:
+    get:
+      operationId: listFocusGroups
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 300 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        "200":
+          description: Searchable distinct groups, at most 25 per page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FocusGroupPage" }
+  /tripwire/focus-groups/{id}/articles:
+    get:
+      operationId: getFocusGroupArticles
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        "404": { description: Focus group not found }
+        "200":
+          description: Bounded article selection page with group revision token
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FocusGroupArticlesPage" }
+  /tripwire/focus-groups/{id}/article-corrections:
+    post:
+      operationId: correctFocusGroupArticles
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FocusGroupArticlesInput" }
+      responses:
+        "400": { description: Invalid selection or correction }
+        "404": { description: Article or group not found }
+        "409": { description: "Group membership, article placement or target changed; nothing saved" }
+        "200":
+          description: Selected article placements saved atomically
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FocusGroupArticlesResult" }
+  /tripwire/focus-groups/{id}:
+    get:
+      operationId: getFocusGroup
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "404": { description: Focus group not found }
+        "200":
+          description: Shared group scope preview and recent history
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FocusGroupDetail" }
+    patch:
+      operationId: updateFocusGroup
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FocusGroupInput" }
+      responses:
+        "400": { description: Invalid fields or scope confirmation missing }
+        "404": { description: Focus group not found }
+        "409": { description: Group membership or correction changed }
+        "200":
+          description: Shared group correction saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FocusGroupDetail" }
+  /tripwire/claims/{id}/correction:
+    patch:
+      operationId: updateClaim
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClaimCorrectionInput" }
+      responses:
+        "400": { description: Invalid claim metadata or correction reason }
+        "404": { description: Claim not found }
+        "409": { description: Claim revision changed }
+        "200":
+          description: Claim metadata saved without altering retained evidence
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TrackedRecord" }
+  /tripwire/provenance/link-corrections:
+    post:
+      operationId: correctClaimLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClaimLinkInput" }
+      responses:
+        "400": { description: Invalid association target or correction reason }
+        "404": { description: Article or passage association not found }
+        "409": { description: Association changed since review }
+        "200":
+          description: Append-only correction to the active claim association
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClaimLinkCorrection" }
+  /tripwire/records/{id}/focus:
+    get:
+      operationId: getArticleFocus
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Article-local placement and available shared groups
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArticleFocusState" }
+        "404": { description: Article not found }
+    patch:
+      operationId: correctArticleFocus
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ArticleFocusInput" }
+      responses:
+        "200":
+          description: Saved article-only focus correction
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TrackedRecord" }
+        "400": { description: Invalid focus }
+        "404": { description: Article not found }
+        "409": { description: Placement changed or article dismissed }
   /tripwire/records/{id}/classification:
     patch:
       operationId: correctArticleClassification
@@ -684,6 +824,7 @@ components:
       properties:
         articles: { type: integer }
         occurrences: { type: integer }
+        historicalPassages: { type: integer }
         minimumAnonymousHumans: { type: ["integer", "null"] }
         suppliedMinimumAnonymousHumans: { type: ["integer", "null"] }
         provisionalSourceRecords: { type: ["integer", "null"] }
@@ -692,6 +833,7 @@ components:
       type: object
       required: [id, relation, rationale, createdAt]
       properties:
+        associationCorrectionId: { type: ["string", "null"] }
         id: { type: string }
         relation: { type: string }
         rationale: { type: string }
@@ -718,6 +860,10 @@ components:
       type: object
       required: [id, claimId, familyId, proposition, articleId, title, supplied, sourceIds, reviews]
       properties:
+        originalClaimId: { type: string }
+        linkCorrectionId: { type: ["string", "null"] }
+        linkExcluded: { type: boolean }
+        linkHistory: { type: array, items: { $ref: "#/components/schemas/ClaimLinkCorrection" } }
         direction: { type: string, enum: [positive, negative, neutral, mixed, unassessed] }
         directionSubject: { type: ["string", "null"] }
         directionReason: { type: ["string", "null"] }
@@ -1146,6 +1292,146 @@ components:
         notes: { type: string, maxLength: 4000 }
         duplicateOf: { type: string }
         requestId: { type: string, minLength: 8, maxLength: 100 }
+    ClaimLinkInput:
+      type: object
+      required: [observationId, targetClaimId, supersedesId, rationale, requestId]
+      properties:
+        observationId: { type: string, minLength: 1 }
+        targetClaimId: { type: ["string", "null"] }
+        supersedesId: { type: ["string", "null"] }
+        rationale: { type: string, minLength: 5, maxLength: 4000 }
+        requestId: { type: string, minLength: 8, maxLength: 100 }
+    ClaimLinkCorrection:
+      type: object
+      required: [id, observationId, targetClaimId, supersedesId, rationale, createdAt]
+      properties:
+        id: { type: string }
+        observationId: { type: string }
+        targetClaimId: { type: ["string", "null"] }
+        supersedesId: { type: ["string", "null"] }
+        rationale: { type: string }
+        createdAt: { type: string }
+    ClaimCorrectionInput:
+      type: object
+      required: [record, expectedRevision, rationale, requestId]
+      properties:
+        record: { $ref: "#/components/schemas/RecordInput" }
+        expectedRevision: { type: integer, minimum: 0 }
+        rationale: { type: string, minLength: 5, maxLength: 4000 }
+        requestId: { type: string, minLength: 8, maxLength: 100 }
+    FocusGroupPage:
+      type: object
+      required: [groups, hasMore, offset]
+      properties:
+        groups: { type: array, items: { $ref: "#/components/schemas/ArticleFocus" } }
+        hasMore: { type: boolean }
+        offset: { type: integer }
+    FocusGroupArticlesPage:
+      type: object
+      required: [token, count, articles, offset, hasMore]
+      properties:
+        token: { type: string }
+        count: { type: integer }
+        articles:
+          type: array
+          items: { $ref: "#/components/schemas/FocusGroupArticle" }
+        offset: { type: integer }
+        hasMore: { type: boolean }
+    FocusGroupArticlesInput:
+      type: object
+      required: [articleIds, mode, expectedToken, reason, requestId]
+      properties:
+        articleIds:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          items: { type: string, minLength: 1 }
+        mode: { type: string, enum: [manual, auto] }
+        categoryId: { type: string }
+        topicId: { type: string }
+        topicTitle: { type: string, minLength: 1, maxLength: 300 }
+        expectedToken: { type: string, minLength: 1 }
+        reason: { type: string, minLength: 5, maxLength: 4000 }
+        requestId: { type: string, minLength: 8, maxLength: 100 }
+    FocusGroupArticlesResult:
+      type: object
+      required: [updated, articleIds, focus]
+      properties:
+        updated: { type: integer }
+        articleIds: { type: array, items: { type: string } }
+        focus:
+          anyOf:
+            - { $ref: "#/components/schemas/ArticleFocus" }
+            - { type: "null" }
+    FocusGroupDetail:
+      type: object
+      required: [effective, automatic, mode, token, count, articles, history]
+      properties:
+        effective: { $ref: "#/components/schemas/ArticleFocus" }
+        automatic: { $ref: "#/components/schemas/ArticleFocus" }
+        mode: { type: string, enum: [auto, manual] }
+        token: { type: string }
+        count: { type: integer }
+        articles:
+          type: array
+          items: { $ref: "#/components/schemas/FocusGroupArticle" }
+        history:
+          type: array
+          items: { $ref: "#/components/schemas/FocusGroupEvent" }
+    FocusGroupArticle:
+      type: object
+      required: [id, title]
+      properties:
+        id: { type: string }
+        title: { type: string }
+    FocusGroupEvent:
+      type: object
+      required: [id, timestamp, reason, mode]
+      properties:
+        id: { type: string }
+        timestamp: { type: string }
+        reason: { type: string }
+        mode: { type: string }
+        before: { $ref: "#/components/schemas/ArticleFocus" }
+        after: { $ref: "#/components/schemas/ArticleFocus" }
+    FocusGroupInput:
+      type: object
+      required: [mode, expectedToken, confirmed, reason, requestId]
+      properties:
+        mode: { type: string, enum: [auto, manual] }
+        categoryId: { type: string }
+        topicTitle: { type: string, minLength: 1, maxLength: 300 }
+        expectedToken: { type: string, minLength: 1 }
+        confirmed: { type: boolean }
+        reason: { type: string, minLength: 5, maxLength: 4000 }
+        requestId: { type: string, minLength: 8, maxLength: 100 }
+    ArticleFocus:
+      type: object
+      required: [categoryId, topicId, topicTitle]
+      properties:
+        categoryId: { type: string, minLength: 1, maxLength: 100 }
+        topicId: { type: string, minLength: 1, maxLength: 200 }
+        topicTitle: { type: string, minLength: 1 }
+    ArticleFocusState:
+      type: object
+      required: [effective, automatic, mode, revision, groups]
+      properties:
+        effective: { $ref: "#/components/schemas/ArticleFocus" }
+        automatic: { $ref: "#/components/schemas/ArticleFocus" }
+        mode: { type: string, enum: [auto, manual] }
+        revision: { type: integer, minimum: 0 }
+        groups: { type: array, items: { $ref: "#/components/schemas/ArticleFocus" } }
+    ArticleFocusInput:
+      type: object
+      required: [mode, expectedRevision, requestId]
+      properties:
+        mode: { type: string, enum: [auto, manual] }
+        categoryId: { type: string, minLength: 1, maxLength: 100 }
+        topicId: { type: string, minLength: 1, maxLength: 200 }
+        topicTitle: { type: string, minLength: 1, maxLength: 300 }
+        expectedRevision: { type: integer, minimum: 0 }
+        requestId: { type: string, minLength: 8, maxLength: 100 }
     ArticleCorrectionInput:
       type: object
       required: [field, mode, reason, requestId, expectedRevision]
@@ -1245,6 +1531,15 @@ components:
         impactOverrideOrigin: { type: string, enum: [analyst, legacy-unknown] }
         topicOverrideOrigin: { type: string, enum: [analyst, legacy-unknown] }
         classificationRevision: { type: integer }
+        focusOverride:
+          anyOf:
+            - { $ref: "#/components/schemas/ArticleFocus" }
+            - { type: "null" }
+        focusRevision: { type: integer, minimum: 0 }
+        claimRevision: { type: integer, minimum: 0 }
+        automaticFocus: { $ref: "#/components/schemas/ArticleFocus" }
+        focusPolicy: { type: string }
+        sharedFocus: { $ref: "#/components/schemas/ArticleFocus" }
         classificationReason: { type: string }
         classificationNotes: { type: string }
         expectedClassificationRevision: { type: integer }

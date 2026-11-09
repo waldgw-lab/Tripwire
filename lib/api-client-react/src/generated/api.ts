@@ -28,10 +28,15 @@ import type {
   ArticleCorrectionInput,
   ArticleDismissalInput,
   ArticleFeedbackPage,
+  ArticleFocusInput,
+  ArticleFocusState,
   AutomationAction,
   AutomationHealth,
   ClaimCategory,
+  ClaimCorrectionInput,
   ClaimDirectionInput,
+  ClaimLinkCorrection,
+  ClaimLinkInput,
   ContentSearch,
   DevelopmentAction,
   EnqueueEnrichment200,
@@ -44,12 +49,19 @@ import type {
   EntityPage,
   EvidenceInput,
   FlagRequest,
+  FocusGroupArticlesInput,
+  FocusGroupArticlesPage,
+  FocusGroupArticlesResult,
+  FocusGroupDetail,
+  FocusGroupInput,
+  FocusGroupPage,
   GetArticleContentParams,
   GetArticleFeedbackParams,
   GetClaimCoverageSummaries200Item,
   GetClaimProcessing200,
   GetEntityAutomationParams,
   GetEntityParams,
+  GetFocusGroupArticlesParams,
   GetQuickEnrichmentText200,
   GetReportingProvenanceParams,
   HealthStatus,
@@ -62,6 +74,7 @@ import type {
   ListEntitiesParams,
   ListEntityCaptures200,
   ListEntityCapturesParams,
+  ListFocusGroupsParams,
   ProcessArticleClaims200,
   QuickEnrichmentInput,
   QuickEnrichmentJob,
@@ -2820,6 +2833,822 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getDeleteRecordMutationOptions(options), queryClient);
+    }
+
+export const getListFocusGroupsUrl = (params?: ListFocusGroupsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/tripwire/focus-groups?${stringifiedParams}` : `/api/tripwire/focus-groups`
+}
+
+export const listFocusGroups = async (params?: ListFocusGroupsParams, options?: Parameters<typeof customFetch>[1]): Promise<FocusGroupPage> => {
+
+  return customFetch<FocusGroupPage>(getListFocusGroupsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFocusGroupsQueryKey = (params?: ListFocusGroupsParams,) => {
+    return [
+    `/api/tripwire/focus-groups`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListFocusGroupsQueryOptions = <TData = Awaited<ReturnType<typeof listFocusGroups>>, TError = ErrorType<unknown>>(params?: ListFocusGroupsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFocusGroups>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFocusGroupsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFocusGroups>>> = ({ signal }) => listFocusGroups(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFocusGroups>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListFocusGroupsQueryResult = NonNullable<Awaited<ReturnType<typeof listFocusGroups>>>
+export type ListFocusGroupsQueryError = ErrorType<unknown>
+
+
+export function useListFocusGroups<TData = Awaited<ReturnType<typeof listFocusGroups>>, TError = ErrorType<unknown>>(
+ params: undefined |  ListFocusGroupsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFocusGroups>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFocusGroups>>,
+          TError,
+          Awaited<ReturnType<typeof listFocusGroups>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFocusGroups<TData = Awaited<ReturnType<typeof listFocusGroups>>, TError = ErrorType<unknown>>(
+ params?: ListFocusGroupsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFocusGroups>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFocusGroups>>,
+          TError,
+          Awaited<ReturnType<typeof listFocusGroups>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFocusGroups<TData = Awaited<ReturnType<typeof listFocusGroups>>, TError = ErrorType<unknown>>(
+ params?: ListFocusGroupsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFocusGroups>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListFocusGroups<TData = Awaited<ReturnType<typeof listFocusGroups>>, TError = ErrorType<unknown>>(
+ params?: ListFocusGroupsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFocusGroups>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListFocusGroupsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetFocusGroupArticlesUrl = (id: string,
+    params?: GetFocusGroupArticlesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/tripwire/focus-groups/${id}/articles?${stringifiedParams}` : `/api/tripwire/focus-groups/${id}/articles`
+}
+
+export const getFocusGroupArticles = async (id: string,
+    params?: GetFocusGroupArticlesParams, options?: Parameters<typeof customFetch>[1]): Promise<FocusGroupArticlesPage> => {
+
+  return customFetch<FocusGroupArticlesPage>(getGetFocusGroupArticlesUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFocusGroupArticlesQueryKey = (id: string,
+    params?: GetFocusGroupArticlesParams,) => {
+    return [
+    `/api/tripwire/focus-groups/${id}/articles`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetFocusGroupArticlesQueryOptions = <TData = Awaited<ReturnType<typeof getFocusGroupArticles>>, TError = ErrorType<void>>(id: string,
+    params?: GetFocusGroupArticlesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFocusGroupArticles>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFocusGroupArticlesQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFocusGroupArticles>>> = ({ signal }) => getFocusGroupArticles(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFocusGroupArticles>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetFocusGroupArticlesQueryResult = NonNullable<Awaited<ReturnType<typeof getFocusGroupArticles>>>
+export type GetFocusGroupArticlesQueryError = ErrorType<void>
+
+
+export function useGetFocusGroupArticles<TData = Awaited<ReturnType<typeof getFocusGroupArticles>>, TError = ErrorType<void>>(
+ id: string,
+    params: undefined |  GetFocusGroupArticlesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFocusGroupArticles>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getFocusGroupArticles>>,
+          TError,
+          Awaited<ReturnType<typeof getFocusGroupArticles>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetFocusGroupArticles<TData = Awaited<ReturnType<typeof getFocusGroupArticles>>, TError = ErrorType<void>>(
+ id: string,
+    params?: GetFocusGroupArticlesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFocusGroupArticles>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getFocusGroupArticles>>,
+          TError,
+          Awaited<ReturnType<typeof getFocusGroupArticles>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetFocusGroupArticles<TData = Awaited<ReturnType<typeof getFocusGroupArticles>>, TError = ErrorType<void>>(
+ id: string,
+    params?: GetFocusGroupArticlesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFocusGroupArticles>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetFocusGroupArticles<TData = Awaited<ReturnType<typeof getFocusGroupArticles>>, TError = ErrorType<void>>(
+ id: string,
+    params?: GetFocusGroupArticlesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFocusGroupArticles>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetFocusGroupArticlesQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCorrectFocusGroupArticlesUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/focus-groups/${id}/article-corrections`
+}
+
+export const correctFocusGroupArticles = async (id: string,
+    focusGroupArticlesInput: FocusGroupArticlesInput, options?: Parameters<typeof customFetch>[1]): Promise<FocusGroupArticlesResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FocusGroupArticlesResult>(getCorrectFocusGroupArticlesUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(focusGroupArticlesInput)
+  }
+);}
+
+
+
+
+
+export const getCorrectFocusGroupArticlesMutationKey = () => ['correctFocusGroupArticles'] as const;
+
+export const getCorrectFocusGroupArticlesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof correctFocusGroupArticles>>, TError,CorrectFocusGroupArticlesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof correctFocusGroupArticles>>, TError,CorrectFocusGroupArticlesMutationVariables, TContext> => {
+
+const mutationKey = getCorrectFocusGroupArticlesMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof correctFocusGroupArticles>>, CorrectFocusGroupArticlesMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  correctFocusGroupArticles(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CorrectFocusGroupArticlesMutationResult = NonNullable<Awaited<ReturnType<typeof correctFocusGroupArticles>>>
+    export type CorrectFocusGroupArticlesMutationBody = BodyType<FocusGroupArticlesInput>
+    export type CorrectFocusGroupArticlesMutationError = ErrorType<void>
+    export type CorrectFocusGroupArticlesMutationVariables = {id: string;data: BodyType<FocusGroupArticlesInput>}
+
+    export const useCorrectFocusGroupArticles = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof correctFocusGroupArticles>>, TError,CorrectFocusGroupArticlesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof correctFocusGroupArticles>>,
+        TError,
+        CorrectFocusGroupArticlesMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCorrectFocusGroupArticlesMutationOptions(options), queryClient);
+    }
+
+export const getGetFocusGroupUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/focus-groups/${id}`
+}
+
+export const getFocusGroup = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<FocusGroupDetail> => {
+
+  return customFetch<FocusGroupDetail>(getGetFocusGroupUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFocusGroupQueryKey = (id: string,) => {
+    return [
+    `/api/tripwire/focus-groups/${id}`
+    ] as const;
+    }
+
+
+export const getGetFocusGroupQueryOptions = <TData = Awaited<ReturnType<typeof getFocusGroup>>, TError = ErrorType<void>>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFocusGroup>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFocusGroupQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFocusGroup>>> = ({ signal }) => getFocusGroup(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFocusGroup>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetFocusGroupQueryResult = NonNullable<Awaited<ReturnType<typeof getFocusGroup>>>
+export type GetFocusGroupQueryError = ErrorType<void>
+
+
+export function useGetFocusGroup<TData = Awaited<ReturnType<typeof getFocusGroup>>, TError = ErrorType<void>>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFocusGroup>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getFocusGroup>>,
+          TError,
+          Awaited<ReturnType<typeof getFocusGroup>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetFocusGroup<TData = Awaited<ReturnType<typeof getFocusGroup>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFocusGroup>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getFocusGroup>>,
+          TError,
+          Awaited<ReturnType<typeof getFocusGroup>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetFocusGroup<TData = Awaited<ReturnType<typeof getFocusGroup>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFocusGroup>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetFocusGroup<TData = Awaited<ReturnType<typeof getFocusGroup>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFocusGroup>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetFocusGroupQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateFocusGroupUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/focus-groups/${id}`
+}
+
+export const updateFocusGroup = async (id: string,
+    focusGroupInput: FocusGroupInput, options?: Parameters<typeof customFetch>[1]): Promise<FocusGroupDetail> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<FocusGroupDetail>(getUpdateFocusGroupUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(focusGroupInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateFocusGroupMutationKey = () => ['updateFocusGroup'] as const;
+
+export const getUpdateFocusGroupMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFocusGroup>>, TError,UpdateFocusGroupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFocusGroup>>, TError,UpdateFocusGroupMutationVariables, TContext> => {
+
+const mutationKey = getUpdateFocusGroupMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFocusGroup>>, UpdateFocusGroupMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateFocusGroup(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFocusGroupMutationResult = NonNullable<Awaited<ReturnType<typeof updateFocusGroup>>>
+    export type UpdateFocusGroupMutationBody = BodyType<FocusGroupInput>
+    export type UpdateFocusGroupMutationError = ErrorType<void>
+    export type UpdateFocusGroupMutationVariables = {id: string;data: BodyType<FocusGroupInput>}
+
+    export const useUpdateFocusGroup = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFocusGroup>>, TError,UpdateFocusGroupMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateFocusGroup>>,
+        TError,
+        UpdateFocusGroupMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateFocusGroupMutationOptions(options), queryClient);
+    }
+
+export const getUpdateClaimUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/claims/${id}/correction`
+}
+
+export const updateClaim = async (id: string,
+    claimCorrectionInput: ClaimCorrectionInput, options?: Parameters<typeof customFetch>[1]): Promise<TrackedRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<TrackedRecord>(getUpdateClaimUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(claimCorrectionInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateClaimMutationKey = () => ['updateClaim'] as const;
+
+export const getUpdateClaimMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClaim>>, TError,UpdateClaimMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateClaim>>, TError,UpdateClaimMutationVariables, TContext> => {
+
+const mutationKey = getUpdateClaimMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateClaim>>, UpdateClaimMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateClaim(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateClaimMutationResult = NonNullable<Awaited<ReturnType<typeof updateClaim>>>
+    export type UpdateClaimMutationBody = BodyType<ClaimCorrectionInput>
+    export type UpdateClaimMutationError = ErrorType<void>
+    export type UpdateClaimMutationVariables = {id: string;data: BodyType<ClaimCorrectionInput>}
+
+    export const useUpdateClaim = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClaim>>, TError,UpdateClaimMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateClaim>>,
+        TError,
+        UpdateClaimMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateClaimMutationOptions(options), queryClient);
+    }
+
+export const getCorrectClaimLinkUrl = () => {
+
+
+
+
+  return `/api/tripwire/provenance/link-corrections`
+}
+
+export const correctClaimLink = async (claimLinkInput: ClaimLinkInput, options?: Parameters<typeof customFetch>[1]): Promise<ClaimLinkCorrection> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ClaimLinkCorrection>(getCorrectClaimLinkUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(claimLinkInput)
+  }
+);}
+
+
+
+
+
+export const getCorrectClaimLinkMutationKey = () => ['correctClaimLink'] as const;
+
+export const getCorrectClaimLinkMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof correctClaimLink>>, TError,CorrectClaimLinkMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof correctClaimLink>>, TError,CorrectClaimLinkMutationVariables, TContext> => {
+
+const mutationKey = getCorrectClaimLinkMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof correctClaimLink>>, CorrectClaimLinkMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  correctClaimLink(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CorrectClaimLinkMutationResult = NonNullable<Awaited<ReturnType<typeof correctClaimLink>>>
+    export type CorrectClaimLinkMutationBody = BodyType<ClaimLinkInput>
+    export type CorrectClaimLinkMutationError = ErrorType<void>
+    export type CorrectClaimLinkMutationVariables = {data: BodyType<ClaimLinkInput>}
+
+    export const useCorrectClaimLink = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof correctClaimLink>>, TError,CorrectClaimLinkMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof correctClaimLink>>,
+        TError,
+        CorrectClaimLinkMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCorrectClaimLinkMutationOptions(options), queryClient);
+    }
+
+export const getGetArticleFocusUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/records/${id}/focus`
+}
+
+export const getArticleFocus = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<ArticleFocusState> => {
+
+  return customFetch<ArticleFocusState>(getGetArticleFocusUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetArticleFocusQueryKey = (id: string,) => {
+    return [
+    `/api/tripwire/records/${id}/focus`
+    ] as const;
+    }
+
+
+export const getGetArticleFocusQueryOptions = <TData = Awaited<ReturnType<typeof getArticleFocus>>, TError = ErrorType<void>>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getArticleFocus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetArticleFocusQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getArticleFocus>>> = ({ signal }) => getArticleFocus(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getArticleFocus>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetArticleFocusQueryResult = NonNullable<Awaited<ReturnType<typeof getArticleFocus>>>
+export type GetArticleFocusQueryError = ErrorType<void>
+
+
+export function useGetArticleFocus<TData = Awaited<ReturnType<typeof getArticleFocus>>, TError = ErrorType<void>>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getArticleFocus>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getArticleFocus>>,
+          TError,
+          Awaited<ReturnType<typeof getArticleFocus>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetArticleFocus<TData = Awaited<ReturnType<typeof getArticleFocus>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getArticleFocus>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getArticleFocus>>,
+          TError,
+          Awaited<ReturnType<typeof getArticleFocus>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetArticleFocus<TData = Awaited<ReturnType<typeof getArticleFocus>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getArticleFocus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetArticleFocus<TData = Awaited<ReturnType<typeof getArticleFocus>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getArticleFocus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetArticleFocusQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCorrectArticleFocusUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/records/${id}/focus`
+}
+
+export const correctArticleFocus = async (id: string,
+    articleFocusInput: ArticleFocusInput, options?: Parameters<typeof customFetch>[1]): Promise<TrackedRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<TrackedRecord>(getCorrectArticleFocusUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(articleFocusInput)
+  }
+);}
+
+
+
+
+
+export const getCorrectArticleFocusMutationKey = () => ['correctArticleFocus'] as const;
+
+export const getCorrectArticleFocusMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof correctArticleFocus>>, TError,CorrectArticleFocusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof correctArticleFocus>>, TError,CorrectArticleFocusMutationVariables, TContext> => {
+
+const mutationKey = getCorrectArticleFocusMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof correctArticleFocus>>, CorrectArticleFocusMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  correctArticleFocus(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CorrectArticleFocusMutationResult = NonNullable<Awaited<ReturnType<typeof correctArticleFocus>>>
+    export type CorrectArticleFocusMutationBody = BodyType<ArticleFocusInput>
+    export type CorrectArticleFocusMutationError = ErrorType<void>
+    export type CorrectArticleFocusMutationVariables = {id: string;data: BodyType<ArticleFocusInput>}
+
+    export const useCorrectArticleFocus = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof correctArticleFocus>>, TError,CorrectArticleFocusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof correctArticleFocus>>,
+        TError,
+        CorrectArticleFocusMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCorrectArticleFocusMutationOptions(options), queryClient);
     }
 
 export const getCorrectArticleClassificationUrl = (id: string,) => {
