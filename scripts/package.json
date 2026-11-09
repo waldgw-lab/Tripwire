@@ -6,6 +6,7 @@
   "scripts": {
     "test": "tsx --tsconfig ../artifacts/tripwire/tsconfig.json --test ./*.test.mjs",
     "test:claims-browser": "playwright test --config browser/playwright.config.mjs",
+    "test:reporting-safety": "tsx --test claim-policy-compatibility.test.mjs feed-refresh-history.test.mjs retained-content-guard.test.mjs retained-comparison.test.mjs tripwire-import-concurrency.test.mjs live-claims.test.mjs source-search.test.mjs",
     "hello": "tsx ./src/hello.ts",
     "source-search:inventory": "python ./source-search-inventory.py",
     "source-search:backfill": "tsx ./source-search-backfill.mjs",

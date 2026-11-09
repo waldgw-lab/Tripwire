@@ -36,7 +36,7 @@ async function sourceItems(source: IntakeSource, outlet: string): Promise<Intake
   return parseRssItems(xml);
 }
 
-export async function refreshFeeds(_userId?: string | null) {
+export async function refreshFeeds(_userId?: string | null, readSource: typeof sourceItems = sourceItems) {
   // Manual refresh and background monitoring share one intake and lock. Creating
   // per-user copies here would duplicate articles and leave stale status shadows.
   const owner = "public";
@@ -74,7 +74,7 @@ export async function refreshFeeds(_userId?: string | null) {
           if (previous?.nextAttemptAt && Date.parse(previous.nextAttemptAt) > Date.now()) { health.push(previous); continue; }
           let items: IntakeItem[];
           try {
-            items = await sourceItems(source, outlet.title);
+            items = await readSource(source, outlet.title);
             const freshness = feedFreshness(items.map(item => item.isoDate ?? item.pubDate));
             const status = !items.length ? "empty" : freshness.stale ? "stale" : "connected";
             const ok = status === "connected";

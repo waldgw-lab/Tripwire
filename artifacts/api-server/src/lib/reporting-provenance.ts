@@ -5,6 +5,17 @@ import { grammaticalMinimum, conservativeMinimum, sourceKey, suppliedDate } from
 import { evidenceVersion, claimEvidenceScope, type EvidenceScope } from "./reporting-versions";
 
 type Row = Record<string, any>;
+function byField(rows: Row[], field: string) {
+  const index = new Map<string, Row[]>();
+  for (const row of rows) {
+    const key = row[field];
+    if (typeof key !== "string") continue;
+    const group = index.get(key) ?? [];
+    group.push(row);
+    index.set(key, group);
+  }
+  return index;
+}
 const latestSql = `select r.* from tripwire_provenance_reviews r where r.workspace=$1
  and not exists(select 1 from tripwire_provenance_reviews n where n.workspace=r.workspace and n.supersedes_id=r.id)`;
 const review = (r: Row) => ({ id: r.id, relation: r.relation, rationale: r.rationale, createdAt: r.created_at.toISOString(),
@@ -27,11 +38,18 @@ export async function reportingProvenance(q: { articleId?: string; claimId?: str
        where l.workspace=c.workspace and l.claim_id=c.id and s.evidence_id=${p}))`);
   }
   const where = `c.workspace=$1 ${filters.length ? "and " + filters.join(" and ") : ""}`;
+  // Resolve workspace/public shadows once, not with a metadata scan per claim.
+  // Both physical IDs and canonical base IDs remain valid lookup aliases.
+  const articleLookup = `with article_lookup as materialized (
+    select distinct on(identity.article_id) identity.article_id,r.data
+    from tripwire_records r cross join lateral (
+      select r.id article_id union select r.data->>'baseId' where r.data->>'baseId' is not null
+    ) identity where r.kind='article' and r.owner in ('public',$1)
+    order by identity.article_id,(r.owner=$1) desc
+  )`;
   const from = `from tripwire_attributed_claims c join tripwire_claim_families f on f.workspace=c.workspace and f.id=c.family_id
-    left join lateral (select data from tripwire_records r where r.kind='article' and r.owner in ('public',$1)
-      and (r.id=c.article_id or r.data->>'baseId'=c.article_id)
-      order by (r.owner=$1) desc limit 1) a on true`;
-  const all = (await pool.query(`select c.*, f.claim_id legacy_claim_id,f.event_id,f.entity_event_id,a.data article ${from} where ${where}
+    left join article_lookup a on a.article_id=c.article_id`;
+  const all = (await pool.query(`${articleLookup} select c.*, f.claim_id legacy_claim_id,f.event_id,f.entity_event_id,a.data article ${from} where ${where}
     and coalesce(a.data->>'hidden','false')<>'true' order by a.data->>'publishedAt' nulls last,c.id`, params)).rows;
   all.sort((a, b) => (a.article?.publishedAt ?? suppliedDate(a.article?.sourceSearch?.date) ?? "9999").localeCompare(
     b.article?.publishedAt ?? suppliedDate(b.article?.sourceSearch?.date) ?? "9999") || a.id.localeCompare(b.id));
@@ -44,12 +62,25 @@ export async function reportingProvenance(q: { articleId?: string; claimId?: str
   const captures = articleIds.length ? (await pool.query("select * from tripwire_entity_captures where workspace=$1 and article_id=any($2::text[])", [W, articleIds])).rows : [];
   const articles = new Map(all.map(c => [c.article_id, c.article]));
   if (q.articleId && selectedArticle) articles.set(q.articleId, selectedArticle);
-  const hashes = [...new Set([...captures.map(c => c.hash), ...[...articles.values()].map(a => a?.fullTextHash)].filter(Boolean))];
-  const bodies = new Map<string, string>(hashes.length ? (await pool.query("select hash,text from tripwire_content where hash=any($1::text[])", [hashes])).rows.map(r => [r.hash, r.text]) : []);
   const retainedEvidence = captures.length ? (await pool.query("select * from tripwire_entity_evidence where workspace=$1 and capture_id=any($2::text[])", [W, captures.map(c => c.id)])).rows : [];
+  const captureById = new Map(captures.map(c => [c.id, c]));
+  const evidenceById = new Map(retainedEvidence.map(e => [e.id, e]));
+  // Unreferenced retained captures do not participate in evidence comparisons.
+  // Keep original JS strings: PostgreSQL substring uses code-point offsets,
+  // whereas retained evidence offsets are UTF-16.
+  const hashes = [...new Set([...retainedEvidence.map(e => captureById.get(e.capture_id)?.hash),
+    ...[...articles.values()].map(a => a?.fullTextHash)].filter(Boolean))];
+  const bodies = new Map<string, string>(hashes.length ? (await pool.query("select hash,text from tripwire_content where hash=any($1::text[])", [hashes])).rows.map(r => [r.hash, r.text]) : []);
+  const versionCache = new Map<string, ReturnType<typeof evidenceVersion>>();
   const versionFor = (id: string | null, articleId: string) => {
-    const e = retainedEvidence.find(e => e.id === id);
-    return evidenceVersion(e, captures.find(c => c.id === e?.capture_id && c.article_id === articleId), articles.get(articleId), bodies);
+    const key = JSON.stringify([articleId, id]);
+    const cached = versionCache.get(key);
+    if (cached) return cached;
+    const e = evidenceById.get(id);
+    const capture = captureById.get(e?.capture_id);
+    const result = evidenceVersion(e, capture?.article_id === articleId ? capture : undefined, articles.get(articleId), bodies);
+    versionCache.set(key, result);
+    return result;
   };
   const sources = sourceRows.map(s => ({ id: s.id, articleId: s.article_id, descriptor: s.descriptor, sourceType: s.source_type,
     evidenceVersion: versionFor(s.evidence_id, s.article_id),
@@ -59,12 +90,17 @@ export async function reportingProvenance(q: { articleId?: string; claimId?: str
   const matched = sourceIds.length ? (await pool.query("select * from tripwire_source_matches where workspace=$1 and (source_a=any($2::text[]) or source_b=any($2::text[])) limit 500", [W, sourceIds])).rows : [];
   const reviews = (await pool.query(`select * from tripwire_provenance_reviews where workspace=$1 and
     (claim_id=any($2::text[]) or source_match_id=any($3::text[])) order by created_at,id`, [W, all.map(c => c.id), matched.map(m => m.id)])).rows;
-  const current = reviews.filter(r => !reviews.some(n => n.supersedes_id === r.id));
+  const superseded = new Set(reviews.map(r => r.supersedes_id).filter(Boolean));
+  const current = reviews.filter(r => !superseded.has(r.id));
   const versions=all.length ? (await pool.query(`select * from tripwire_claim_capture_links where workspace=$1 and claim_id=any($2::text[])
     order by created_at,capture_id`,[W,all.map(c=>c.id)])).rows : [];
+  const captureLinksByClaim = byField(versions, "claim_id");
+  const reviewsByClaim = byField(reviews, "claim_id");
+  const currentByClaim = byField(current, "claim_id");
+  const reviewsByMatch = byField(reviews, "source_match_id");
   const versionsByClaim = new Map(all.map(c => {
-    const ids = [...new Set([c.evidence_id, ...versions.filter(v => v.claim_id === c.id).map(v => v.evidence_id),
-      ...reviews.filter(r => r.claim_id === c.id).map(r => r.evidence_id)].filter(Boolean))] as string[];
+    const ids = [...new Set([c.evidence_id, ...(captureLinksByClaim.get(c.id) ?? []).map(v => v.evidence_id),
+      ...(reviewsByClaim.get(c.id) ?? []).map(r => r.evidence_id)].filter(Boolean))] as string[];
     return [c.id, ids.map(id => versionFor(id, c.article_id))];
   }));
   const filtered = all.filter(c => !q.evidenceScope || q.evidenceScope === "all" || claimEvidenceScope(versionsByClaim.get(c.id)!) === q.evidenceScope);
@@ -74,11 +110,14 @@ export async function reportingProvenance(q: { articleId?: string; claimId?: str
   const evidenceIds = [...new Set([...page.map(c => c.evidence_id), ...reviews.map(r => r.evidence_id)].filter(Boolean))];
   const evidence = evidenceIds.length ? (await pool.query("select * from tripwire_entity_evidence where workspace=$1 and id=any($2::text[])", [W, evidenceIds])).rows : [];
   const links = page.length ? (await pool.query("select * from tripwire_claim_sources where workspace=$1 and claim_id=any($2::text[])", [W, page.map(c => c.id)])).rows : [];
+  const correctionsByClaim = new Map(corrections.map(c => [c.claim_id, c]));
+  const displayedEvidence = new Map(evidence.map(e => [e.id, e]));
+  const linksByClaim = byField(links, "claim_id");
   const claims = page.map(c => {
-    const correction=corrections.find(r=>r.claim_id===c.id), assessment=c.data?.assessment;
-    const refs = reviews.filter(r => r.claim_id === c.id);
-    const last = current.find(r => r.claim_id === c.id);
-    const e = evidence.find(e => e.id === (last ? last.evidence_id : c.evidence_id));
+    const correction=correctionsByClaim.get(c.id), assessment=c.data?.assessment;
+    const refs = reviewsByClaim.get(c.id) ?? [];
+    const last = currentByClaim.get(c.id)?.[0];
+    const e = displayedEvidence.get(last ? last.evidence_id : c.evidence_id);
     return { id: c.id, claimId: c.legacy_claim_id, familyId: c.family_id, proposition: c.proposition, articleId: c.article_id,
       direction: correction?.direction ?? assessment?.direction ?? "unassessed",
       directionSubject: correction?.subject ?? assessment?.subject ?? null,
@@ -92,7 +131,7 @@ export async function reportingProvenance(q: { articleId?: string; claimId?: str
       suppliedDate: suppliedDate(c.article?.sourceSearch?.date),
       eventId: c.event_id ?? c.entity_event_id ?? null, evidenceId: e?.id ?? null, excerpt: e?.excerpt ?? null,
       start: e?.start ?? null, end: e?.end ?? null, captureId: e?.capture_id ?? null, supplied: c.supplied,
-      externalId: c.external_id, sourceIds: links.filter(l => l.claim_id === c.id).map(l => l.source_id), reviews: refs.map(review) };
+      externalId: c.external_id, sourceIds: (linksByClaim.get(c.id) ?? []).map(l => l.source_id), reviews: refs.map(review) };
   });
   const context = articleIds.length ? (await pool.query(`select sheet,row_key,data,resolution from tripwire_source_inputs i
     join tripwire_source_batches b on b.id=i.batch_id and b.status='applied'
@@ -102,7 +141,7 @@ export async function reportingProvenance(q: { articleId?: string; claimId?: str
   const reviewedSources = sourceRows.filter(s => !s.supplied);
   return { claims, sources, matches: matched.map(m => ({ id: m.id, sourceA: m.source_a, sourceB: m.source_b,
     hypothesis: m.hypothesis, rationale: m.rationale, conflicts: m.conflicts, supplied: m.supplied,
-    reviews: reviews.filter(r => r.source_match_id === m.id).map(review) })), context,
+    reviews: (reviewsByMatch.get(m.id) ?? []).map(review) })), context,
     counts: { articles: articleIds.length, occurrences: sources.length, minimumAnonymousHumans: conservativeMinimum(reviewedSources),
       provisionalSourceRecords: q.articleId ? (selectedArticle?.sourceSearch?.provisionalSourceRecords ?? null) : null,
       suppliedMinimumAnonymousHumans: q.articleId ? (selectedArticle?.sourceSearch?.minimumAnonymousHumans ?? null) : null,

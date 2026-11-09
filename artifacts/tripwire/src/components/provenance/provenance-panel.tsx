@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { RetainedCopyComparison } from './retained-copy-comparison';
 import { useMemo, useRef, useState } from 'react';
 import {
   getGetArticleContentQueryKey,
@@ -250,6 +251,7 @@ function ClaimObservation({ o, editable, onReview, onFocusEvent, highlight, sour
             {v.excerpt && <blockquote className="mt-1 border-l-2 border-border pl-2 font-serif text-sm">{v.excerpt}</blockquote>}
             <Mono className="block">capture {v.captureId ?? 'unknown'} · evidence {v.evidenceId ?? 'unknown'} · offsets {v.start ?? '?'}-{v.end ?? '?'}</Mono>
             <Mono className="block">body {v.bodyHash ?? 'unknown'} · selected {v.selectedBodyHash ?? 'unknown'}</Mono>
+            <RetainedCopyComparison articleId={o.articleId} version={v} />
           </div>)}
         </Disclosure>
         {own.length > 0 && <Disclosure label="Supporting sources" count={own.length} testId={`details-sources-${o.id}`}>

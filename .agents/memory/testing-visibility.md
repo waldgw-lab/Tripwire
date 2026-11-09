@@ -19,3 +19,12 @@ a test restores them. Cleanup cannot undo actions taken during that interval.
 **How to apply:** Skip control-state integration tests when isolation is absent;
 exercise routine article persistence in isolated owners and UI saves with
 browser-scoped responses instead of modifying shared reporting.
+
+Full collector tests require an isolated schema, not a test owner argument.
+
+**Why:** Refresh uses the shared collector regardless of its legacy caller
+argument; passing a fictional owner does not keep fixtures out of shared intake.
+
+**How to apply:** Isolate every database connection without a public-schema
+fallback, replace the source reader with offline fixtures, and exercise the real
+admission and cooldown rules rather than weakening them for tests.

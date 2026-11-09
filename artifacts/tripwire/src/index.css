@@ -493,4 +493,5 @@
 @container (min-width:800px){.tw-overview-band{display:grid;grid-template-columns:250px minmax(0,1fr);column-gap:20px;align-items:start}.tw-overview-band>figure{grid-column:2;grid-row:1 / span 2;margin-top:0}}
 @keyframes tw-overview-pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .tw-overview-pulse{animation:tw-overview-pulse 2.4s ease-in-out infinite}
+.dark button[aria-current="true"]{background-color:hsl(var(--accent));color:hsl(var(--accent-foreground))}
 @media (prefers-reduced-motion:reduce){.tw-overview-pulse{animation:none}}

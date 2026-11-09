@@ -52,7 +52,7 @@ test('real intake trigger, worker, versions, corrections, retries and summaries 
   await admin.query(`set search_path to "${schema}"`);
   await admin.query('create table tripwire_records (like public.tripwire_records including all)');
   await admin.query('create table tripwire_content (like public.tripwire_content including all)');
-  for(const file of ['0000_evidence_entities','0002_reporting_provenance','0003_development_claim_links','0004_live_claims','0005_claim_capture_intake','0006_claim_extraction_reuse']){
+  for(const file of ['0000_evidence_entities','0002_reporting_provenance','0003_development_claim_links','0004_live_claims','0005_claim_capture_intake','0006_claim_extraction_reuse','0007_retained_content_immutable']){
    const sql=await readFile(new URL(`../lib/db/migrations/entities/${file}.sql`,import.meta.url),'utf8');
    for(const part of sql.split('--> statement-breakpoint').filter(p=>p.trim()))await admin.query(part.replaceAll('"public".',`"${schema}".`));
   }

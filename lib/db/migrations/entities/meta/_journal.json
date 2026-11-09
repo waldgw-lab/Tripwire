@@ -50,6 +50,13 @@
       "when": 1794102000000,
       "tag": "0006_claim_extraction_reuse",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794230000000,
+      "tag": "0007_retained_content_immutable",
+      "breakpoints": true
     }
   ]
 }
