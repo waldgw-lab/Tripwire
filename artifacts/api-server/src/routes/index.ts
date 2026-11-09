@@ -6,6 +6,7 @@ import tripwireContentRouter from "./tripwire-content";
 import enrichmentJobsRouter from "./tripwire-enrichment-jobs";
 import tripwireEntitiesRouter from "./tripwire-entities";
 import tripwireProvenanceRouter from "./tripwire-provenance";
+import tripwireXRouter from "./tripwire-x";
 
 const router: IRouter = Router();
 
@@ -21,5 +22,6 @@ router.use(tripwireContentRouter);
 router.use(enrichmentJobsRouter);
 router.use(tripwireEntitiesRouter);
 router.use(tripwireProvenanceRouter);
+router.use(tripwireXRouter);
 
 export default router;

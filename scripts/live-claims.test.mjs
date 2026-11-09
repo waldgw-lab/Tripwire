@@ -11,9 +11,21 @@ import {correctDirection} from '../artifacts/api-server/src/lib/claim-direction.
 import {recordsFor,writeRecord} from '../artifacts/api-server/src/lib/tripwire-store.ts';
 import {storeContent,readContent} from '../artifacts/api-server/src/lib/tripwire-content-storage.ts';
 import {CLAIM_POLICY} from '../artifacts/api-server/src/lib/live-claim-rules.ts';
+import {xClaimSkipReason} from '../artifacts/api-server/src/lib/x-claim-policy.ts';
 
 const text='Officials said the regional commanders strengthened air defenses after the attack.\nThe commanders failed to protect the northern supply route during the attack.';
 const hash=s=>createHash('sha256').update(JSON.stringify([s,s])).digest('hex');
+
+test('X claims skip reposts and truncated text without affecting article processing',()=>{
+ assert.equal(xClaimSkipReason({sourceType:'x',xPost:{references:[]}},text),undefined);
+ assert.equal(xClaimSkipReason({sourceType:'x',xPost:{references:[{type:'quoted'}]}},text),undefined);
+ assert.match(xClaimSkipReason({sourceType:'x',xPost:{references:[{type:'retweeted'}]}},text),/Repost/);
+ assert.match(xClaimSkipReason({sourceType:'x'},'RT @someone: '+text),/Repost/);
+ assert.match(xClaimSkipReason({sourceType:'web',xPost:{references:[{type:'retweeted'}]}},text),/Repost/);
+ assert.match(xClaimSkipReason({sourceType:'x',xPost:{references:[],textTruncated:true}},text),/Truncated/);
+ assert.match(xClaimSkipReason({sourceType:'x'},text+'… https://t.co/example'),/Truncated/);
+ assert.equal(xClaimSkipReason({sourceType:'web'},text+'…'),undefined);
+});
 
 test('local claim extraction preserves precise passages, subject direction, denial and uncertainty',()=>{
  const claims=extractLocalClaims('😀 '+text);
@@ -284,6 +296,30 @@ test('real intake trigger, worker, versions, corrections, retries and summaries 
   await Promise.all([runClaimTick(),runClaimTick()]);
   assert.equal((await admin.query("select count(*)::int n from tripwire_claim_jobs where article_id in ('empty-a','empty-b') and status='no-claims'")).rows[0].n,2);
   assert.equal((await admin.query('select count(*)::int n from tripwire_claim_extraction_chunks where text_hash=$1',[createHash('sha256').update(empty).digest('hex')])).rows[0].n,1);
+  // Local intake handles X statements without conferring independent confirmation.
+  const xMeta={sourceType:'x',url:'https://x.com/fixture/status/100',xPost:{handle:'fixture',accountName:'Fixture Reporter',references:[],textTruncated:false}};
+  const xText='Officials said the coastal units strengthened air defenses after the attack.\nThe coastal units failed to protect the southern supply route during the attack.';
+  await put('x-related-article',xText);
+  await put('x-original',xText,xMeta);
+  await put('x-quote',xText,{...xMeta,xPost:{...xMeta.xPost,references:[{type:'quoted',id:'999',handle:'someone_else',text:'An unrelated expanded original should not be processed as the tracked account’s statement.'}]}});
+  await put('x-repost',xText,{...xMeta,xPost:{...xMeta.xPost,references:[{type:'retweeted',id:'100'}]}});
+  await put('x-truncated',xText+'…',{...xMeta,xPost:{...xMeta.xPost,textTruncated:true}});
+  for(let n=0;n<12;n++)if(!await runClaimTick())break;
+  const xp=await reportingProvenance({articleId:'x-original'});
+  assert.equal(xp.claims.length,2);
+  const articleClaims=await reportingProvenance({articleId:'x-related-article'});
+  assert.ok(xp.claims.every(c=>c.familyId));
+  assert.deepEqual(xp.claims.map(c=>c.familyId).sort(),articleClaims.claims.map(c=>c.familyId).sort());
+  assert.equal((await reportingProvenance({articleId:'x-quote'})).claims.length,2);
+  assert.equal(xp.counts.independentPaths,null);
+  assert.ok((await admin.query("select byline from tripwire_entity_captures where article_id='x-original'")).rows.every(c=>c.byline==='@fixture'));
+  assert.ok((await admin.query("select attribution from tripwire_entity_evidence e join tripwire_entity_captures c on c.id=e.capture_id where c.article_id='x-original'")).rows.some(c=>c.attribution==='@fixture'));
+  for(const [id,reason] of [['x-repost','Repost'],['x-truncated','Truncated']]){
+   assert.equal((await reportingProvenance({articleId:id})).claims.length,0);
+   const job=(await admin.query('select status,error from tripwire_claim_jobs where article_id=$1',[id])).rows[0];
+   assert.equal(job.status,'no-claims');assert.match(job.error,new RegExp(reason));
+   await assert.rejects(queueArticleClaims(id),new RegExp(reason));
+  }
  } finally {
   if(setPath)pool.off('connect',setPath);
   await admin.query('set search_path to public');

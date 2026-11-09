@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'wouter';
 import { QuickCorrection } from './quick-correction';
 import { FocusCorrection } from './focus-correction';
 import { getGetArticleContentQueryKey, useGetArticleContent, type TrackedRecord } from '@workspace/api-client-react';
@@ -138,7 +139,7 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
             className="mb-2 inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-xs hover:border-foreground" data-testid="button-toggle-importer">
             {importOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />} Add / update content
           </button>
-          {a.kind === 'article' && hasMain && signedIn && <ProcessArticleButton key={`proc-${a.id}`} articleId={a.id} />}
+          {a.kind === 'article' && hasMain && signedIn && !a.xPost?.textTruncated && !a.xPost?.references.some(r => r.type === 'retweeted') && <ProcessArticleButton key={`proc-${a.id}`} articleId={a.id} />}
           {importOpen && <div id={`article-importer-${a.id}`}><Importer key={a.id} targetId={a.id} targetTitle={a.title} compact onCommitted={record => { if (record.id !== a.id) onOpenArticle?.(record.id); }} /></div>}
         </div>}
 
@@ -146,6 +147,21 @@ export function ArticleReader({ article: a, impact, onClose, signedIn, onToggleF
         {a.kind === 'article' && !feedbackId && <ArticleClaims key={`claims-${a.id}`} articleId={a.id} />}
 
         <dl className="mt-5 grid gap-4 rounded-md border border-border/70 bg-background/70 p-4">
+          {a.xPost && <Field label="X account and capture">
+            {a.xPost.accountType === 'reporter' && a.xPost.accountName && <p className="mb-1 text-xs">
+              Tracked reporter: <Link className="underline" href={`/outlets?tab=journalists&name=${encodeURIComponent(a.xPost.accountName)}`}>{a.xPost.accountName}</Link>
+              {a.outlet && <span className="text-muted-foreground"> · {a.outlet} affiliation, not an institutional statement</span>}
+            </p>}
+            <a href={`https://x.com/${a.xPost.handle}`} target="_blank" rel="noreferrer" className="underline">@{a.xPost.handle}</a>
+            {(a.xPost.textTruncated || a.xPost.references.some(r => r.type === 'retweeted')) && <p className="mt-1 text-xs text-muted-foreground">
+              {a.xPost.textTruncated ? 'Truncated text: retained for context, not processed into Claims.' : 'Repost: retained for context, not processed as a new statement by this account.'}
+            </p>}
+            <p className="mt-1 font-mono text-[11px] text-muted-foreground">{a.xPost.origin === 'x-public-page' ? 'Public-page sample' : 'Timeline capture'} · {fmtDate(a.xPost.capturedAt, true)} · post {a.xPost.postId}</p>
+            {!!a.xPost.references.length && <ul className="mt-2 space-y-2">{a.xPost.references.map(ref => <li key={`${ref.type}-${ref.id}`} className="border-l border-border pl-3">
+              <a href={`https://x.com/i/web/status/${ref.id}`} target="_blank" rel="noreferrer" className="text-xs underline">{ref.type}{ref.handle ? ` · @${ref.handle}` : ref.authorId ? ` · author ${ref.authorId}` : ' · original author unavailable'}</a>
+              {ref.text && <p className="mt-1 whitespace-pre-wrap text-sm">{ref.text}</p>}
+            </li>)}</ul>}
+          </Field>}
           <Field label="Byline">
             {bylineCredits.length ? (
               <ul className="space-y-0.5" data-testid="list-reader-credits">

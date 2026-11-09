@@ -640,6 +640,49 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/TrackedRecord" }
+  /tripwire/x-feeds:
+    get:
+      operationId: getXFeeds
+      responses:
+        "200":
+          description: Shared X timeline watches and collection health
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/XFeeds" }
+  /tripwire/x-feeds/refresh:
+    post:
+      operationId: refreshXFeeds
+      responses:
+        "200":
+          description: Bounded refresh result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/XFeeds" }
+  /tripwire/x-feeds/{id}:
+    patch:
+      operationId: updateXFeed
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/XWatchSettings"
+      responses:
+        "200":
+          description: Updated tracking state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/XFeeds" }
+        "404": { description: Unknown account }
+    delete:
+      operationId: removeXFeed
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Watch removed without deleting coverage }
+        "404": { description: Unknown account }
   /tripwire/refresh:
     post:
       operationId: refreshFeeds
@@ -1491,6 +1534,85 @@ components:
         observedAt: { type: string }
         source: { type: string, enum: [publisher-page, publisher-rss, publisher-sitemap] }
         captureId: { type: string }
+    XWatchSettings:
+      type: object
+      required: [enabled]
+      properties:
+        enabled: { type: boolean }
+    XPost:
+      type: object
+      required: [postId, authorId, handle, capturedAt, origin, references]
+      properties:
+        postId: { type: string }
+        authorId: { type: string }
+        handle: { type: string }
+        watchId: { type: string }
+        accountName: { type: string }
+        accountType: { type: string, enum: [outlet, reporter] }
+        textTruncated: { type: boolean }
+        capturedAt: { type: string }
+        origin: { type: string, enum: [x-timeline, x-public-page] }
+        references:
+          type: array
+          items:
+            type: object
+            required: [id, type]
+            properties:
+              id: { type: string }
+              type: { type: string }
+              authorId: { type: string }
+              handle: { type: string }
+              text: { type: string }
+    XAccount:
+      type: object
+      required: [id, handle, url, outletId, outlet, enabled, status]
+      properties:
+        id: { type: string }
+        handle: { type: string }
+        name: { type: string }
+        aliases: { type: array, items: { type: string } }
+        accountType: { type: string, enum: [outlet, reporter] }
+        profileImageUrl: { type: string }
+        profileImageSourceUrl: { type: string }
+        url: { type: string }
+        outletId: { type: string }
+        outlet: { type: string }
+        enabled: { type: boolean }
+        status: { type: string }
+        lastChecked: { type: string }
+        lastSuccess: { type: string }
+        nextCheck: { type: string }
+        message: { type: string }
+    XFeeds:
+      type: object
+      required: [accounts, status, message, intervalMinutes, requestsUsed, postsReserved]
+      properties:
+        accounts: { type: array, items: { $ref: "#/components/schemas/XAccount" } }
+        status: { type: string }
+        message: { type: string }
+        mode: { type: string, enum: [api, public-page] }
+        intervalMinutes: { type: integer }
+        trial: { $ref: "#/components/schemas/XTrial" }
+        requestsUsed: { type: integer }
+        postsReserved: { type: integer }
+        requestLimit: { type: integer }
+        postLimit: { type: integer }
+    XTrial:
+      type: object
+      required: [days, budgetUsd, phase, providerLimitConfirmed, credentialsConfigured, postsReturned, usersReturned, estimatedUsd, reservedUsd, unreconciledRequests]
+      properties:
+        days: { type: integer }
+        budgetUsd: { type: number }
+        phase: { type: string, enum: [prepared, active, ended, budget-limited] }
+        startedAt: { type: string }
+        endsAt: { type: string }
+        providerLimitConfirmed: { type: boolean }
+        credentialsConfigured: { type: boolean }
+        postsReturned: { type: integer }
+        usersReturned: { type: integer }
+        estimatedUsd: { type: number }
+        reservedUsd: { type: number }
+        unreconciledRequests: { type: integer }
     RecordInput:
       type: object
       required: [kind, title]
@@ -1692,6 +1814,7 @@ components:
         - type: object
           required: [id, createdAt, updatedAt]
           properties:
+            xPost: { $ref: "#/components/schemas/XPost" }
             id: { type: string }
             createdAt: { type: string }
             updatedAt: { type: string }

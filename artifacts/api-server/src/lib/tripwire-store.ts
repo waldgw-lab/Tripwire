@@ -10,6 +10,7 @@ import { publicationUpdate } from "./tripwire-publication";
 import { articleLock, currentArticle, FeedbackError, canonicalArticleUrl, classificationSnapshot, appendFeedback, CORRECTION_REASONS } from "./tripwire-feedback";
 import { mergeHeadlines, publisherIdentityUpdate } from "./tripwire-headlines";
 import { articleFocus } from "./article-focus";
+import { xStatusId } from "./tripwire-x-api";
 
 export type RecordData = typeof SaveRecordBody._output;
 export async function seedConfig() {
@@ -67,11 +68,24 @@ export async function recordsFor(userId?: string | null, includeContent = true, 
 
 type WriteTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export async function writeRecord(userId: string, data: RecordData, protectMetadata = false, analystEdit = false, trustedHeadlines = false, transaction?: WriteTransaction) {
-  const baseId = data.id ?? crypto.randomUUID();
+  let baseId = data.id ?? crypto.randomUUID();
   // Per-user shadow copies allow edits/bookmarks without mutating shared feed metadata.
-  const id = `${userId}:${baseId}`;
+  let id = `${userId}:${baseId}`;
   const write = async (tx: WriteTransaction) => {
   await articleLock(tx, userId);
+  // X identity is the stable status ID, not a handle or linked news URL.
+  // Use the same lock for collector, direct intake and reviewed imports.
+  const postId = data.kind === "article" ? xStatusId(data.url) : undefined;
+  if (postId) {
+    const matching = (await tx.select().from(tripwireRecords).where(and(inArray(tripwireRecords.owner, ["public", userId]), eq(tripwireRecords.kind, "article"))))
+      .filter(r => xStatusId(String(r.data.url ?? "")) === postId);
+    const match = matching.find(r => r.owner === userId) ?? matching[0];
+    if (match) {
+      baseId = String(match.data.baseId ?? (match.owner === userId ? match.id.replace(`${userId}:`, "") : match.id));
+      id = `${userId}:${baseId}`;
+      data = { ...data, id: baseId };
+    }
+  }
   const correctionEvents: { field: "impact" | "topic"; before: ReturnType<typeof classificationSnapshot> }[] = [];
   let original: RecordData | undefined;
   if (data.kind === "article") {

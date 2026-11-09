@@ -1,4 +1,4 @@
-import type { ArticleCredit, TrackedRecord } from '@workspace/api-client-react';
+import type { ArticleCredit, TrackedRecord, XAccount } from '@workspace/api-client-react';
 
 export const creditRoles = ['author', 'contributor', 'reporting', 'research', 'photography', 'editing', 'other'] as const;
 export const nameKey = (value: string) => value.normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
@@ -36,6 +36,8 @@ export type JournalistCoverage = {
   aliases: string[];
   outlets: string[];
   coverage: CoverageItem[];
+  xAccounts: XAccount[];
+  xPosts: TrackedRecord[];
   latest: number;
 };
 export type JournalistSort = 'last-name' | 'recent' | 'items';
@@ -46,11 +48,26 @@ export function sortJournalists(profiles: JournalistCoverage[], sort: Journalist
   });
 }
 
-export function buildMediaCoverage(records: TrackedRecord[]): JournalistCoverage[] {
+/** Status identity/account affiliation, never a byline or independent-source inference. */
+export function xAccountMatchesPost(account: XAccount, post: TrackedRecord) {
+  if (post.sourceType !== 'x' && !post.xPost) return false;
+  if (post.xPost?.watchId === account.id) return true;
+  const handle = (s: string) => s.replace(/^@/, '').toLowerCase();
+  if (post.xPost?.handle) return handle(post.xPost.handle) === handle(account.handle);
+  try {
+    const url = new URL(post.url ?? '');
+    if (!['x.com', 'www.x.com', 'twitter.com', 'www.twitter.com'].includes(url.hostname) ||
+      !['https:', 'http:'].includes(url.protocol)) return false;
+    const match = /^\/([A-Za-z0-9_]{1,15})\/status\/\d+\/?$/.exec(url.pathname);
+    return !!match && handle(match[1]) === handle(account.handle);
+  } catch { return false; }
+}
+
+export function buildMediaCoverage(records: TrackedRecord[], accounts: XAccount[] = []): JournalistCoverage[] {
   const profiles = new Map<string, JournalistCoverage>();
   const aliases = new Map<string, string>();
   const ensure = (key: string, name: string) => {
-    if (!profiles.has(key)) profiles.set(key, { key, name, aliases: [], outlets: [], coverage: [], latest: 0 });
+    if (!profiles.has(key)) profiles.set(key, { key, name, aliases: [], outlets: [], coverage: [], xAccounts: [], xPosts: [], latest: 0 });
     return profiles.get(key)!;
   };
   for (const watch of records.filter(r => r.kind === 'watch' && r.watchType === 'journalist')) {
@@ -61,7 +78,22 @@ export function buildMediaCoverage(records: TrackedRecord[]): JournalistCoverage
     if (watch.outlet) p.outlets.push(watch.outlet);
     for (const name of [watch.title, ...p.aliases]) aliases.set(nameKey(name), key);
   }
-  const articles = records.filter(r => r.kind === 'article' && r.sourceType !== 'x').sort((a, b) => {
+  for (const account of accounts.filter(a => a.accountType === 'reporter' && a.name?.trim())) {
+    const names = [account.name!, ...(account.aliases ?? [])];
+    const key = names.map(n => aliases.get(nameKey(n))).find(Boolean) ?? nameKey(account.name!);
+    const p = ensure(key, account.name!);
+    p.name = account.name!;
+    p.aliases = [...new Set([...p.aliases, ...names, p.watch?.title ?? ''])].filter(n => n && nameKey(n) !== nameKey(p.name));
+    if (!p.xAccounts.some(a => a.id === account.id)) p.xAccounts.push(account);
+    if (!p.outlets.some(o => nameKey(o) === nameKey(account.outlet))) p.outlets.push(account.outlet);
+    for (const n of [p.name, ...p.aliases]) aliases.set(nameKey(n), key);
+  }
+  const posts = records.filter(r => r.kind === 'article' && (r.sourceType === 'x' || r.xPost))
+    .sort((a, b) => (b.publishedAt ?? b.createdAt).localeCompare(a.publishedAt ?? a.createdAt));
+  for (const p of profiles.values()) {
+    p.xPosts = posts.filter(post => p.xAccounts.some(account => xAccountMatchesPost(account, post)));
+  }
+  const articles = records.filter(r => r.kind === 'article' && r.sourceType !== 'x' && !r.xPost).sort((a, b) => {
     const time = (r: TrackedRecord) => Date.parse(r.publishedAt ?? '') || 0;
     return time(b) - time(a);
   });
@@ -92,3 +124,6 @@ export function buildMediaCoverage(records: TrackedRecord[]): JournalistCoverage
 
 export const coverageAtOutlet = (profile: JournalistCoverage, outlet?: string) =>
   outlet ? profile.coverage.filter(item => nameKey(item.article.outlet ?? '') === nameKey(outlet)) : profile.coverage;
+
+export const xPostsAtOutlet = (profile: JournalistCoverage, outlet?: string) =>
+  outlet ? profile.xPosts.filter(post => nameKey(post.outlet ?? '') === nameKey(outlet)) : profile.xPosts;

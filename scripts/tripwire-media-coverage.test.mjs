@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { articleCredits, buildMediaCoverage, coverageAtOutlet, surnameKey, sortJournalists } from '../artifacts/tripwire/src/lib/media-coverage.ts';
+import { articleCredits, buildMediaCoverage, coverageAtOutlet, surnameKey, sortJournalists, xPostsAtOutlet, xAccountMatchesPost } from '../artifacts/tripwire/src/lib/media-coverage.ts';
 import { parseByline } from '../artifacts/api-server/src/lib/tripwire-bylines.ts';
 
 const article = (id, credits, extra = {}) => ({ id, title: id, kind: 'article', outlet: 'Outlet A', credits, publishedAt: '2026-11-05T12:00:00Z', ...extra });
@@ -65,4 +65,50 @@ test('recent and item sorts use publication time and distinct articles', () => {
 });
 test('X posts do not silently create journalist article credits', () => {
   assert.equal(buildMediaCoverage([article('post', [author('Jane Doe')], { sourceType: 'x' })]).length, 0);
+});
+
+const account = (extra = {}) => ({ id: 'x:watch:janedoe', handle: 'JaneDoe', name: 'Jane A. Doe', aliases: ['Jane Doe'],
+  accountType: 'reporter', outlet: 'Outlet A', outletId: 'outlet-a', url: 'https://x.com/JaneDoe', enabled: true, status: 'setup-required', ...extra });
+const post = (id, extra = {}) => article(id, [], { sourceType: 'x', url: `https://x.com/JaneDoe/status/${id}`,
+  xPost: { postId: id, watchId: 'x:watch:janedoe', handle: 'JaneDoe', references: [] }, ...extra });
+test('explicit reporter aliases unify articles and social posts without adding article credits or counts', () => {
+  const profiles = buildMediaCoverage([watch('Jane Doe'), article('article', [author('Jane Doe')]), post('100')], [account()]);
+  assert.equal(profiles.length, 1);
+  const [p] = profiles;
+  assert.equal(p.name, 'Jane Doe', 'preserve the observed article byline');
+  assert.equal(p.coverage.length, 1);
+  assert.equal(p.xPosts.length, 1);
+  assert.equal(p.xAccounts.length, 1);
+  assert.deepEqual(articleCredits(p.xPosts[0]), []);
+});
+test('reporter profile is visible before collection and outlet accounts never become journalists', () => {
+  const profiles = buildMediaCoverage([], [account(), account({ id: 'outlet', accountType: 'outlet', name: 'Outlet A' })]);
+  assert.equal(profiles.length, 1);
+  assert.equal(profiles[0].xPosts.length, 0);
+  assert.equal(profiles[0].coverage.length, 0);
+});
+test('social activity does not affect article sorting or leak across outlet scopes', () => {
+  const profiles = buildMediaCoverage([watch('Jane Doe'), post('100', { outlet: 'Outlet B', publishedAt: '2026-11-09T12:00:00Z' }),
+    article('latest-article', [author('Other Person')])], [account()]);
+  const p = profiles.find(p => p.name === 'Jane A. Doe');
+  assert.equal(p.latest, 0);
+  assert.equal(sortJournalists(profiles, 'recent')[0].name, 'Other Person');
+  assert.equal(xPostsAtOutlet(p, 'Outlet A').length, 0);
+  assert.equal(xPostsAtOutlet(p, 'Outlet B').length, 1);
+  assert.equal(coverageAtOutlet(p, 'Outlet B').length, 0);
+});
+test('manual X imports link by exact status URLs, not lookalike hosts, prose mentions or quoted authors', () => {
+  const a = account();
+  assert.equal(xAccountMatchesPost(a, post('100', { xPost: undefined, url: 'https://twitter.com/janedoe/status/100?s=20' })), true);
+  for (const url of ['https://evilx.com/JaneDoe/status/100', 'https://x.com.evil.test/JaneDoe/status/100',
+    'https://x.com/JaneDoe', 'https://x.com/Other/status/100']) {
+    assert.equal(xAccountMatchesPost(a, post('100', { xPost: undefined, url })), false);
+  }
+  assert.equal(xAccountMatchesPost(a, post('100', { xPost: { handle: 'Other', watchId: 'other',
+    references: [{ type: 'quoted', handle: 'JaneDoe' }] }, url: 'https://x.com/Other/status/100' })), false);
+  assert.equal(xAccountMatchesPost(a, article('news', [author('Jane Doe')], { url: a.url })), false);
+});
+test('distinct people with similar names are not fuzzily joined', () => {
+  const profiles = buildMediaCoverage([watch('Jane Doe'), article('a', [author('Janet Doe')])], [account({ name: 'Jane A. Doe', aliases: [] })]);
+  assert.equal(profiles.length, 3);
 });

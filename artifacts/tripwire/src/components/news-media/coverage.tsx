@@ -5,7 +5,9 @@ import { ArrowUpRight, ChevronDown, ChevronRight, Pencil, Trash2 } from 'lucide-
 import { cn } from '@/lib/utils';
 import { OutletBrand } from '@/components/outlet-brand';
 import { publicationET } from '@/lib/article-signals';
-import { articleCredits, creditLabel, nameKey, type CoverageItem, type JournalistCoverage } from '@/lib/media-coverage';
+import { articleCredits, creditLabel, nameKey, xPostsAtOutlet, type CoverageItem, type JournalistCoverage } from '@/lib/media-coverage';
+import { JournalistXPosts } from '@/components/news-media/journalist-x-posts';
+import { XAccountAvatar } from '@/components/news-media/x-account-avatar';
 
 export function Disclosure({ open, onToggle, label, id, children, className }: {
   open: boolean; onToggle: () => void; label: string; id: string; children: ReactNode; className?: string;
@@ -65,22 +67,25 @@ export function JournalistRow({ profile, outlet, scope, isOpen, toggle, signedIn
 }) {
   const w = profile.watch;
   const items = outlet ? profile.coverage.filter(i => nameKey(i.article.outlet ?? '') === nameKey(outlet)) : profile.coverage;
+  const accounts = outlet ? profile.xAccounts.filter(a => nameKey(a.outlet) === nameKey(outlet)) : profile.xAccounts;
+  const posts = xPostsAtOutlet(profile, outlet);
   const key = `${scope}|j:${profile.key}`;
   const open = isOpen(key);
   return <li className={cn('group', w?.enabled === false && 'opacity-50')} data-testid={`row-journalist-${profile.key}`}>
     <div className="flex items-center gap-3 px-3 py-2 text-sm">
       <Disclosure open={open} onToggle={() => toggle(key)} label={profile.name} id={domId(key)} className="flex-1">
-        <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', w ? 'bg-foreground' : 'border border-muted-foreground')} />
+        {accounts[0] ? <XAccountAvatar account={accounts[0]} /> : <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', w ? 'bg-foreground' : 'border border-muted-foreground')} />}
         <span className="min-w-0">
           <span className={cn('block truncate', w ? 'font-medium' : 'text-muted-foreground')} data-testid={`text-journalist-${profile.key}`}>{profile.name}</span>
           {!!profile.aliases.length && <span className="block truncate font-mono text-[10px] text-muted-foreground">{profile.aliases.join(' · ')}</span>}
         </span>
-        {!w && <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">byline</span>}
+        {!w && <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{accounts.length ? 'X account' : 'byline'}</span>}
       </Disclosure>
       {showOutlets && <span className="hidden max-w-[220px] truncate text-xs text-muted-foreground sm:inline">
         {profile.outlets.length ? profile.outlets.map((o, i) => <span key={o}>{i > 0 && ', '}<OutletBrand name={o} /></span>) : '—'}
       </span>}
-      <span className="w-10 text-right font-mono text-xs" data-testid={`text-items-${profile.key}`}>{items.length}</span>
+      {!!accounts.length && <span className="shrink-0 font-mono text-[10px] text-muted-foreground" data-testid={`text-x-items-${profile.key}`}>{posts.length} X</span>}
+      <span className="w-10 text-right font-mono text-xs" title="Articles only" data-testid={`text-items-${profile.key}`}>{items.length}</span>
       <div className="flex w-14 justify-end">
         {signedIn && w && <div className="flex opacity-100 md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100">
           <button type="button" aria-label={`Edit ${profile.name}`} onClick={() => onEdit(w)} className="p-1 text-muted-foreground hover:text-foreground" data-testid={`button-edit-watch-${w.id}`}><Pencil className="h-3.5 w-3.5" /></button>
@@ -89,9 +94,11 @@ export function JournalistRow({ profile, outlet, scope, isOpen, toggle, signedIn
       </div>
     </div>
     {open && <div id={domId(key)} className="border-t border-border bg-background/40 pl-6">
+      <h3 className="px-3 pt-2.5 font-mono text-[11px] font-medium">ARTICLES · {items.length}</h3>
       {items.length ? <ul className="divide-y divide-border">{items.map(item =>
         <CoverageRow key={item.article.id} item={item} profile={profile} showOutlet={!outlet} openKey={`${key}|a:${item.article.id}`} isOpen={isOpen} toggle={toggle} />)}</ul>
-        : <p className="px-3 py-2.5 font-mono text-[11px] text-muted-foreground">No coverage recorded{outlet ? ` at ${outlet}` : ''}.</p>}
+        : <p className="px-3 py-2.5 font-mono text-[11px] text-muted-foreground">No article coverage recorded{outlet ? ` at ${outlet}` : ''}.</p>}
+      <JournalistXPosts accounts={accounts} posts={posts} />
     </div>}
   </li>;
 }

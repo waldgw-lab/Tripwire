@@ -90,7 +90,9 @@ import type {
   RetrievalReport,
   SearchArticleContentParams,
   TrackedRecord,
-  Workspace
+  Workspace,
+  XFeeds,
+  XWatchSettings
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -3998,6 +4000,320 @@ export function useGetFeedbackArticle<TData = Awaited<ReturnType<typeof getFeedb
 
 
 
+
+export const getGetXFeedsUrl = () => {
+
+
+
+
+  return `/api/tripwire/x-feeds`
+}
+
+export const getXFeeds = async ( options?: Parameters<typeof customFetch>[1]): Promise<XFeeds> => {
+
+  return customFetch<XFeeds>(getGetXFeedsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetXFeedsQueryKey = () => {
+    return [
+    `/api/tripwire/x-feeds`
+    ] as const;
+    }
+
+
+export const getGetXFeedsQueryOptions = <TData = Awaited<ReturnType<typeof getXFeeds>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getXFeeds>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetXFeedsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getXFeeds>>> = ({ signal }) => getXFeeds({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getXFeeds>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetXFeedsQueryResult = NonNullable<Awaited<ReturnType<typeof getXFeeds>>>
+export type GetXFeedsQueryError = ErrorType<unknown>
+
+
+export function useGetXFeeds<TData = Awaited<ReturnType<typeof getXFeeds>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getXFeeds>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getXFeeds>>,
+          TError,
+          Awaited<ReturnType<typeof getXFeeds>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetXFeeds<TData = Awaited<ReturnType<typeof getXFeeds>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getXFeeds>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getXFeeds>>,
+          TError,
+          Awaited<ReturnType<typeof getXFeeds>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetXFeeds<TData = Awaited<ReturnType<typeof getXFeeds>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getXFeeds>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetXFeeds<TData = Awaited<ReturnType<typeof getXFeeds>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getXFeeds>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetXFeedsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRefreshXFeedsUrl = () => {
+
+
+
+
+  return `/api/tripwire/x-feeds/refresh`
+}
+
+export const refreshXFeeds = async ( options?: Parameters<typeof customFetch>[1]): Promise<XFeeds> => {
+
+  return customFetch<XFeeds>(getRefreshXFeedsUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRefreshXFeedsMutationKey = () => ['refreshXFeeds'] as const;
+
+export const getRefreshXFeedsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshXFeeds>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof refreshXFeeds>>, TError,void, TContext> => {
+
+const mutationKey = getRefreshXFeedsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof refreshXFeeds>>, void> = () => {
+
+
+          return  refreshXFeeds(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RefreshXFeedsMutationResult = NonNullable<Awaited<ReturnType<typeof refreshXFeeds>>>
+
+    export type RefreshXFeedsMutationError = ErrorType<unknown>
+
+
+    export const useRefreshXFeeds = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshXFeeds>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof refreshXFeeds>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRefreshXFeedsMutationOptions(options), queryClient);
+    }
+
+export const getUpdateXFeedUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/x-feeds/${id}`
+}
+
+export const updateXFeed = async (id: string,
+    xWatchSettings: XWatchSettings, options?: Parameters<typeof customFetch>[1]): Promise<XFeeds> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<XFeeds>(getUpdateXFeedUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(xWatchSettings)
+  }
+);}
+
+
+
+
+
+export const getUpdateXFeedMutationKey = () => ['updateXFeed'] as const;
+
+export const getUpdateXFeedMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateXFeed>>, TError,UpdateXFeedMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateXFeed>>, TError,UpdateXFeedMutationVariables, TContext> => {
+
+const mutationKey = getUpdateXFeedMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateXFeed>>, UpdateXFeedMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateXFeed(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateXFeedMutationResult = NonNullable<Awaited<ReturnType<typeof updateXFeed>>>
+    export type UpdateXFeedMutationBody = BodyType<XWatchSettings>
+    export type UpdateXFeedMutationError = ErrorType<void>
+    export type UpdateXFeedMutationVariables = {id: string;data: BodyType<XWatchSettings>}
+
+    export const useUpdateXFeed = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateXFeed>>, TError,UpdateXFeedMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateXFeed>>,
+        TError,
+        UpdateXFeedMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateXFeedMutationOptions(options), queryClient);
+    }
+
+export const getRemoveXFeedUrl = (id: string,) => {
+
+
+
+
+  return `/api/tripwire/x-feeds/${id}`
+}
+
+export const removeXFeed = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRemoveXFeedUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveXFeedMutationKey = () => ['removeXFeed'] as const;
+
+export const getRemoveXFeedMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeXFeed>>, TError,RemoveXFeedMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeXFeed>>, TError,RemoveXFeedMutationVariables, TContext> => {
+
+const mutationKey = getRemoveXFeedMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeXFeed>>, RemoveXFeedMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  removeXFeed(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveXFeedMutationResult = NonNullable<Awaited<ReturnType<typeof removeXFeed>>>
+
+    export type RemoveXFeedMutationError = ErrorType<void>
+    export type RemoveXFeedMutationVariables = {id: string}
+
+    export const useRemoveXFeed = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeXFeed>>, TError,RemoveXFeedMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof removeXFeed>>,
+        TError,
+        RemoveXFeedMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRemoveXFeedMutationOptions(options), queryClient);
+    }
 
 export const getRefreshFeedsUrl = () => {
 

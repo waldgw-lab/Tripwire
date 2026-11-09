@@ -99,7 +99,7 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
       if (claimFilterLive && !matchesClaimFilter(a.id, claimFilter, linkage.claimsByArticle, linkage.summaryById)) return false;
       if (!needle) return true;
       if (bodyHits.has(a.id)) return true;
-      return [a.title, a.summary, a.fullText, a.outlet, a.contentType, a.contentFormat, a.topic, a.byline, ...articleCredits(a).map(c => c.name), ...(a.entities ?? [])]
+      return [a.title, a.summary, a.fullText, a.outlet, a.contentType, a.contentFormat, a.topic, a.byline, a.xPost?.accountName, a.xPost?.handle, a.xPost?.handle && `@${a.xPost.handle}`, ...articleCredits(a).map(c => c.name), ...(a.entities ?? [])]
         .some((s) => s?.toLowerCase().includes(needle));
     });
     return flaggedFirst ? out.sort((x, y) => Number(isFlagged(y)) - Number(isFlagged(x))) : out;

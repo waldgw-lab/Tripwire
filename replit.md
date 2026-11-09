@@ -65,7 +65,7 @@ Tracks the requested twelve outlets (including NBC), an entity/account watchlist
 
 ## Gotchas
 
-- X automation requires an authorized workspace X integration; X intake and account tracking are currently manual.
+- X Feeds uses bounded public-page samples at the user's request, not guaranteed complete timelines. Optional paid API collection remains separately gated. See `docs/x-feeds.md`; agent-only X callbacks are not runtime access.
 - Reuters has no default feed; use manual intake or configure a licensed feed. Other feed failures are reported per outlet.
 - Public feeds refresh every ten minutes while the API process runs.
 - Entity automation starts observe-only and without a configured provider. See `docs/entity-automation-security.md` for trust boundaries, activation gates and rollback; live decisions remain blocked until actual private-access verification and reviewed quality calibration are recorded.

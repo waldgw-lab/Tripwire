@@ -5,6 +5,7 @@ import { retainedClaimChunk } from "./live-claim-extraction-cache";
 import { sourceKey } from "./source-search-rules";
 import { WORKSPACE_OWNER as W } from "./tripwire-access";
 import { logger } from "./logger";
+import { xClaimSkipReason } from "./x-claim-policy";
 
 type Row = Record<string, any>;
 export class LiveClaimInputError extends Error {}
@@ -21,6 +22,9 @@ export async function queueArticleClaims(articleId: string) {
   if(!article || article.data.hidden)throw new LiveClaimInputError("Article is unavailable");
   const hash=article.data.fullTextHash;
   if(typeof hash!=="string" || hash.length!==64)throw new LiveClaimInputError("Add retained article text before processing claims");
+  const retained = (await client.query("select text from tripwire_content where hash=$1", [hash])).rows[0];
+  const skipReason = xClaimSkipReason(article.data, retained?.text ?? "");
+  if (skipReason) throw new LiveClaimInputError(skipReason);
   const result=await client.query(`insert into tripwire_claim_jobs(workspace,article_id,hash,policy) values($1,$2,$3,$4)
    on conflict(workspace,article_id,hash,policy) do update set status='pending',attempts=0,cursor=0,result_count=0,error=null,updated_at=now()
    where tripwire_claim_jobs.status in ('failed','superseded') returning article_id`,
@@ -39,6 +43,13 @@ async function applyJob(client: PoolClient, job: Row) {
  const data=article.data;
  const retained=(await client.query("select text from tripwire_content where hash=$1",[job.hash])).rows[0];
  if(!retained)throw new Error("Retained body is unavailable; original article is unchanged");
+ const skipReason=xClaimSkipReason(data,retained.text);
+ if(skipReason) {
+  await client.query(`update tripwire_claim_jobs set status='no-claims',result_count=0,error=$5,updated_at=now()
+   where workspace=$1 and article_id=$2 and hash=$3 and policy=$4`,[W,job.article_id,job.hash,job.policy,skipReason]);
+  return;
+ }
+ const postAttribution=data.xPost ? `@${data.xPost.handle}` : null;
  const {claims,nextCursor}=await retainedClaimChunk(client,job.hash,retained.text,job.cursor,job.policy);
  const captures:Row[]=data.retainedContent?.filter((c:Row)=>c.bodyHash===job.hash)??[];
  if(!captures.length)captures.push({});
@@ -54,7 +65,7 @@ async function applyJob(client: PoolClient, job: Row) {
  await client.query(`insert into tripwire_entity_captures(workspace,id,article_id,capture_id,hash,source,url,published_at,captured_at,complete,authorized,byline,publisher)
   values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,false,$11,$12) on conflict do nothing`,
   [W,captureId,job.article_id,originalCaptureId,job.hash,capture?.source ?? "retained article",data.url??null,date,
-   capture?.capturedAt ?? job.created_at,job.hash===data.fullTextHash && !!data.fullTextComplete,data.byline??null,data.outlet??null]);
+   capture?.capturedAt ?? job.created_at,job.hash===data.fullTextHash && !!data.fullTextComplete,postAttribution??data.byline??null,data.outlet??null]);
  for(const c of claims) {
   if(retained.text.slice(c.start,c.end)!==c.excerpt)throw new Error("Passage offsets do not match retained text");
   const candidates=families.filter(f=>propositionKey(f.proposition)===propositionKey(c.proposition));
@@ -63,15 +74,16 @@ async function applyJob(client: PoolClient, job: Row) {
   if(!family) {
    const id=sourceKey(W,"live-family",job.article_id,job.hash,propositionKey(c.proposition)),claimId=randomUUID();
    await client.query(`insert into tripwire_records(id,owner,kind,data) values($1,$2,'claim',$3)`,
-    [`${W}:${claimId}`,W,{baseId:claimId,kind:"claim",title:c.proposition,summary:"Article-backed reporting",observations:[]}]);
+    [`${W}:${claimId}`,W,{baseId:claimId,kind:"claim",title:c.proposition,summary:postAttribution ? "X-post reporting" : "Article-backed reporting",observations:[]}]);
    await client.query(`insert into tripwire_claim_families(workspace,id,claim_id,proposition,supplied) values($1,$2,$3,$4,false)`,
     [W,id,claimId,c.proposition]);
    family={id,claim_id:claimId,proposition:c.proposition,record_id:`${W}:${claimId}`};families.push(family);
   }
   const evidenceId=sourceKey(W,"live-evidence",captureId,c.start,c.end);
   await client.query(`insert into tripwire_entity_evidence(workspace,id,capture_id,excerpt,start,"end",attribution,certainty,scope,extractor_version,policy_version)
-   values($1,$2,$3,$4,$5,$6,$7,$8,'Article-attributed reporting, not a truth or independence decision',$9,$9) on conflict do nothing`,
-   [W,evidenceId,captureId,c.excerpt,c.start,c.end,c.descriptor??"Article narrative",c.stance==="reported"?"attributed":c.stance==="disputed"?"disputed":"alleged",CLAIM_POLICY]);
+   values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$10) on conflict do nothing`,
+   [W,evidenceId,captureId,c.excerpt,c.start,c.end,c.descriptor??postAttribution??"Article narrative",c.stance==="reported"?"attributed":c.stance==="disputed"?"disputed":"alleged",
+    postAttribution ? "X-post reporting, not a truth or independence decision" : "Article-attributed reporting, not a truth or independence decision",CLAIM_POLICY]);
   const existing=(await client.query("select id from tripwire_attributed_claims where workspace=$1 and family_id=$2 and article_id=$3 limit 2",
    [W,family.id,job.article_id])).rows;
   if(existing.length>1)throw new Error("Multiple existing attributions for this article/proposition; exact linkage needs attention");
@@ -87,11 +99,11 @@ async function applyJob(client: PoolClient, job: Row) {
    [W,claimId,captureId,evidenceId]);
   if(linked.rowCount)await client.query(`update tripwire_records set updated_at=now()
    where owner=$1 and kind='claim' and (id=$2 or data->>'baseId'=$2)`,[W,family.claim_id]);
-  const descriptor=c.descriptor??"Article narrative", sourceId=sourceKey(W,"live-source",captureId,descriptor,c.start);
+  const descriptor=c.descriptor??postAttribution??"Article narrative", sourceId=sourceKey(W,"live-source",captureId,descriptor,c.start);
   // Explicit source descriptions remain article/capture-specific. Narrative is not an anonymous human.
   await client.query(`insert into tripwire_source_occurrences(workspace,id,article_id,capture_id,evidence_id,descriptor,source_type,anonymity,supplied,data)
    values($1,$2,$3,$4,$5,$6,$7,'Unknown',false,$8) on conflict do nothing`,
-   [W,sourceId,job.article_id,captureId,evidenceId,descriptor,c.descriptor?"Attributed description":"Article",
+   [W,sourceId,job.article_id,captureId,evidenceId,descriptor,c.descriptor?"Attributed description":postAttribution?"X post":"Article",
     {method:CLAIM_POLICY,sourceWording:c.descriptor,minimumUnknown:true}]);
   await client.query(`insert into tripwire_claim_sources(workspace,claim_id,source_id,article_id) values($1,$2,$3,$4) on conflict do nothing`,
    [W,claimId,sourceId,job.article_id]);

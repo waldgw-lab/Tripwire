@@ -18,7 +18,8 @@ export function browserBoundary(req: Request, res: Response, next: NextFunction)
   }
   if (req.get("sec-fetch-site") === "cross-site") { res.status(403).json({ error: "Cross-site requests are not allowed" }); return; }
   const noBody = !req.get("transfer-encoding") && Number(req.get("content-length") ?? 0) === 0;
-  const existingBodylessAction = noBody && (req.method === "DELETE" || req.method === "POST" && (req.path === "/refresh" || /^\/records\/[^/]+\/restore$/.test(req.path)));
+  const existingBodylessAction = noBody && (req.method === "DELETE" || req.method === "POST" &&
+    (req.path === "/refresh" || req.path === "/x-feeds/refresh" || /^\/records\/[^/]+\/restore$/.test(req.path)));
   if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && !existingBodylessAction && !req.is("application/json")) {
     res.status(415).json({ error: "State changes require application/json" }); return;
   }

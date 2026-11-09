@@ -14,3 +14,4 @@
 - [Stale service processes](workflow-orphans.md) — address-in-use failures can leave an older preview serving; stop confirmed stale service trees, then restart managed workflows.
 - [Grouped Feed intent](grouped-feed-intent.md) — chronological stays default; optional development groups retain all eligible articles, independent of Claims extraction.
 - [Transaction connections](transaction-connections.md) — locked article transactions must reuse their connection for nested reads to avoid small-pool deadlocks.
+- [X collection authorization](x-collection-authorization.md) — user requested public-page samples instead of paid setup; paid API use remains separately gated.

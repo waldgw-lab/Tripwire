@@ -823,7 +823,45 @@ export interface RecordInput {
   observations?: Observation[];
 }
 
+export type XPostAccountType = typeof XPostAccountType[keyof typeof XPostAccountType];
+
+
+export const XPostAccountType = {
+  outlet: 'outlet',
+  reporter: 'reporter',
+} as const;
+
+export type XPostOrigin = typeof XPostOrigin[keyof typeof XPostOrigin];
+
+
+export const XPostOrigin = {
+  'x-timeline': 'x-timeline',
+  'x-public-page': 'x-public-page',
+} as const;
+
+export type XPostReferencesItem = {
+  id: string;
+  type: string;
+  authorId?: string;
+  handle?: string;
+  text?: string;
+};
+
+export interface XPost {
+  postId: string;
+  authorId: string;
+  handle: string;
+  watchId?: string;
+  accountName?: string;
+  accountType?: XPostAccountType;
+  textTruncated?: boolean;
+  capturedAt: string;
+  origin: XPostOrigin;
+  references: XPostReferencesItem[];
+}
+
 export type TrackedRecord = RecordInput & {
+  xPost?: XPost;
   id: string;
   createdAt: string;
   updatedAt: string;
@@ -1773,6 +1811,83 @@ export interface ArticleFeedbackPage {
   page: number;
   pageSize: number;
   reasons?: string[];
+}
+
+export interface XWatchSettings {
+  enabled: boolean;
+}
+
+export type XAccountAccountType = typeof XAccountAccountType[keyof typeof XAccountAccountType];
+
+
+export const XAccountAccountType = {
+  outlet: 'outlet',
+  reporter: 'reporter',
+} as const;
+
+export interface XAccount {
+  id: string;
+  handle: string;
+  name?: string;
+  aliases?: string[];
+  accountType?: XAccountAccountType;
+  profileImageUrl?: string;
+  profileImageSourceUrl?: string;
+  url: string;
+  outletId: string;
+  outlet: string;
+  enabled: boolean;
+  status: string;
+  lastChecked?: string;
+  lastSuccess?: string;
+  nextCheck?: string;
+  message?: string;
+}
+
+export type XFeedsMode = typeof XFeedsMode[keyof typeof XFeedsMode];
+
+
+export const XFeedsMode = {
+  api: 'api',
+  'public-page': 'public-page',
+} as const;
+
+export type XTrialPhase = typeof XTrialPhase[keyof typeof XTrialPhase];
+
+
+export const XTrialPhase = {
+  prepared: 'prepared',
+  active: 'active',
+  ended: 'ended',
+  'budget-limited': 'budget-limited',
+} as const;
+
+export interface XTrial {
+  days: number;
+  budgetUsd: number;
+  phase: XTrialPhase;
+  startedAt?: string;
+  endsAt?: string;
+  providerLimitConfirmed: boolean;
+  credentialsConfigured: boolean;
+  postsReturned: number;
+  usersReturned: number;
+  estimatedUsd: number;
+  reservedUsd: number;
+  unreconciledRequests: number;
+}
+
+export interface XFeeds {
+  accounts: XAccount[];
+  status: string;
+  message: string;
+  mode?: XFeedsMode;
+  intervalMinutes: number;
+  trial?: XTrial;
+  requestsUsed: number;
+  postsReserved: number;
+  requestLimit?: number;
+  postLimit?: number;
 }
 
 export interface ArticleContent {

@@ -124,6 +124,10 @@ export function canonicalArticleUrl(raw?: string) {
   if (!raw) return undefined;
   try {
     const url = new URL(raw);
+    if (/^(www\.)?(x|twitter)\.com$/i.test(url.hostname)) {
+      const post = /^\/(?:[a-z0-9_]+|i\/web)\/status\/(\d+)\/?$/i.exec(url.pathname)?.[1];
+      if (post) return `https://x.com/i/web/status/${post}`;
+    }
     url.hash = ""; url.hostname = url.hostname.toLowerCase().replace(/^www\./, "");
     for (const key of [...url.searchParams.keys()]) if (/^(?:utm_|fbclid$|gclid$)/i.test(key)) url.searchParams.delete(key);
     url.searchParams.sort();

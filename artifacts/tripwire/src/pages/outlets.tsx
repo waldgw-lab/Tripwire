@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useWorkspaceAccess } from '@/lib/workspace-access';
 import { useLocation, useSearch } from 'wouter';
-import type { TrackedRecord } from '@workspace/api-client-react';
+import { useGetXFeeds, type TrackedRecord } from '@workspace/api-client-react';
 import { Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
@@ -9,17 +9,19 @@ import { Input } from '@/components/ui/input';
 import { Empty, ErrorState, PageHead, RowsSkeleton } from '@/components/bits';
 import { ConfirmDelete, OutletEditor, WatchEditor } from '@/components/editors';
 import { OutletBrand } from '@/components/outlet-brand';
+import { XFeedsView } from '@/components/news-media/x-feeds';
 import { Disclosure, JournalistRow } from '@/components/news-media/coverage';
 import { byKind, fmtDate, toInput, useSave, useWorkspace } from '@/lib/workspace';
-import { buildMediaCoverage, coverageAtOutlet, nameKey, sortJournalists, type JournalistCoverage, type JournalistSort } from '@/lib/media-coverage';
+import { buildMediaCoverage, coverageAtOutlet, nameKey, sortJournalists, xPostsAtOutlet, type JournalistCoverage, type JournalistSort } from '@/lib/media-coverage';
 
-type Tab = 'all' | 'outlets' | 'journalists';
-const TABS: Tab[] = ['all', 'outlets', 'journalists'];
+type Tab = 'all' | 'outlets' | 'journalists' | 'x-feeds';
+const TABS: Tab[] = ['all', 'outlets', 'journalists', 'x-feeds'];
 const SORTS: [JournalistSort, string][] = [['last-name', 'Last name A–Z'], ['recent', 'Newest coverage'], ['items', 'Most items']];
 
 export default function OutletsPage() {
   const { canEdit: isSignedIn } = useWorkspaceAccess();
   const { data, isLoading, isError, refetch } = useWorkspace();
+  const xFeeds = useGetXFeeds({ query: { refetchInterval: 60_000 } });
   const save = useSave();
   const search = useSearch();
   const [, navigate] = useLocation();
@@ -45,15 +47,17 @@ export default function OutletsPage() {
   const toggle = (k: string) => setOpen(s => { const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n; });
 
   const outlets = useMemo(() => byKind(data?.records, 'outlet').sort((a, b) => (a.tier ?? 9) - (b.tier ?? 9) || a.title.localeCompare(b.title)), [data]);
-  const profiles = useMemo(() => buildMediaCoverage(data?.records ?? []), [data]);
+  const profiles = useMemo(() => buildMediaCoverage(data?.records ?? [], xFeeds.data?.accounts ?? []), [data, xFeeds.data]);
   const sorted = useMemo(() => sortJournalists(profiles, sort), [profiles, sort]);
   const articleCount = useMemo(() => {
     const m = new Map<string, Set<string>>();
-    for (const a of byKind(data?.records, 'article')) if (a.outlet) {
+    for (const a of byKind(data?.records, 'article')) if (a.outlet && a.sourceType !== 'x' && !a.xPost) {
       const k = nameKey(a.outlet); const s = m.get(k) ?? new Set<string>(); s.add(a.id); m.set(k, s);
     }
     return m;
   }, [data]);
+  const postCount = (o: TrackedRecord) => byKind(data?.records, 'article')
+    .filter(a => (a.sourceType === 'x' || a.xPost) && nameKey(a.outlet ?? '') === nameKey(o.title)).length;
 
   const nameMatches = (p: JournalistCoverage, n: string) => [p.name, p.watch?.title ?? '', ...p.aliases].some(v => v && nameKey(v) === nameKey(n));
   const focused = useMemo(() => nameParam ? profiles.find(p => nameMatches(p, nameParam))
@@ -68,15 +72,17 @@ export default function OutletsPage() {
   }, [focused, nameParam]);
 
   const ql = nameKey(q);
-  const jMatch = (p: JournalistCoverage) => !ql || [p.name, p.watch?.title ?? '', ...p.aliases].some(v => nameKey(v).includes(ql));
+  const jMatch = (p: JournalistCoverage) => !ql || [p.name, p.watch?.title ?? '', ...p.aliases, ...p.xAccounts.map(a => `@${a.handle}`)].some(v => nameKey(v).includes(ql));
   const oMatch = (o: TrackedRecord) => !ql || nameKey(o.title).includes(ql) || nameKey(o.feedUrl ?? '').includes(ql);
   const atOutlet = (o: TrackedRecord) => sortJournalists(profiles.filter(p => p.outlets.some(x => nameKey(x) === nameKey(o.title))).map(p => {
     const coverage = coverageAtOutlet(p, o.title);
-    return { ...p, coverage, latest: Math.max(0, ...coverage.map(item => Date.parse(item.article.publishedAt ?? '') || 0)) };
+    return { ...p, coverage, xPosts: xPostsAtOutlet(p, o.title),
+      xAccounts: p.xAccounts.filter(a => nameKey(a.outlet) === nameKey(o.title)),
+      latest: Math.max(0, ...coverage.map(item => Date.parse(item.article.publishedAt ?? '') || 0)) };
   }), sort);
   const outletKeys = new Set(outlets.map(o => nameKey(o.title)));
   const unlinked = sorted.filter(p => !p.outlets.some(o => outletKeys.has(nameKey(o))));
-  const tracked = profiles.filter(p => p.watch).length;
+  const tracked = profiles.filter(p => p.watch || p.xAccounts.length).length;
   const items = (o: TrackedRecord) => articleCount.get(nameKey(o.title))?.size ?? 0;
 
   const rowProps = { isOpen, toggle, signedIn: !!isSignedIn, onEdit: setWatchEditing, onDelete: setDeleting };
@@ -109,8 +115,9 @@ export default function OutletsPage() {
         </Disclosure>
         <div className="flex flex-1 flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] text-muted-foreground">
           {o.tier && <span>Tier {o.tier}</span>}{status(o)}<span>{fmtDate(o.lastChecked, true)}</span>
-          <span className="text-foreground" data-testid={`text-outlet-items-${o.id}`}>{items(o)} items</span>
-          <span>{js.length} journalists · {js.filter(p => p.watch).length} tracked</span>
+          <span className="text-foreground" data-testid={`text-outlet-items-${o.id}`}>{items(o)} articles</span>
+          <span data-testid={`text-outlet-x-posts-${o.id}`}>{postCount(o)} X posts</span>
+          <span>{js.length} journalists · {js.filter(p => p.watch || p.xAccounts.length).length} tracked</span>
           {scope === 'ot' && o.feedUrl && <span className="max-w-[260px] truncate" title={o.feedUrl}>{o.feedUrl}</span>}
           {siteLink(o)}
         </div>
@@ -118,7 +125,7 @@ export default function OutletsPage() {
         <div className="w-16">{outletActions(o)}</div>
       </div>
       {isO && <div id={`nm-${key.replace(/[^a-z0-9]+/gi, '-')}`}>
-        {journalistList(js.filter(p => coverageAtOutlet(p, o.title).length || p.watch), key, o.title)}
+        {journalistList(js.filter(p => coverageAtOutlet(p, o.title).length || p.watch || p.xAccounts.length || p.xPosts.length), key, o.title)}
       </div>}
     </section>;
   }
@@ -153,7 +160,7 @@ export default function OutletsPage() {
     if (!shown.length) return <Empty title={profiles.length ? 'No matches' : 'No journalists recorded'} />;
     return <div className="px-5 py-5 md:px-8">
       <div className="flex items-center gap-3 px-3 pb-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-        <span className="flex-1 pl-5">Name</span><span className="hidden sm:inline">Outlets</span><span className="w-10 text-right">Items</span><span className="w-14" />
+        <span className="flex-1 pl-5">Name</span><span className="hidden sm:inline">Outlets</span><span className="w-10 text-right">Articles</span><span className="w-14" />
       </div>
       <ul className="divide-y divide-border rounded-md border border-border bg-card">
         {shown.map(p => <JournalistRow key={p.key} profile={p} scope="jt" showOutlets {...rowProps} />)}
@@ -161,14 +168,14 @@ export default function OutletsPage() {
     </div>;
   }
 
-  const tabs: [Tab, string, number][] = [['all', 'All', outlets.length + profiles.length], ['outlets', 'Outlets', outlets.length], ['journalists', 'Journalists', profiles.length]];
+  const tabs: [Tab, string, number][] = [['all', 'All', outlets.length + profiles.length], ['outlets', 'Outlets', outlets.length], ['journalists', 'Journalists', profiles.length], ['x-feeds', 'X Feeds', 0]];
 
   return (
     <div className="tw-rise">
       <PageHead title="News Media" count={outlets.length}>
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Filter" aria-label="Filter outlets and journalists" className="h-8 w-40 bg-card pl-8 text-sm" data-testid="input-media-search" />
+          <Input value={q} onChange={e => setQ(e.target.value)} placeholder={tab === 'x-feeds' ? 'Outlet, handle, text' : 'Filter'} aria-label={tab === 'x-feeds' ? 'Filter X feeds' : 'Filter outlets and journalists'} className="h-8 w-40 bg-card pl-8 text-sm" data-testid="input-media-search" />
         </div>
         {isSignedIn && <>
           <button onClick={() => setWatchCreating(true)} data-testid="button-add-journalist" className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-xs font-medium hover:bg-secondary"><Plus className="h-3.5 w-3.5" /> Journalist</button>
@@ -177,21 +184,22 @@ export default function OutletsPage() {
       </PageHead>
       <div className="flex flex-wrap items-center gap-1 border-b border-border px-5 py-2.5 md:px-8">
         {tabs.map(([t, label, n]) => <button key={t} onClick={() => setParams({ tab: t, name: null })} aria-pressed={tab === t} data-testid={`tab-media-${t}`} className={cn('h-7 rounded-md px-2.5 font-mono text-[11px] uppercase tracking-wider', tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary')}>
-          {label} <span className="opacity-60">{n}</span>
+          {label}{t !== 'x-feeds' && <> <span className="opacity-60">{n}</span></>}
         </button>)}
         {nameParam && <button onClick={() => setParams({ name: null })} data-testid="button-clear-name" className="ml-2 inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 font-mono text-[11px]">
           {focused?.name ?? nameParam} <X className="h-3 w-3" aria-label="Clear profile filter" />
         </button>}
         <div className="ml-auto flex flex-wrap items-center gap-3">
-          {tab !== 'outlets' && <div className="flex items-center gap-1" role="group" aria-label="Sort journalists">
+          {(tab === 'all' || tab === 'journalists') && <div className="flex items-center gap-1" role="group" aria-label="Sort journalists">
             {SORTS.map(([s, l]) => <button key={s} onClick={() => setSort(s)} aria-pressed={sort === s} data-testid={`button-sort-${s}`}
               className={cn('h-6 rounded px-1.5 font-mono text-[10px] uppercase tracking-wider', sort === s ? 'text-foreground underline underline-offset-4' : 'text-muted-foreground hover:text-foreground')}>{l}</button>)}
           </div>}
-          {open.size > 0 && <button onClick={() => setOpen(new Set())} data-testid="button-collapse-all" className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground">Collapse all</button>}
-          {tab !== 'outlets' && <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{tracked} tracked · {profiles.length - tracked} bylines</span>}
+          {open.size > 0 && tab !== 'x-feeds' && <button onClick={() => setOpen(new Set())} data-testid="button-collapse-all" className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground">Collapse all</button>}
+          {(tab === 'all' || tab === 'journalists') && <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{tracked} tracked · {profiles.length - tracked} bylines</span>}
         </div>
       </div>
-      {isLoading ? <RowsSkeleton /> : isError ? <ErrorState onRetry={() => refetch()} /> : tab === 'all' ? (outlets.length || profiles.length ? allView() : <Empty title="No outlets configured" />) : tab === 'outlets' ? outletsView() : journalistsView()}
+      {xFeeds.isError && tab !== 'x-feeds' && <p role="status" className="px-5 pt-3 text-xs text-muted-foreground md:px-8">X account links are unavailable. Article coverage is still shown.</p>}
+      {isLoading ? <RowsSkeleton /> : isError ? <ErrorState onRetry={() => refetch()} /> : tab === 'all' ? (outlets.length || profiles.length ? allView() : <Empty title="No outlets configured" />) : tab === 'x-feeds' ? <XFeedsView outlets={outlets} records={data?.records ?? []} q={q} signedIn={!!isSignedIn} /> : tab === 'outlets' ? outletsView() : journalistsView()}
       <OutletEditor open={creating || !!editing} onOpenChange={(o) => { if (!o) { setCreating(false); setEditing(null); } }} record={editing} />
       <WatchEditor open={watchCreating || !!watchEditing} onOpenChange={(o) => { if (!o) { setWatchCreating(false); setWatchEditing(null); } }} record={watchEditing} initialWatchType="journalist" />
       <ConfirmDelete target={deleting} onClose={() => setDeleting(null)} />

@@ -13,3 +13,14 @@ Group coverage under the article's actual publisher, not whichever outlet appear
 **Why:** Journalists can have coverage at multiple outlets; frequency is not proof of exclusive employment or affiliation.
 
 **How to apply:** Filter nested coverage by publisher before counting or sorting recent coverage. Use explicit aliases for identity linking, not speculative fuzzy merges; retain original bylines even when profiles merge.
+
+Reporter social activity should align to the same person without becoming
+article credits or inflating article coverage counts. Outlet affiliation on an
+individual's account is not an institutional statement.
+
+**Why:** The user asked to connect reporter X coverage to relevant Feed, Claims,
+author and outlet views, and approved completing the available alignment work.
+
+**How to apply:** Keep Articles and X Posts distinct, use explicit identity
+mappings, and preserve original authors and repost/quote context. Repetition
+does not establish independent confirmation.

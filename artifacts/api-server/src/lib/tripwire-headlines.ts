@@ -1,11 +1,14 @@
 import type { RecordData } from "./tripwire-store";
 import type { Capture } from "./tripwire-content";
 import { publisherUrl } from "./tripwire-intake";
+import { xStatusId } from "./tripwire-x-api";
 
 export function canonicalUrl(raw?: string) {
   if (!raw?.trim()) return undefined;
   const url = new URL(raw.trim());
   if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new Error("Use an http or https source URL");
+  const postId = xStatusId(raw);
+  if (postId) return `https://x.com/i/web/status/${postId}`;
   for (const key of [...url.searchParams.keys()]) if (/^(utm_|fbclid|gclid)/i.test(key)) url.searchParams.delete(key);
   url.hash = ""; url.hostname = url.hostname.replace(/^www\./, "");
   url.pathname = url.pathname.replace(/\/+$/, "") || "/";

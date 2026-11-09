@@ -5,8 +5,10 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { RecordInput } from './recordInput';
+import type { XPost } from './xPost';
 
 export type TrackedRecord = RecordInput & {
+  xPost?: XPost;
   id: string;
   createdAt: string;
   updatedAt: string;

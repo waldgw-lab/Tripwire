@@ -1234,6 +1234,24 @@ export const GetWorkspaceResponse = zod.object({
   "url": zod.string().optional()
 })).optional()
 }).and(zod.object({
+  "xPost": zod.object({
+  "postId": zod.string(),
+  "authorId": zod.string(),
+  "handle": zod.string(),
+  "watchId": zod.string().optional(),
+  "accountName": zod.string().optional(),
+  "accountType": zod.enum(['outlet', 'reporter']).optional(),
+  "textTruncated": zod.boolean().optional(),
+  "capturedAt": zod.string(),
+  "origin": zod.enum(['x-timeline', 'x-public-page']),
+  "references": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "authorId": zod.string().optional(),
+  "handle": zod.string().optional(),
+  "text": zod.string().optional()
+}))
+}).optional(),
   "id": zod.string(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -1444,6 +1462,24 @@ export const GetQuickEnrichmentResponse = zod.object({
   "url": zod.string().optional()
 })).optional()
 }).and(zod.object({
+  "xPost": zod.object({
+  "postId": zod.string(),
+  "authorId": zod.string(),
+  "handle": zod.string(),
+  "watchId": zod.string().optional(),
+  "accountName": zod.string().optional(),
+  "accountType": zod.enum(['outlet', 'reporter']).optional(),
+  "textTruncated": zod.boolean().optional(),
+  "capturedAt": zod.string(),
+  "origin": zod.enum(['x-timeline', 'x-public-page']),
+  "references": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "authorId": zod.string().optional(),
+  "handle": zod.string().optional(),
+  "text": zod.string().optional()
+}))
+}).optional(),
   "id": zod.string(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -1946,6 +1982,24 @@ export const SaveRecordResponse = zod.object({
   "url": zod.string().optional()
 })).optional()
 }).and(zod.object({
+  "xPost": zod.object({
+  "postId": zod.string(),
+  "authorId": zod.string(),
+  "handle": zod.string(),
+  "watchId": zod.string().optional(),
+  "accountName": zod.string().optional(),
+  "accountType": zod.enum(['outlet', 'reporter']).optional(),
+  "textTruncated": zod.boolean().optional(),
+  "capturedAt": zod.string(),
+  "origin": zod.enum(['x-timeline', 'x-public-page']),
+  "references": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "authorId": zod.string().optional(),
+  "handle": zod.string().optional(),
+  "text": zod.string().optional()
+}))
+}).optional(),
   "id": zod.string(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -2614,6 +2668,24 @@ export const UpdateClaimResponse = zod.object({
   "url": zod.string().optional()
 })).optional()
 }).and(zod.object({
+  "xPost": zod.object({
+  "postId": zod.string(),
+  "authorId": zod.string(),
+  "handle": zod.string(),
+  "watchId": zod.string().optional(),
+  "accountName": zod.string().optional(),
+  "accountType": zod.enum(['outlet', 'reporter']).optional(),
+  "textTruncated": zod.boolean().optional(),
+  "capturedAt": zod.string(),
+  "origin": zod.enum(['x-timeline', 'x-public-page']),
+  "references": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "authorId": zod.string().optional(),
+  "handle": zod.string().optional(),
+  "text": zod.string().optional()
+}))
+}).optional(),
   "id": zod.string(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -2904,6 +2976,24 @@ export const CorrectArticleFocusResponse = zod.object({
   "url": zod.string().optional()
 })).optional()
 }).and(zod.object({
+  "xPost": zod.object({
+  "postId": zod.string(),
+  "authorId": zod.string(),
+  "handle": zod.string(),
+  "watchId": zod.string().optional(),
+  "accountName": zod.string().optional(),
+  "accountType": zod.enum(['outlet', 'reporter']).optional(),
+  "textTruncated": zod.boolean().optional(),
+  "capturedAt": zod.string(),
+  "origin": zod.enum(['x-timeline', 'x-public-page']),
+  "references": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "authorId": zod.string().optional(),
+  "handle": zod.string().optional(),
+  "text": zod.string().optional()
+}))
+}).optional(),
   "id": zod.string(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -3122,6 +3212,24 @@ export const CorrectArticleClassificationResponse = zod.object({
   "url": zod.string().optional()
 })).optional()
 }).and(zod.object({
+  "xPost": zod.object({
+  "postId": zod.string(),
+  "authorId": zod.string(),
+  "handle": zod.string(),
+  "watchId": zod.string().optional(),
+  "accountName": zod.string().optional(),
+  "accountType": zod.enum(['outlet', 'reporter']).optional(),
+  "textTruncated": zod.boolean().optional(),
+  "capturedAt": zod.string(),
+  "origin": zod.enum(['x-timeline', 'x-public-page']),
+  "references": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "authorId": zod.string().optional(),
+  "handle": zod.string().optional(),
+  "text": zod.string().optional()
+}))
+}).optional(),
   "id": zod.string(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -3319,6 +3427,24 @@ export const RestoreArticleResponse = zod.object({
   "url": zod.string().optional()
 })).optional()
 }).and(zod.object({
+  "xPost": zod.object({
+  "postId": zod.string(),
+  "authorId": zod.string(),
+  "handle": zod.string(),
+  "watchId": zod.string().optional(),
+  "accountName": zod.string().optional(),
+  "accountType": zod.enum(['outlet', 'reporter']).optional(),
+  "textTruncated": zod.boolean().optional(),
+  "capturedAt": zod.string(),
+  "origin": zod.enum(['x-timeline', 'x-public-page']),
+  "references": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "authorId": zod.string().optional(),
+  "handle": zod.string().optional(),
+  "text": zod.string().optional()
+}))
+}).optional(),
   "id": zod.string(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -3786,10 +3912,175 @@ export const GetFeedbackArticleResponse = zod.object({
   "url": zod.string().optional()
 })).optional()
 }).and(zod.object({
+  "xPost": zod.object({
+  "postId": zod.string(),
+  "authorId": zod.string(),
+  "handle": zod.string(),
+  "watchId": zod.string().optional(),
+  "accountName": zod.string().optional(),
+  "accountType": zod.enum(['outlet', 'reporter']).optional(),
+  "textTruncated": zod.boolean().optional(),
+  "capturedAt": zod.string(),
+  "origin": zod.enum(['x-timeline', 'x-public-page']),
+  "references": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "authorId": zod.string().optional(),
+  "handle": zod.string().optional(),
+  "text": zod.string().optional()
+}))
+}).optional(),
   "id": zod.string(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 }))
+
+
+export const GetXFeedsResponse = zod.object({
+  "accounts": zod.array(zod.object({
+  "id": zod.string(),
+  "handle": zod.string(),
+  "name": zod.string().optional(),
+  "aliases": zod.array(zod.string()).optional(),
+  "accountType": zod.enum(['outlet', 'reporter']).optional(),
+  "profileImageUrl": zod.string().optional(),
+  "profileImageSourceUrl": zod.string().optional(),
+  "url": zod.string(),
+  "outletId": zod.string(),
+  "outlet": zod.string(),
+  "enabled": zod.boolean(),
+  "status": zod.string(),
+  "lastChecked": zod.string().optional(),
+  "lastSuccess": zod.string().optional(),
+  "nextCheck": zod.string().optional(),
+  "message": zod.string().optional()
+})),
+  "status": zod.string(),
+  "message": zod.string(),
+  "mode": zod.enum(['api', 'public-page']).optional(),
+  "intervalMinutes": zod.number().int(),
+  "trial": zod.object({
+  "days": zod.number().int(),
+  "budgetUsd": zod.number(),
+  "phase": zod.enum(['prepared', 'active', 'ended', 'budget-limited']),
+  "startedAt": zod.string().optional(),
+  "endsAt": zod.string().optional(),
+  "providerLimitConfirmed": zod.boolean(),
+  "credentialsConfigured": zod.boolean(),
+  "postsReturned": zod.number().int(),
+  "usersReturned": zod.number().int(),
+  "estimatedUsd": zod.number(),
+  "reservedUsd": zod.number(),
+  "unreconciledRequests": zod.number().int()
+}).optional(),
+  "requestsUsed": zod.number().int(),
+  "postsReserved": zod.number().int(),
+  "requestLimit": zod.number().int().optional(),
+  "postLimit": zod.number().int().optional()
+})
+
+
+export const RefreshXFeedsResponse = zod.object({
+  "accounts": zod.array(zod.object({
+  "id": zod.string(),
+  "handle": zod.string(),
+  "name": zod.string().optional(),
+  "aliases": zod.array(zod.string()).optional(),
+  "accountType": zod.enum(['outlet', 'reporter']).optional(),
+  "profileImageUrl": zod.string().optional(),
+  "profileImageSourceUrl": zod.string().optional(),
+  "url": zod.string(),
+  "outletId": zod.string(),
+  "outlet": zod.string(),
+  "enabled": zod.boolean(),
+  "status": zod.string(),
+  "lastChecked": zod.string().optional(),
+  "lastSuccess": zod.string().optional(),
+  "nextCheck": zod.string().optional(),
+  "message": zod.string().optional()
+})),
+  "status": zod.string(),
+  "message": zod.string(),
+  "mode": zod.enum(['api', 'public-page']).optional(),
+  "intervalMinutes": zod.number().int(),
+  "trial": zod.object({
+  "days": zod.number().int(),
+  "budgetUsd": zod.number(),
+  "phase": zod.enum(['prepared', 'active', 'ended', 'budget-limited']),
+  "startedAt": zod.string().optional(),
+  "endsAt": zod.string().optional(),
+  "providerLimitConfirmed": zod.boolean(),
+  "credentialsConfigured": zod.boolean(),
+  "postsReturned": zod.number().int(),
+  "usersReturned": zod.number().int(),
+  "estimatedUsd": zod.number(),
+  "reservedUsd": zod.number(),
+  "unreconciledRequests": zod.number().int()
+}).optional(),
+  "requestsUsed": zod.number().int(),
+  "postsReserved": zod.number().int(),
+  "requestLimit": zod.number().int().optional(),
+  "postLimit": zod.number().int().optional()
+})
+
+
+export const UpdateXFeedParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateXFeedBody = zod.object({
+  "enabled": zod.boolean()
+})
+
+export const UpdateXFeedResponse = zod.object({
+  "accounts": zod.array(zod.object({
+  "id": zod.string(),
+  "handle": zod.string(),
+  "name": zod.string().optional(),
+  "aliases": zod.array(zod.string()).optional(),
+  "accountType": zod.enum(['outlet', 'reporter']).optional(),
+  "profileImageUrl": zod.string().optional(),
+  "profileImageSourceUrl": zod.string().optional(),
+  "url": zod.string(),
+  "outletId": zod.string(),
+  "outlet": zod.string(),
+  "enabled": zod.boolean(),
+  "status": zod.string(),
+  "lastChecked": zod.string().optional(),
+  "lastSuccess": zod.string().optional(),
+  "nextCheck": zod.string().optional(),
+  "message": zod.string().optional()
+})),
+  "status": zod.string(),
+  "message": zod.string(),
+  "mode": zod.enum(['api', 'public-page']).optional(),
+  "intervalMinutes": zod.number().int(),
+  "trial": zod.object({
+  "days": zod.number().int(),
+  "budgetUsd": zod.number(),
+  "phase": zod.enum(['prepared', 'active', 'ended', 'budget-limited']),
+  "startedAt": zod.string().optional(),
+  "endsAt": zod.string().optional(),
+  "providerLimitConfirmed": zod.boolean(),
+  "credentialsConfigured": zod.boolean(),
+  "postsReturned": zod.number().int(),
+  "usersReturned": zod.number().int(),
+  "estimatedUsd": zod.number(),
+  "reservedUsd": zod.number(),
+  "unreconciledRequests": zod.number().int()
+}).optional(),
+  "requestsUsed": zod.number().int(),
+  "postsReserved": zod.number().int(),
+  "requestLimit": zod.number().int().optional(),
+  "postLimit": zod.number().int().optional()
+})
+
+
+export const RemoveXFeedParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const RemoveXFeedResponse = zod.void()
 
 
 export const RefreshFeedsResponse = zod.object({
@@ -3995,6 +4286,24 @@ export const FlagArticleResponse = zod.object({
   "url": zod.string().optional()
 })).optional()
 }).and(zod.object({
+  "xPost": zod.object({
+  "postId": zod.string(),
+  "authorId": zod.string(),
+  "handle": zod.string(),
+  "watchId": zod.string().optional(),
+  "accountName": zod.string().optional(),
+  "accountType": zod.enum(['outlet', 'reporter']).optional(),
+  "textTruncated": zod.boolean().optional(),
+  "capturedAt": zod.string(),
+  "origin": zod.enum(['x-timeline', 'x-public-page']),
+  "references": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "authorId": zod.string().optional(),
+  "handle": zod.string().optional(),
+  "text": zod.string().optional()
+}))
+}).optional(),
   "id": zod.string(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
@@ -4430,6 +4739,24 @@ export const CommitImportResponse = zod.object({
   "url": zod.string().optional()
 })).optional()
 }).and(zod.object({
+  "xPost": zod.object({
+  "postId": zod.string(),
+  "authorId": zod.string(),
+  "handle": zod.string(),
+  "watchId": zod.string().optional(),
+  "accountName": zod.string().optional(),
+  "accountType": zod.enum(['outlet', 'reporter']).optional(),
+  "textTruncated": zod.boolean().optional(),
+  "capturedAt": zod.string(),
+  "origin": zod.enum(['x-timeline', 'x-public-page']),
+  "references": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "authorId": zod.string().optional(),
+  "handle": zod.string().optional(),
+  "text": zod.string().optional()
+}))
+}).optional(),
   "id": zod.string(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()

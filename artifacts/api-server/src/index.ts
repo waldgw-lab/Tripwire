@@ -10,6 +10,8 @@ import { migrateWatches } from "./lib/entity-db";
 import { startEntityWorker } from "./lib/entity-worker";
 import { startArchiveReassessment } from "./lib/tripwire-reassessment";
 import { startClaimWorker } from "./lib/live-claims";
+import { seedXAccounts, startXMonitoring } from "./lib/tripwire-x";
+import { prepareXTrial } from "./lib/tripwire-x-budget";
 
 const rawPort = process.env["PORT"];
 
@@ -27,6 +29,8 @@ if (Number.isNaN(port) || port <= 0) {
 
 async function start() {
   await seedConfig();
+  await seedXAccounts();
+  await prepareXTrial();
   await migrateRetainedContent();
   await backfillDiscoveryDates();
   await classifyExistingArticles();
@@ -40,6 +44,7 @@ async function start() {
 
   logger.info({ port }, "Server listening");
     startMonitoring();
+    startXMonitoring();
     startRetrieval();
     startPasteJobs();
     startEntityWorker();
