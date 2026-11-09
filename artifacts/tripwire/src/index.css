@@ -220,101 +220,8 @@
   );
 }
 
-.dark {
-  --button-outline: rgba(255, 255, 255, 0.1);
-  --badge-outline: rgba(255, 255, 255, 0.05);
-
-  --opaque-button-border-intensity: 9; /* In terms of percentages */
-
-  /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(255, 255, 255, 0.04);
-  --elevate-2: rgba(255, 255, 255, 0.09);
-
-  --background: 40 18% 95%;
-
-  --foreground: 218 32% 15%;
-
-  --border: 36 14% 84%;
-
-  --card: 40 25% 98%;
-
-  --card-foreground: 218 32% 15%;
-
-  --card-border: 36 14% 86%;
-
-  --sidebar: 218 30% 13%;
-
-  --sidebar-foreground: 40 16% 84%;
-
-  --sidebar-border: 218 22% 21%;
-
-  --sidebar-primary: 9 64% 48%;
-
-  --sidebar-primary-foreground: 40 30% 97%;
-
-  --sidebar-accent: 218 24% 19%;
-
-  --sidebar-accent-foreground: 40 25% 95%;
-
-  --sidebar-ring: 9 64% 48%;
-
-  --popover: 40 25% 98%;
-
-  --popover-foreground: 218 32% 15%;
-
-  --popover-border: 36 14% 84%;
-
-  --primary: 218 32% 17%;
-
-  --primary-foreground: 40 30% 96%;
-
-  --secondary: 38 18% 89%;
-
-  --secondary-foreground: 218 32% 17%;
-
-  --muted: 38 16% 91%;
-
-  --muted-foreground: 218 10% 42%;
-
-  --accent: 9 64% 48%;
-
-  --accent-foreground: 40 30% 97%;
-
-  --destructive: 0 62% 42%;
-
-  --destructive-foreground: 40 30% 97%;
-
-  /* Used as the border around inputs. Dark mode: Should be a border that is light enough to have high contrast when rendered on a --card background. More contrast than standard --border */
-  --input: 36 12% 78%;
-  --ring: 9 64% 48%;
-  --chart-1: 9 64% 48%;
-  --chart-2: 196 42% 36%;
-  --chart-3: 42 70% 46%;
-  --chart-4: 152 30% 34%;
-  --chart-5: 218 32% 17%;
-
-  --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow-sm:
-    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
-    0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow:
-    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
-    0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow-md:
-    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
-    0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow-lg:
-    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
-    0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow-xl:
-    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
-    0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0);
-  --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
-}
-
 /* Neutral surfaces and navigation; color is reserved for semantic statuses. */
-:root, .dark {
+:root {
   --background: 0 0% 98%;
   --foreground: 0 0% 8%;
   --border: 0 0% 85%;
@@ -347,6 +254,44 @@
   --chart-3: 0 0% 50%;
   --chart-4: 0 0% 66%;
   --chart-5: 0 0% 80%;
+}
+
+/* DARK MODE — graphite workspace; brand sidebar stays as-is (already dark). */
+.dark {
+  color-scheme: dark;
+  --button-outline: rgba(255,255,255,.1);
+  --badge-outline: rgba(255,255,255,.06);
+  --opaque-button-border-intensity: 9;
+  --elevate-1: rgba(255,255,255,.04);
+  --elevate-2: rgba(255,255,255,.09);
+  --background: 220 8% 8%;
+  --foreground: 40 10% 90%;
+  --border: 220 6% 22%;
+  --card: 220 7% 11%;
+  --card-foreground: 40 10% 90%;
+  --card-border: 220 6% 20%;
+  --sidebar: 0 0% 4%;
+  --sidebar-border: 0 0% 17%;
+  --popover: 220 7% 12%;
+  --popover-foreground: 40 10% 90%;
+  --popover-border: 220 6% 24%;
+  --primary: 40 10% 90%;
+  --primary-foreground: 220 8% 9%;
+  --secondary: 220 6% 18%;
+  --secondary-foreground: 40 10% 88%;
+  --muted: 220 6% 16%;
+  --muted-foreground: 220 6% 64%;
+  --accent: 220 6% 22%;
+  --accent-foreground: 40 10% 94%;
+  --destructive: 0 68% 52%;
+  --destructive-foreground: 0 0% 98%;
+  --input: 220 6% 30%;
+  --ring: 220 6% 62%;
+  --chart-1: 40 10% 88%;
+  --chart-2: 220 6% 68%;
+  --chart-3: 220 6% 52%;
+  --chart-4: 220 6% 38%;
+  --chart-5: 220 6% 26%;
 }
 
 @layer base {
@@ -492,3 +437,52 @@
 .tw-compare-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
 .tw-board-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));align-items:start;container-type:inline-size}
 @container (min-width:600px){.tw-board-open{grid-column:span 2}}
+
+/* ---------- Dark overrides for hard-coded light surfaces ---------- */
+.dark ::selection{background:hsl(40 10% 90%/.22)}
+.dark input::placeholder,.dark textarea::placeholder{color:hsl(220 6% 52%)}
+.dark .cl-formFieldInput::placeholder{color:hsl(220 6% 52%)}
+.dark select option{background:hsl(var(--popover));color:hsl(var(--popover-foreground))}
+.dark .tw-waves{background-image:linear-gradient(hsl(220 8% 8%/.9),hsl(220 8% 8%/.86)),var(--tw-waves-url)}
+.dark .tw-glass{background:hsl(220 7% 11%/.8)}
+.dark .tw-feed-item{background:hsl(220 7% 12%/.78);border-color:hsl(220 6% 100%/.06);box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.dark .tw-feed-item:hover{background:hsl(220 7% 14%/.86)}
+.dark .tw-feed-item-active{background:hsl(220 7% 16%/.92);box-shadow:inset 3px 0 0 hsl(40 10% 88%),0 2px 12px rgba(0,0,0,.35)}
+.dark .tw-group-row:hover{background:hsl(220 6% 100%/.05)}
+.dark .tw-group-row-active{background:hsl(220 6% 100%/.085);box-shadow:inset 3px 0 0 hsl(40 10% 88%)}
+.dark .prose{--tw-prose-body:hsl(40 8% 82%);--tw-prose-headings:hsl(40 10% 93%);--tw-prose-lead:hsl(220 6% 70%);--tw-prose-links:hsl(40 10% 93%);--tw-prose-bold:hsl(40 10% 93%);--tw-prose-counters:hsl(220 6% 60%);--tw-prose-bullets:hsl(220 6% 40%);--tw-prose-hr:hsl(220 6% 22%);--tw-prose-quotes:hsl(40 10% 88%);--tw-prose-quote-borders:hsl(220 6% 28%);--tw-prose-captions:hsl(220 6% 60%);--tw-prose-code:hsl(40 10% 92%);--tw-prose-pre-code:hsl(40 8% 85%);--tw-prose-pre-bg:hsl(220 8% 6%);--tw-prose-th-borders:hsl(220 6% 28%);--tw-prose-td-borders:hsl(220 6% 20%)}
+/* metadata greys */
+.dark .text-neutral-600{color:hsl(220 6% 64%)}
+.dark .text-gray-900{color:hsl(var(--foreground))}
+.dark .text-gray-800{color:hsl(40 8% 82%)}
+.dark .text-gray-600{color:hsl(var(--muted-foreground))}
+.dark .bg-gray-50{background-color:hsl(var(--background))}
+.dark .bg-gray-100{background-color:hsl(var(--muted))}
+.dark .bg-gray-900{background-color:hsl(var(--primary));color:hsl(var(--primary-foreground))}
+.dark .hover\:bg-gray-700:hover{background-color:hsl(40 8% 78%)}
+/* semantic red / amber / green text */
+.dark .text-red-800,.dark .text-red-700{color:hsl(0 80% 72%)}
+.dark .text-amber-800{color:hsl(38 85% 64%)}
+.dark .text-green-800{color:hsl(140 45% 62%)}
+.dark .bg-red-50{background-color:hsl(0 50% 14%)}
+.dark .border-red-700\/40{border-color:hsl(0 60% 50%/.45)}
+.dark .border-red-700{border-color:hsl(0 62% 52%)}
+.dark .text-\[hsl\(152_30\%_32\%\)\]{color:hsl(150 38% 60%)}
+.dark .border-\[hsl\(152_30\%_32\%\)\]{border-color:hsl(150 32% 46%)}
+.dark .text-\[hsl\(0_62\%_42\%\)\]{color:hsl(0 78% 70%)}
+.dark .bg-\[hsl\(0_0\%_32\%\)\]{background-color:hsl(0 0% 58%)}
+/* provenance / claim-direction chips */
+.dark .bg-\[hsl\(150_18\%_92\%\)\],.dark .bg-\[hsl\(150_18\%_94\%\)\]{background-color:hsl(150 20% 16%)}
+.dark .text-\[hsl\(150_22\%_28\%\)\]{color:hsl(150 34% 70%)}
+.dark .bg-\[hsl\(20_28\%_92\%\)\]{background-color:hsl(20 24% 17%)}
+.dark .text-\[hsl\(18_30\%_34\%\)\]{color:hsl(20 50% 72%)}
+.dark .bg-\[hsl\(212_20\%_93\%\)\],.dark .bg-\[hsl\(212_20\%_97\%\)\]{background-color:hsl(212 18% 16%)}
+.dark .text-\[hsl\(212_24\%_32\%\)\],.dark .text-\[hsl\(212_18\%_36\%\)\]{color:hsl(212 34% 74%)}
+.dark .bg-\[hsl\(42_26\%_91\%\)\]{background-color:hsl(40 22% 16%)}
+.dark .text-\[hsl\(38_30\%_30\%\)\]{color:hsl(40 50% 70%)}
+.dark .border-\[hsl\(212_14\%_88\%\)\]{border-color:hsl(212 12% 26%)}
+.dark .border-\[hsl\(212_20\%_70\%\)\]{border-color:hsl(212 20% 42%)}
+/* logo tiles stay white on purpose; give them a quiet edge so they read as intentional */
+.dark span.bg-white[role='img'],.dark span.rounded-sm.bg-white{box-shadow:0 0 0 1px hsl(0 0% 100%/.12)}
+/* X tile: bg-foreground would become light; keep it a dark tile with a visible edge */
+.dark span.bg-foreground.text-background[role='img']{background:hsl(0 0% 4%);color:hsl(0 0% 96%);box-shadow:0 0 0 1px hsl(0 0% 100%/.18)}

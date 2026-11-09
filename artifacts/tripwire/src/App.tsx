@@ -11,6 +11,7 @@ import WatchlistPage from '@/pages/watchlist';
 import OutletsPage from '@/pages/outlets';
 import DashboardPage from '@/pages/dashboard';
 import NotFound from '@/pages/not-found';
+import { ThemeProvider } from '@/lib/theme';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 60_000, retry: 1 } } });
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -39,10 +40,10 @@ function WorkspaceRoutes() {
 }
 export default function App() {
   return (
-    <WouterRouter base={basePath}>
+    <ThemeProvider><WouterRouter base={basePath}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider><WorkspaceRoutes /><Toaster /></TooltipProvider>
       </QueryClientProvider>
-    </WouterRouter>
+    </WouterRouter></ThemeProvider>
   );
 }

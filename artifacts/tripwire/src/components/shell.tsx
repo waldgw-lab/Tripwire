@@ -3,6 +3,7 @@ import { Link, useLocation } from 'wouter';
 import { ChevronLeft, ChevronRight, Network, Flag, GitBranch, LayoutDashboard, Newspaper, RefreshCw, Rss } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fmtDate, useRefresh, useWorkspace } from '@/lib/workspace';
+import { ThemeSwitcher } from '@/components/theme-switcher';
 
 const NAV = [
   { href: '/feed', label: 'Feed', icon: Newspaper, publicHref: '/' },
@@ -70,6 +71,7 @@ export function Shell({ children, signedIn }: { children: ReactNode; signedIn: b
           </dl>
         )}
         <div className={cn('mt-auto hidden border-t border-sidebar-border p-4 md:block', collapsed && 'md:p-3')}>
+          <div className="mb-3"><ThemeSwitcher collapsed={collapsed} /></div>
           <button
             onClick={() => refresh.mutate()}
             disabled={refresh.isPending}
@@ -88,6 +90,7 @@ export function Shell({ children, signedIn }: { children: ReactNode; signedIn: b
       </aside>
       <main className="tw-waves min-w-0 flex-1" style={{ ['--tw-waves-url' as string]: `url(${import.meta.env.BASE_URL}workspace-waves.webp)` }}>
         <div className="flex items-center justify-end gap-2 border-b border-border px-4 py-2 md:hidden">
+          <ThemeSwitcher compact />
           <button onClick={() => refresh.mutate()} disabled={refresh.isPending} data-testid="button-refresh-mobile" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-xs text-accent-foreground">
             <RefreshCw className={cn('h-3.5 w-3.5', refresh.isPending && 'animate-spin')} /> Refresh
           </button>
