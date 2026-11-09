@@ -20,7 +20,7 @@ const article = (id, title, publishedAt) => record(id, 'article', title, {
   // Feed defaults to Critical/High; keep navigation independent of impact rules.
   impact: 'high', impactMode: 'manual',
 });
-const records = [
+export const records = [
   article('staff-new', 'Pete Hegseth faces possible removal', '2026-11-08T12:00:00Z'),
   article('staff-old', 'Earlier reporting on Pentagon leadership', '2026-11-01T12:00:00Z'),
   article('policy', 'Senator supports gun control on public health grounds', '2026-11-07T12:00:00Z'),

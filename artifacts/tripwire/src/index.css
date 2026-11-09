@@ -486,3 +486,9 @@
 .tw-feed-list{container-type:inline-size}
 .tw-feed-headline{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:18px;font-size:clamp(18px,calc(15px + .5cqi),21px);line-height:1.2;overflow-wrap:anywhere;max-height:100%}
 .tw-reader-headline{font-size:1.5rem;font-size:clamp(1.375rem,calc(1rem + 1.6cqi),2rem);line-height:1.25;overflow-wrap:anywhere}
+.tw-group-row{transition:background-color .15s}
+.tw-group-row:hover{background:rgba(255,255,255,.7)}
+.tw-group-row-active{background:rgba(255,255,255,.92);box-shadow:inset 3px 0 0 #202020}
+.tw-compare-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+.tw-board-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));align-items:start;container-type:inline-size}
+@container (min-width:600px){.tw-board-open{grid-column:span 2}}

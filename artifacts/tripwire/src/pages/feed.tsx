@@ -12,6 +12,10 @@ import { FeedMeta } from '@/components/feed/feed-meta';
 import { FittedHeadline } from '@/components/feed/fitted-headline';
 import { DevelopmentsPanel } from '@/components/feed/developments';
 import { ArticleReader } from '@/components/feed/article-reader';
+import { GroupedFeed, type GroupLayout } from '@/components/feed/grouped-feed';
+import { groupFeedArticles, type FeedGroupOrder } from '@/lib/feed-development-groups';
+import type { ClaimSummary } from '@/lib/claim-group-core';
+import { useSearch } from 'wouter';
 import { ArticleEditor, ConfirmDelete } from '@/components/editors';
 import { Importer } from '@/components/importer';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -30,6 +34,19 @@ function writeFlagged(on: boolean) {
 function writeParam(id: string | null) {
   const url = new URL(window.location.href);
   if (id) url.searchParams.set('article', id); else url.searchParams.delete('article');
+  window.history.replaceState(window.history.state, '', url);
+}
+
+type ViewState = { grouped: boolean; layout: GroupLayout };
+function readView(): ViewState {
+  const p = new URLSearchParams(window.location.search);
+  const l = p.get('layout');
+  return { grouped: p.get('view') === 'grouped', layout: l === 'compare' || l === 'board' ? l : 'briefing' };
+}
+function writeView(v: ViewState) {
+  const url = new URL(window.location.href);
+  if (v.grouped) { url.searchParams.set('view', 'grouped'); url.searchParams.set('layout', v.layout); }
+  else { url.searchParams.delete('view'); url.searchParams.delete('layout'); }
   window.history.replaceState(window.history.state, '', url);
 }
 
@@ -56,6 +73,12 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
   const [flaggedFirst, setFlaggedFirst] = useState(false);
   const [open, setOpenState] = useState<string | null>(() => readParam());
   const setOpen = useCallback((id: string | null) => { setOpenState(id); writeParam(id); }, []);
+  const [view, setViewState] = useState<ViewState>(readView);
+  const setView = useCallback((v: ViewState) => { setViewState(v); writeView(v); }, []);
+  const search = useSearch();
+  useEffect(() => { setViewState(prev => { const n = readView(); return n.grouped === prev.grouped && n.layout === prev.layout ? prev : n; }); }, [search]);
+  useEffect(() => { const on = () => { setViewState(readView()); setOpenState(readParam()); }; window.addEventListener('popstate', on); return () => window.removeEventListener('popstate', on); }, []);
+  const [order, setOrder] = useState<FeedGroupOrder>('relevant');
   const [editing, setEditing] = useState<TrackedRecord | null>(null);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<TrackedRecord | null>(null);
@@ -84,6 +107,8 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
     return flaggedFirst ? out.sort((x, y) => Number(isFlagged(y)) - Number(isFlagged(x))) : out;
   }, [articles, impacts, q, bodyHits, filters, flaggedOnly, flaggedFirst, claimFilter, claimFilterLive, claimBlocked, linkage.claimsByArticle, linkage.summaryById]);
 
+  const groups = useMemo(() => view.grouped ? groupFeedArticles(rows, { impacts, summaries: (linkage.summaries.data ?? []) as ClaimSummary[], order, flaggedFirst }) : [],
+    [view.grouped, rows, impacts, linkage.summaries.data, order, flaggedFirst]);
   const selected = useMemo(() => (open ? articles.find((a) => a.id === open) ?? null : null), [articles, open]);
   useEffect(() => {
     if (!open) return;
@@ -136,6 +161,12 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search headline, text, journalist, entity" className="h-8 bg-card pl-8 text-sm" data-testid="input-search" />
         </div>
+        <div role="radiogroup" aria-label="Feed view" className="inline-flex h-8 items-center rounded-md border border-border bg-card p-0.5" title={view.grouped ? 'Grouped: related headlines bundled by development' : 'Chronological: every article, newest first'}>
+          {([['chronological', false], ['grouped', true]] as const).map(([k, g]) => (
+            <button key={k} role="radio" aria-checked={view.grouped === g} onClick={() => setView({ ...view, grouped: g })}
+              className={cn('h-full rounded px-2.5 text-xs font-medium capitalize', view.grouped === g ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')} data-testid={`button-view-${k}`}>{k}</button>
+          ))}
+        </div>
         <FeedFilterMenu value={filters} onChange={setFilters} topics={topics} outlets={outlets} reporting={REPORTING} sentiment={SENTIMENT} focus={FOCUS}
           flagged={flaggedOnly} onFlaggedChange={setFlaggedOnly} flaggedFirst={flaggedFirst} onFlaggedFirstChange={setFlaggedFirst}
           claimFilter={claimFilter} onClaimFilterChange={setClaimFilter} linkage={linkage} />
@@ -165,6 +196,10 @@ export default function FeedPage({ mode }: { mode: 'public' | 'feed' | 'saved' }
                 {refresh.isPending ? 'Checking feeds' : 'Refresh feeds'}
               </button>
             </Empty>
+      ) : view.grouped ? (
+        <GroupedFeed groups={groups} layout={view.layout} order={order} onLayout={(layout) => setView({ grouped: true, layout })} onOrder={setOrder}
+          impactOf={(a) => impacts.get(a.id) ?? impactRating(a, watches)} open={open} setOpen={setOpen} signedIn={!!isSignedIn}
+          onToggleFlag={toggleFlag} flagPending={flag.isPending} onEdit={setEditing} onDelete={setDeleting} />
       ) : (
         <ol className="tw-feed-list space-y-2.5 px-3 py-3 md:px-5 md:py-4">
           {rows.map((a) => {
