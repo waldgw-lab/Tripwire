@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "tsx --tsconfig ../artifacts/tripwire/tsconfig.json --test ./*.test.mjs",
+    "test:claims-browser": "playwright test --config browser/playwright.config.mjs",
     "hello": "tsx ./src/hello.ts",
     "source-search:inventory": "python ./source-search-inventory.py",
     "source-search:backfill": "tsx ./source-search-backfill.mjs",
@@ -12,6 +13,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "@types/node": "catalog:",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",

@@ -28,6 +28,10 @@ args = "source-search"
 task = "workflow.run"
 args = "intake-safety"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "claims-browser"
+
 [[workflows.workflow]]
 name = "typecheck"
 author = "agent"
@@ -57,6 +61,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm --filter @workspace/scripts exec tsx --test tripwire-import-concurrency.test.mjs tripwire-import-matching.test.mjs"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "claims-browser"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/scripts run test:claims-browser"
 
 [workflows.workflow.metadata]
 isValidation = true

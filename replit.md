@@ -7,6 +7,7 @@ Reporting intelligence workspace tracking relevant outlet releases, journalists,
 - Use managed workflows `artifacts/api-server: API Server` and `artifacts/tripwire: web`.
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm test` — regression suite; shared-workspace entity tests require a dedicated isolated schema and otherwise skip
+- `pnpm --filter @workspace/scripts run test:claims-browser` — isolated Claims/Feed browser regression; needs the Tripwire frontend workflow, not the API (see `scripts/browser/README.md`)
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `node lib/db/migrate-entities.mjs` — apply additive journaled entity/reporting migrations; do not schema-push over graph constraints
