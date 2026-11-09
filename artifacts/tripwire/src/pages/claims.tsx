@@ -11,9 +11,10 @@ import { Disclosure, ProvenancePanel, TONE } from '@/components/provenance/prove
 import { OutletBrand } from '@/components/outlet-brand';
 import { ClaimProcessingStatus } from '@/components/provenance/claim-processing';
 import { FocusContext } from '@/components/provenance/focus-context';
+import { FocusOverview } from '@/components/provenance/focus-overview';
 import { STAGES, byKind, fmtDate, useWorkspace } from '@/lib/workspace';
 import {
-  UNCATEGORIZED, categoryKey, groupClaimsByArticle, categoryLabel, compareClaims, groupKey, pickDefault, reportTime, topicKey, topicLabel, summariesForClaim, useClaimLinkage, type ClaimSummary,
+  UNCATEGORIZED, categoryKey, groupClaimsByArticle, categoryLabel, compareClaims, groupKey, reportTime, topicKey, topicLabel, summariesForClaim, useClaimLinkage, type ClaimSummary,
 } from '@/lib/claim-groups';
 
 const isImportNote = (s?: string) => !!s && /supplied analysis|unreviewed claim-family/i.test(s);
@@ -26,13 +27,13 @@ function dateRange(first: string | null | undefined, last: string | null | undef
 
 type Sort = 'newest' | 'oldest' | 'linked';
 type Recency = 'ongoing' | 'all';
-type UrlState = { claim: string | null; category: string; topic: string; q: string; recency: Recency; sort: Sort };
+type UrlState = { claim: string | null; focus: string | null; category: string; topic: string; q: string; recency: Recency; sort: Sort };
 
 function readUrl(): UrlState {
   const p = new URLSearchParams(window.location.search);
   const sort = p.get('sort');
   return {
-    claim: p.get('claim'), category: p.get('category') ?? '', topic: p.get('topic') ?? '', q: p.get('q') ?? '',
+    claim: p.get('claim'), focus: p.get('focus'), category: p.get('category') ?? '', topic: p.get('topic') ?? '', q: p.get('q') ?? '',
     recency: p.get('recency') === 'ongoing' ? 'ongoing' : 'all',
     sort: sort === 'oldest' || sort === 'linked' ? sort : 'newest',
   };
@@ -40,7 +41,7 @@ function readUrl(): UrlState {
 function writeUrl(s: UrlState, push: boolean) {
   const url = new URL(window.location.href);
   const set = (k: string, v: string | null, def = '') => { if (v && v !== def) url.searchParams.set(k, v); else url.searchParams.delete(k); };
-  set('claim', s.claim); set('category', s.category); set('topic', s.topic); set('q', s.q); set('recency', s.recency, 'all'); set('sort', s.sort, 'newest');
+  set('claim', s.claim); set('focus', s.focus); set('category', s.category); set('topic', s.topic); set('q', s.q); set('recency', s.recency, 'all'); set('sort', s.sort, 'newest');
   if (url.href === window.location.href) return;
   if (push) window.history.pushState(window.history.state, '', url); else window.history.replaceState(window.history.state, '', url);
 }
@@ -61,7 +62,11 @@ export default function ClaimsPage() {
 
   const [st, setSt] = useState<UrlState>(readUrl);
   const update = useCallback((patch: Partial<UrlState>, push = false) => {
-    setSt(prev => { const next = { ...prev, ...patch }; writeUrl(next, push); return next; });
+    setSt(prev => {
+      const resetFocus = patch.focus === undefined && ['category', 'topic', 'q', 'recency'].some(key => key in patch);
+      const next = { ...prev, ...(resetFocus ? { focus: null } : {}), ...patch };
+      writeUrl(next, push); return next;
+    });
   }, []);
   // Wouter navigations (e.g. Link to /claims?claim=…) change the search without remount; resync from URL.
   const search = useSearch();
@@ -163,11 +168,11 @@ export default function ClaimsPage() {
   }, [st.claim, st.category, st.topic, summaryById, update]);
   const orderedGroups = tree.flatMap(c => c.groups);
   const defaultGroup = orderedGroups.find(g => g.ongoing > 0) ?? orderedGroups[0];
-  const firstVisible = defaultGroup ? pickDefault(defaultGroup.claims, defaultGroup.summaries) : undefined;
-  const current = selectedClaim ?? (st.claim ? null : firstVisible) ?? null;
-  const currentSummary = current ? ((!selectedClaim ? defaultGroup?.summaries.get(current.id) : filtered.find(v => v.claim.id === current.id)?.summary) ?? summaryById.get(current.id)) : undefined;
+  const selectedFocus = st.focus ? orderedGroups.find(g => g.key === st.focus) : defaultGroup;
+  const current = selectedClaim;
+  const currentSummary = current ? (filtered.find(v => v.claim.id === current.id)?.summary ?? summaryById.get(current.id)) : undefined;
   const hiddenByFilters = !!selectedClaim && !filtered.some(v => v.claim.id === selectedClaim.id);
-  const currentGroup = current ? groupKey(currentSummary) : null;
+  const currentGroup = current ? groupKey(currentSummary) : selectedFocus?.key ?? null;
   // Keep the overview compact; expand only a deliberately selected claim/topic.
   const isOpen = (g: Group) => openGroups[g.key] ?? Boolean(st.claim && g.key === currentGroup || st.topic && g.topic === st.topic);
   const currentArticleIds = currentSummary?.articleIds ?? [];
@@ -182,7 +187,7 @@ export default function ClaimsPage() {
     const on = current?.id === c.id && (!scope || groupKey(scope) === currentGroup);
     return (
       <li key={c.id}>
-        <button onClick={() => update({ claim: c.id, ...(scope ? { category: scope.categoryId ?? '', topic: scope.topicId ?? '' } : {}) }, true)} data-testid={`button-claim-${c.id}`} aria-current={on || undefined}
+        <button onClick={() => update({ claim: c.id, focus: null, ...(scope ? { category: scope.categoryId ?? '', topic: scope.topicId ?? '' } : {}) }, true)} data-testid={`button-claim-${c.id}`} aria-current={on || undefined}
           className={cn('w-full border-l-2 py-2.5 pr-4', nested ? 'pl-14' : 'pl-9', ' text-left transition-colors', on ? 'border-[hsl(212_24%_42%)] bg-[hsl(212_20%_96%)]' : 'border-transparent hover:bg-card/60')}>
           {extra && <span className="mb-1 block font-mono text-[9px] uppercase text-muted-foreground">{extra}</span>}
           {sm?.ongoing && <span className="mb-1 block font-mono text-[9px] uppercase text-muted-foreground" title={sm.developmentReason ?? undefined}>{sm.developmentType ?? 'Ongoing'}</span>}
@@ -318,7 +323,8 @@ export default function ClaimsPage() {
                     const open = isOpen(g);
                     return (
                       <li key={g.key} className="border-b border-border/60">
-                        <button onClick={() => setOpenGroups(o => ({ ...o, [g.key]: !open }))} aria-expanded={open} data-testid={`button-topic-${g.cat}-${g.topic}`}
+                        <button onClick={() => { setOpenGroups(o => ({ ...o, [g.key]: !open })); update({ claim: null, focus: g.key }, true); }}
+                          aria-expanded={open} aria-current={!st.claim && g.key === currentGroup || undefined} data-testid={`button-topic-${g.cat}-${g.topic}`}
                           className={cn("flex w-full items-start gap-2 px-4 py-2.5 text-left hover:bg-card/60", g.key === currentGroup && "bg-card/60")}>
                           {open ? <ChevronDown className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
                           <span className="min-w-0 flex-1">
@@ -341,10 +347,18 @@ export default function ClaimsPage() {
             <ClaimDetail current={current} summary={currentSummary} catLabel={categoryLabel(categoryKey(currentSummary), categoryById, currentSummary)}
               isSignedIn={isSignedIn} onEdit={() => setEditing(current)} onDelete={() => setDeleting(current)}
               onTopic={() => update({ category: categoryKey(currentSummary), topic: currentSummary?.topicId ?? '' })}
+              focusArticleCount={wholeByGroup.get(groupKey(currentSummary))?.articleCount}
+              claimArticleCount={summaryById.get(current.id)?.articleIds?.length}
+              onFocusOverview={() => update({ claim: null, focus: groupKey(currentSummary), category: categoryKey(currentSummary), topic: topicKey(currentSummary), q: '', recency: 'all' }, true)}
               legacy={legacy} articleById={articleById} />
           ) : st.claim ? (
             <Empty title="Claim not found"><button onClick={() => update({ claim: null })} className="text-xs text-accent underline" data-testid="button-claim-missing-clear">Show claims</button></Empty>
-          ) : null}
+          ) : selectedFocus ? <FocusOverview key={selectedFocus.key} title={selectedFocus.title} category={categoryLabel(selectedFocus.cat, categoryById)} topic={selectedFocus.topic}
+              articles={selectedFocus.byArticle.articles} unattributed={selectedFocus.byArticle.unattributed} totalArticles={selectedFocus.total.articleCount}
+              complete={selectedFocus.byArticle.complete} summaries={selectedFocus.summaries} articleById={articleById}
+              loading={sumQ.isLoading} error={sumQ.isError} onRetry={() => sumQ.refetch()}
+              onClaim={(c, scope) => update({ claim: c.id, focus: null, category: categoryKey(scope), topic: topicKey(scope) }, true)} />
+            : st.focus ? <Empty title="Focus group not available with these filters"><button className="text-xs underline" data-testid="button-clear-focus" onClick={() => update({ focus: null })}>Show matching groups</button></Empty> : null}
         </div>
       )}
       <ClaimEditor open={creating || !!editing} onOpenChange={(o) => { if (!o) { setCreating(false); setEditing(null); } }} record={editing} articles={articles} />
@@ -353,8 +367,9 @@ export default function ClaimsPage() {
   );
 }
 
-function ClaimDetail({ current, summary, catLabel, isSignedIn, onEdit, onDelete, onTopic, legacy, articleById }: {
+function ClaimDetail({ current, summary, catLabel, isSignedIn, onEdit, onDelete, onTopic, onFocusOverview, focusArticleCount, claimArticleCount, legacy, articleById }: {
   current: TrackedRecord; summary?: ClaimSummary; catLabel: string; isSignedIn: boolean; onEdit: () => void; onDelete: () => void; onTopic: () => void;
+  onFocusOverview: () => void; focusArticleCount?: number; claimArticleCount?: number;
   legacy: NonNullable<TrackedRecord['observations']>; articleById: Map<string, TrackedRecord>;
 }) {
   return (
@@ -383,6 +398,12 @@ function ClaimDetail({ current, summary, catLabel, isSignedIn, onEdit, onDelete,
         )}
       </div>
 
+      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <span>This individual claim · {claimArticleCount == null ? 'article links unknown' : `${claimArticleCount} linked article${claimArticleCount === 1 ? '' : 's'}`}</span>
+        <button onClick={onFocusOverview} className="font-medium text-foreground underline underline-offset-2" data-testid="button-view-focus-coverage">
+          View {focusArticleCount == null ? 'all' : focusArticleCount} article{focusArticleCount === 1 ? '' : 's'} in this focus
+        </button>
+      </div>
       <ProvenancePanel key={current.id} params={{ claimId: current.id }} editable={isSignedIn} heading="Coverage" />
 
       {legacy.length > 0 && (

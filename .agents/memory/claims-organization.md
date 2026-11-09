@@ -58,3 +58,13 @@ claims extracted from one article must not look like multiple reports.
 coverage totals, not statement/capture counts or sums that double-count shared
 articles. Keep claims without article attributions separate. An article count
 still does not establish independent sourcing or confirmation.
+
+Selecting a focus group must show its reporting articles together, not silently
+substitute the evidence view for an automatically selected individual claim.
+Keep individual-claim coverage distinct and provide a route back to the group.
+
+**Why:** The user saw a six-article focus count alongside one claim's single
+article and reasonably thought the other reporting was missing.
+
+**How to apply:** Treat group overview and individual claim evidence as separate
+navigation states; preserve that distinction through reload and browser history.

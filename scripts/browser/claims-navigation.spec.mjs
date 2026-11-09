@@ -74,9 +74,34 @@ test('article-first tree keeps a shared claim in the clicked home through reload
   await location(page, policy);
   await page.goBack();
   await expect(page.getByTestId('select-claim-category')).toHaveValue('');
-  await expect(page.getByTestId('text-claim-breadcrumb')).toContainText(staffing.label);
+  await expect(page.getByTestId(`detail-focus-${policy.topic}`)).toBeVisible();
   await page.goForward();
   await location(page, policy);
+});
+
+test('a focus overview lists all its articles instead of the default individual claim', async ({ page }) => {
+  await page.goto(`/claims?category=${staffing.category}&topic=${staffing.topic}`);
+  const overview = page.getByTestId(`detail-focus-${staffing.topic}`);
+  await expect(overview).toBeVisible();
+  await expect(overview.getByTestId('text-focus-article-count')).toHaveText('2 reporting articles');
+  await expect(overview.locator('[data-testid^="card-focus-article-"]')).toHaveCount(2);
+  await expect(overview.getByTestId('card-focus-article-staff-new')).toContainText('Pete Hegseth faces possible removal');
+  await expect(overview.getByTestId('card-focus-article-staff-old')).toContainText('Earlier reporting on Pentagon leadership');
+  await expect(overview.getByTestId('card-focus-article-policy')).toHaveCount(0);
+  await expect(page.getByTestId('detail-claim-shared')).toHaveCount(0);
+  await page.reload();
+  await expect(overview.getByTestId('text-focus-article-count')).toHaveText('2 reporting articles');
+  await overview.getByTestId('details-focus-article-staff-new').locator('summary').click();
+  await overview.getByTestId('button-focus-claim-staff-new-staff-only').click();
+  await expect(page.getByTestId('detail-claim-staff-only')).toBeVisible();
+  await expect(page.getByTestId('button-view-focus-coverage')).toHaveText('View 2 articles in this focus');
+  await page.getByTestId('button-view-focus-coverage').click();
+  await expect(overview.locator('[data-testid^="card-focus-article-"]')).toHaveCount(2);
+  await page.getByTestId('button-reset-claim-filters').click();
+  await page.getByTestId(topicId(policy)).click();
+  await expect(page.getByTestId(`detail-focus-${policy.topic}`).getByTestId('text-focus-article-count')).toHaveText('1 reporting article');
+  await page.goBack();
+  await expect(overview.getByTestId('text-focus-article-count')).toHaveText('2 reporting articles');
 });
 
 test('feed article links preserve the non-representative home on Claims and the return trip', async ({ page }) => {

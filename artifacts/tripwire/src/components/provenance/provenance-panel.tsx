@@ -22,7 +22,7 @@ import { ChevronLeft, ChevronRight, RefreshCw, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { byKind, errText, fmtDate, useInvalidateClaims, useWorkspace } from '@/lib/workspace';
 import { ErrorLine, Mono, btnCls, inputCls, primaryCls } from '@/components/entities/ui';
-import { OutletBrand } from '@/components/outlet-brand';
+import { ArticleHeading } from '@/components/article-heading';
 import { ClaimDirection } from './claim-direction';
 
 /** Muted complementary tones for compact statuses and disclosures. */
@@ -233,17 +233,12 @@ function ContextRowInner({ c }: { c: ReportingContext }) {
 function ClaimObservation({ o, editable, onReview, onFocusEvent, highlight, sourceById }: { o: ReportingClaim; editable: boolean; onReview: (t: ReviewTarget) => void; onFocusEvent: (id: string) => void; highlight?: boolean; sourceById: Map<string, ReportingSource> }) {
   const cur = currentReview(o.reviews);
   const own = o.sourceIds.map(id => sourceById.get(id)).filter(Boolean) as ReportingSource[];
-  return <li className={cn('relative rounded-md px-2 py-2', highlight && 'bg-[hsl(150_18%_94%)]')} data-testid={`row-coverage-${o.id}`}>
-    <div className="flex items-start gap-3">
-      <OutletBrand name={o.outlet ?? '?'} variant="square" className="h-9 w-9 border border-border" />
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-          <time className="font-mono text-[11px] text-muted-foreground">{coverageDate(o)}</time>
-          <span className="font-semibold">{o.outlet ?? 'Unknown outlet'}</span>
+  return <li className={cn('tw-feed-item relative rounded-xl px-3 py-3.5 sm:px-4', highlight && 'bg-[hsl(150_18%_94%)]')} data-testid={`row-coverage-${o.id}`}>
+        <ArticleHeading outlet={o.outlet ?? 'Unknown outlet'} title={o.title} date={coverageDate(o)}
+          url={o.url ?? undefined} href={`/feed?article=${encodeURIComponent(o.articleId)}`} sourceTestId={`link-source-${o.id}`}>
           {cur ? <RelationTag value={cur.relation} /> : <span className={cn('rounded-sm px-1.5 py-0.5 text-[10px]', TONE.sage)} data-testid={`status-attribution-${o.id}`}>Article attribution</span>}
-          {o.url && <a href={o.url} target="_blank" rel="noreferrer" className="text-[11px] text-[hsl(212_24%_36%)] underline" data-testid={`link-source-${o.id}`}>Open article</a>}
-        </div>
-        <p className="mt-0.5 text-sm leading-snug">{o.title}</p>
+        </ArticleHeading>
+      <div className="mt-3 min-w-0 sm:pl-20">
         <ClaimDirection o={o} editable={editable} />
         <p className="mt-1 text-[11px] font-medium" data-testid={`claim-evidence-scope-${o.id}`}>{VERSION_LABEL[o.evidenceScope ?? 'unknown']}</p>
         {o.excerpt && <blockquote className="mt-1 border-l-2 border-[hsl(212_20%_70%)] pl-2 font-serif text-sm">{o.excerpt}</blockquote>}
@@ -281,7 +276,6 @@ function ClaimObservation({ o, editable, onReview, onFocusEvent, highlight, sour
           {editable && !cur && <button className="mt-1 text-[11px] underline" onClick={() => onReview({ kind: 'claim', observation: o })} data-testid={`button-review-coverage-${o.id}`}>Record relation</button>}
         </Disclosure>}
       </div>
-    </div>
   </li>;
 }
 
