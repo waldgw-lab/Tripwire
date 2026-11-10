@@ -35,6 +35,21 @@ The user selected a $1/day AI processing ceiling for the initial trial.
 conservative reservations from billed usage and measure actual costs before
 recommending a different budget.
 
+On 2026-11-10 the user explicitly approved the bounded private, observe-only
+reporting trial, including managed model usage, within $1 per UTC day,
+$0.10 reserved per attempt and 750,000 reserved tokens per UTC day.
+
+**Why:** The user selected “Approve the capped private trial” after being told
+the approval excludes publishing, autonomous decisions and a separate paid X
+plan.
+
+**How to apply:** Treat trial consent as granted, not as proof of a successful
+provider test or satisfaction of release gates. Pass the fictional validation
+test first and use only a small reviewed public-reporting sample; private
+uploads, global capture authorization and unrestricted archive processing
+remain excluded. Consult the provider setup approval record and do not
+duplicate the existing active trial work.
+
 For this app, the user chose “openrouter or whatever mechanism replit uses to
 connect an ai,” rather than a personal API-key connection.
 

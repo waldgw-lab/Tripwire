@@ -92,3 +92,25 @@ developments and priority quality. Then calibrate the policy. Verify actual
 published private access and always-on hosting separately, and obtain explicit
 activation approval. Do not create the approval manifest before those checks
 are performed.
+
+## Bounded private-trial approval — 2026-11-10
+
+The user explicitly approved the capped private, observe-only monitoring trial:
+
+- Replit-managed provider usage for a small, reviewed sample of public reporting,
+  subject to the existing release-checklist prerequisites.
+- Maximum **$1 per UTC day**, **$0.10 reserved per attempt**, and **750,000
+  reserved tokens per UTC day**. Uncertain or failed attempts retain their
+  reservations.
+- Diagnose and pass the fictional connection test before any real-reporting
+  trial. This approval permits that prerequisite test; it does not establish
+  that it passed or that the provider connection is verified.
+- Private paste/upload material remains excluded. Do not turn on unrestricted
+  archive processing or global capture authorization to perform the trial.
+- No publishing/deployment, autonomous decisions, separate paid X plan, or
+  increase to the approved limits is authorized.
+
+This is an approval record, not evidence of execution, access verification,
+calibration or activation. The existing active private-reporting-trial work
+remains responsible for satisfying and recording those prerequisites; no
+duplicate trial has been started from this approval record.
